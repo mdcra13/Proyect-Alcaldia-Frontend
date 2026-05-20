@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { Eye, EyeOff, User, Lock, AlertCircle } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
@@ -30,7 +31,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true)
     setLoginError(null)
 
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800))
 
     const result = login(data.username, data.password, data.remember)
@@ -45,16 +45,16 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-institutional-texture flex items-center justify-center p-4">
+    <div className="login-wrapper bg-institutional-texture">
       <div className="w-full max-w-md">
-        <div className="bg-card rounded-xl shadow-lg border border-border p-8">
+        <div className="login-card">
           <div className="flex justify-center mb-6">
             <img
-                src="/logo-alcaldia.jpg"
-                alt="Logo Alcaldía"
-                className="h-[110px] w-auto object-contain"
+              src="/logo-alcaldia.jpg"
+              alt="Logo Alcaldía"
+              className="h-[110px] w-auto object-contain"
             />
-            </div>
+          </div>
 
           <h1 className="text-2xl font-serif font-bold text-center text-primary mb-1">
             Sistema de Ayuda Social
@@ -65,7 +65,9 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label htmlFor="username" className="sr-only">Usuario</label>
+              <label htmlFor="username" className="sr-only">
+                Usuario
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <input
@@ -82,7 +84,9 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </div>
 
             <div>
-              <label htmlFor="password" className="sr-only">Contraseña</label>
+              <label htmlFor="password" className="sr-only">
+                Contraseña
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <input
@@ -106,18 +110,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                id="remember"
-                type="checkbox"
-                className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
-                {...register('remember')}
-              />
-              <label htmlFor="remember" className="text-sm text-muted-foreground">
-                Recordar sesión
-              </label>
-            </div>
-
             {loginError && (
               <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
                 <AlertCircle className="h-5 w-5 shrink-0" />
@@ -133,8 +125,20 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   Iniciando sesión...
                 </span>
@@ -144,12 +148,12 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </button>
 
             <div className="text-center">
-              <button
-                type="button"
+              <Link
+                to="/forgot-password"
                 className="text-sm text-primary hover:underline focus:outline-none"
               >
                 ¿Olvidaste tu contraseña?
-              </button>
+              </Link>
             </div>
           </form>
 

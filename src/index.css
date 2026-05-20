@@ -97,6 +97,58 @@
   }
 }
 
+@utility bg-institutional-texture {
+  background-color: #f8f9fa;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(26, 46, 74, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(201, 146, 42, 0.02) 0%, transparent 50%);
+}
+
+@utility login-wrapper {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@utility login-card {
+  background-color: var(--card);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--border);
+  padding: 2rem;
+}
+
+@utility login-input {
+  width: 100%;
+  padding-block: 0.75rem;
+  background-color: color-mix(in srgb, var(--secondary) 50%, transparent);
+  border: 1px solid var(--input);
+  border-radius: 0.5rem;
+  transition: all 150ms ease;
+}
+
+@utility login-input-focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+@utility login-submit {
+  width: 100%;
+  padding-block: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 150ms ease;
+}
+
+@utility login-submit-hover {
+  background-color: color-mix(in srgb, var(--primary) 90%, transparent);
+}
+
 /* Subtle institutional texture background */
 .bg-institutional-texture {
   background-color: #f8f9fa;
