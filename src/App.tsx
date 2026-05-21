@@ -1,122 +1,133 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactNode } from 'react'
+import useAuthStore from '@/lib/stores/authStore'
+import type { UserRole } from '@/lib/types'
 
-function App() {
-  const [count, setCount] = useState(0)
+// Auth
+import LoginPage from '@/components/auth/LoginPage'
+import ForgotPasswordPage from '@/components/auth/ForgotPasswordPage'
+import ResetPasswordPage from '@/components/auth/ResetPasswordPage'
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+// Alcalde screens
+import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
+import AsuntosPendientes from '@/components/alcalde/AsuntosPendientes'
+import GestionUsuarios from '@/components/alcalde/GestionUsuarios'
 
-      <div className="ticks"></div>
+// Secretaria screens
+import SecretariaDashboard from '@/components/secretaria/SecretariaDashboard'
+import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
+import SubirDocumento from '@/components/secretaria/SubirDocumento'
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface ProtectedRouteProps {
+  children: ReactNode
+  allowedRoles?: UserRole[]
 }
 
-export default App
+function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  const { isAuthenticated, user } = useAuthStore()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    if (user.role === 'alcalde') {
+      return <Navigate to="/alcalde" replace />
+    }
+    return <Navigate to="/secretaria" replace />
+  }
+
+  return <>{children}</>
+}
+
+function AuthRedirect() {
+  const { isAuthenticated, user } = useAuthStore()
+
+  if (isAuthenticated && user) {
+    if (user.role === 'alcalde') {
+      return <Navigate to="/alcalde" replace />
+    }
+    return <Navigate to="/secretaria" replace />
+  }
+
+  return <LoginPage />
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AuthRedirect />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
+          {/* Alcalde routes */}
+          <Route
+            path="/alcalde"
+            element={
+              <ProtectedRoute allowedRoles={['alcalde']}>
+                <AlcaldeDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alcalde/pendientes"
+            element={
+              <ProtectedRoute allowedRoles={['alcalde']}>
+                <AsuntosPendientes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alcalde/usuarios"
+            element={
+              <ProtectedRoute allowedRoles={['alcalde', 'administrador']}>
+                <GestionUsuarios />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Secretaria routes */}
+          <Route
+            path="/secretaria"
+            element={
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
+                <SecretariaDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/secretaria/seguimiento"
+            element={
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
+                <SeguimientoSolicitudes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/secretaria/subir"
+            element={
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
+                <SubirDocumento />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
