@@ -1,3 +1,3 @@
 export default function SeguimientoSolicitudes() {
-  return null
+  return <div>Dashboard Secretaria: Solicitudes</div>
 }

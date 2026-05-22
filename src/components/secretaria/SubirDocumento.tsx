@@ -1,3 +1,3 @@
 export default function SubirDocumento() {
-  return null
+  return <div>Dashboard Secretaria: Documentos</div>
 }

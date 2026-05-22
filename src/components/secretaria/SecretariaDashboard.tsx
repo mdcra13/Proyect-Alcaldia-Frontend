@@ -1,3 +1,3 @@
 export default function SecretariaDashboard() {
-  return null
+  return <div>Dashboard Secretaria</div>
 }

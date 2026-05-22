@@ -1,3 +1,3 @@
 export default function GestionUsuarios() {
-  return null
+  return <div>Dashboard Alcalde: Usuarios</div>
 }
