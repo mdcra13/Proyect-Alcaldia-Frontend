@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
 
@@ -45,6 +45,7 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
     if (user.role === 'alcalde') {
       return <Navigate to="/alcalde" replace />
     }
+
     return <Navigate to="/secretaria" replace />
   }
 
@@ -58,6 +59,7 @@ function AuthRedirect() {
     if (user.role === 'alcalde') {
       return <Navigate to="/alcalde" replace />
     }
+
     return <Navigate to="/secretaria" replace />
   }
 
@@ -73,7 +75,6 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-          {/* Alcalde routes */}
           <Route
             path="/alcalde"
             element={
@@ -99,7 +100,6 @@ export default function App() {
             }
           />
 
-          {/* Secretaria routes */}
           <Route
             path="/secretaria"
             element={
