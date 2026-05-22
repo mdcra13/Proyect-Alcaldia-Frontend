@@ -1,3 +1,3 @@
 export default function AsuntosPendientes() {
-  return null
+  return <div>Dashboard Alcalde: Asuntos</div>
 }

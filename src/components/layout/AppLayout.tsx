@@ -1,17 +1,14 @@
 import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
 import '../../styles/globals.css'
 
 type AppLayoutProps = {
   title: string
-  children: React.ReactNode
 }
 
-export default function AppLayout({
-  title,
-  children,
-}: AppLayoutProps) {
+export default function AppLayout({ title }: AppLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
@@ -30,11 +27,7 @@ export default function AppLayout({
           lg:translate-x-0
           lg:sticky
           lg:z-0
-          ${
-            isSidebarOpen
-              ? 'translate-x-0'
-              : 'translate-x-[-105%]'
-          }
+          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-[-105%]'}
         `}
       >
         <Sidebar
@@ -46,13 +39,11 @@ export default function AppLayout({
       <div className="content-wrapper lg:ml-70">
         <Header
           title={title}
-          onMenuClick={() =>
-            setIsSidebarOpen((prev) => !prev)
-          }
+          onMenuClick={() => setIsSidebarOpen((prev) => !prev)}
         />
 
         <main className="page-content">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

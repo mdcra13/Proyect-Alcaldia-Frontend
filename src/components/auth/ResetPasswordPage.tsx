@@ -1,3 +1,3 @@
 export default function ResetPasswordPage() {
-  return null
+  return <div>Página de "Resetear mi Contraseña"</div>
 }

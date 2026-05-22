@@ -1,3 +1,3 @@
 export default function AlcaldeDashboard() {
-  return null
+  return <div>Dashboard Alcalde</div>
 }
