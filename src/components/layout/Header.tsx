@@ -9,7 +9,6 @@ type HeaderProps = {
 }
 
 export default function Header({
-  title,
   onMenuClick,
 }: HeaderProps) {
   const navigate = useNavigate()
@@ -75,9 +74,14 @@ export default function Header({
             </svg>
           </button>
 
-          <h1 className="m-0 text-lg font-black">
-            {title}
-          </h1>
+          <div>
+            <h1 className="m-0 text-lg font-black">
+              {"Bienvenido(a), " + (user?.role ?? 'Usuario') + " " + (user?.name ?? '')}
+            </h1>
+            <small>
+              {new Date().toDateString()}
+            </small>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -91,7 +95,7 @@ export default function Header({
             </button>
 
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[11px] font-black text-white">
+              <span className="absolute right-1 top-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[11px] font-black text-white cursor-pointer">
                 {unreadCount}
               </span>
             )}
@@ -103,7 +107,7 @@ export default function Header({
               onClick={() =>
                 setIsUserMenuOpen((prev) => !prev)
               }
-              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2"
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 cursor-pointer"
               aria-label="Menú de usuario"
             >
               <div
@@ -114,7 +118,7 @@ export default function Header({
               </div>
 
               <span className="text-sm font-black text-slate-900">
-                {user?.name ?? 'Usuario'}
+                {<span>&#9662;</span>}
               </span>
             </button>
 
@@ -122,7 +126,7 @@ export default function Header({
               <div className="dropdown-menu">
                 <button
                   type="button"
-                  className="dropdown-item"
+                  className="dropdown-item hover:bg-gray-400/20"
                   onClick={() => {
                     setIsUserMenuOpen(false)
                     navigate('/perfil')
@@ -133,7 +137,7 @@ export default function Header({
 
                 <button
                   type="button"
-                  className="dropdown-item text-red-500"
+                  className="dropdown-item text-red-500 hover:bg-red-600/20 transition-transform"
                   onClick={() => {
                     setIsUserMenuOpen(false)
                     navigate('/login')

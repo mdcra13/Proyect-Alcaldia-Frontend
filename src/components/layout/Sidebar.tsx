@@ -93,6 +93,13 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-user-card">
+        <div
+          className="user-avatar"
+          aria-hidden
+        >
+          {user?.name?.charAt(0) ?? 'U'}
+        </div>
+
         <div className="text-sm font-extrabold">
           {user?.name ?? 'Invitado'}
         </div>
@@ -118,7 +125,7 @@ export default function Sidebar({
                     ? 'sidebar-link-hover'
                     : ''
                 }
-              `
+              hover:bg-yellow-500/50 transition-transform hover:scale-105`
             }
           >
             {item.label}
@@ -140,7 +147,7 @@ export default function Sidebar({
             onClose()
             navigate('/login')
           }}
-          className="sidebar-link w-full bg-white/10"
+          className="sidebar-link w-full bg-white/10 hover:bg-red-500/50 transition-transform hover:scale-105"
         >
           Cerrar sesión
         </button>
