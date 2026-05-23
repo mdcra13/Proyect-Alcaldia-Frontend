@@ -162,6 +162,10 @@
   padding: 1rem;
 }
 
+@utility layout-main-with-mobile-nav {
+  padding-bottom: 5.5rem;
+}
+
 @utility layout-sidebar {
   position: fixed;
   inset-block: 0;
@@ -299,6 +303,50 @@
   padding: 0.5rem 1rem;
   text-align: left;
   transition: background-color 150ms ease;
+}
+
+@utility mobile-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  border-top: 1px solid var(--border);
+  background-color: color-mix(in srgb, var(--card) 96%, transparent);
+  box-shadow: 0 -10px 30px -20px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(12px);
+}
+
+@utility mobile-nav-inner {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+@utility mobile-nav-link {
+  position: relative;
+  display: flex;
+  min-height: 3.75rem;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+@utility mobile-nav-link-active {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--primary);
+}
+
+@utility responsive-table-scroll {
+  width: 100%;
+  overflow-x: auto;
 }
 
 /* Subtle institutional texture background */
