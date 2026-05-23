@@ -1,157 +1,154 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import useAuthStore from '@/lib/stores/authStore'
-import '../../styles/globals.css'
 
-type SidebarProps = {
+import { useLocation, useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Users,
+  Upload,
+  FileSearch,
+  LogOut,
+  X,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import useAuthStore from '@/lib/stores/authStore'
+
+interface NavLink {
+  path: string
+  label: string
+  icon: LucideIcon
+}
+
+interface SidebarProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type Role =
-  | 'alcalde'
-  | 'secretaria'
-
-type NavItem = {
-  label: string
-  href: string
-  roles: Role[]
-}
-
-const navItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    href: '/',
-    roles: ['alcalde', 'secretaria'],
-  },
-  {
-    label: 'Asuntos Pendientes',
-    href: '/asuntos',
-    roles: ['alcalde'],
-  },
-  {
-    label: 'Usuarios',
-    href: '/usuarios',
-    roles: ['alcalde'],
-  },
-  {
-    label: 'Subir Documento',
-    href: '/subir-documento',
-    roles: ['secretaria'],
-  },
-  {
-    label: 'Seguimiento',
-    href: '/seguimiento',
-    roles: ['secretaria'],
-  },
+const alcaldeLinks: NavLink[] = [
+  { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/alcalde/pendientes', label: 'Asuntos Pendientes', icon: ClipboardList },
+  { path: '/alcalde/usuarios', label: 'Usuarios', icon: Users },
 ]
 
-export default function Sidebar({
-  isOpen,
-  onClose,
-}: SidebarProps) {
+const secretariaLinks: NavLink[] = [
+  { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/secretaria/subir', label: 'Subir Documento', icon: Upload },
+  { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
+]
+
+function getRoleLabel(role?: string) {
+  if (role === 'alcalde') return 'Alcalde'
+  if (role === 'administrador') return 'Administrador'
+  return 'Secretaria'
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const location = useLocation()
   const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
 
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore(
-    (state) => state.logout
-  )
+  const isAlcalde = user?.role === 'alcalde'
+  const links = isAlcalde ? alcaldeLinks : secretariaLinks
+  const roleLabel = getRoleLabel(user?.role)
 
-  const role = user?.role as Role | undefined
+  const handleNavigation = (path: string) => {
+    navigate(path)
+    onClose()
+  }
 
-  const items = role
-    ? navItems.filter((item) =>
-        item.roles.includes(role)
-      )
-    : []
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
 
   return (
-    <aside
-      className="sidebar-panel"
-      aria-label="Sidebar"
-    >
-      <div className="flex items-center gap-3 px-1 pb-4">
-        <div
-          className="flex h-10.5 w-10.5 items-center justify-center rounded-xl bg-white/15 font-black"
-          aria-hidden
-        >
-          <img
-              src="/logo-alcaldia.jpg"
-              alt="Logo Alcaldía"
-              className="h-15 w-auto object-contain"
-            />
-        </div>
-
-        <div>
-          <div className="text-sm font-black">
-            Alcaldía de Santiago
-          </div>
-
-          <div className="text-xs opacity-90">
-            Sistema
-          </div>
-        </div>
-      </div>
-
-      <div className="sidebar-user-card">
-        <div
-          className="user-avatar"
-          aria-hidden
-        >
-          {user?.name?.charAt(0) ?? 'U'}
-        </div>
-
-        <div className="text-sm font-extrabold">
-          {user?.name ?? 'Invitado'}
-        </div>
-
-        <div className="text-xs capitalize opacity-90">
-          {role ?? '—'}
-        </div>
-      </div>
-
-      <nav className="sidebar-nav">
-        {items.map((item) => (
-          <NavLink
-            key={item.href}
-            to={item.href}
-            onClick={() => {
-              if (isOpen) onClose()
-            }}
-            className={({ isActive }) =>
-              `
-                sidebar-link
-                ${
-                  isActive
-                    ? 'sidebar-link-hover'
-                    : ''
-                }
-              hover:bg-yellow-500/50 transition-transform hover:scale-105`
-            }
-          >
-            {item.label}
-          </NavLink>
-        ))}
-
-        {items.length === 0 && (
-          <div className="p-2 text-sm opacity-90">
-            Sin accesos para este rol.
-          </div>
-        )}
-      </nav>
-
-      <div className="pt-4">
+    <>
+      {isOpen && (
         <button
           type="button"
-          onClick={() => {
-            logout()
-            onClose()
-            navigate('/login')
-          }}
-          className="sidebar-link w-full bg-white/10 hover:bg-red-500/50 transition-transform hover:scale-105"
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    </aside>
+          className="layout-sidebar-overlay lg:hidden"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+        />
+      )}
+
+      <aside
+        className={`layout-sidebar lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="layout-sidebar-section">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="layout-sidebar-logo">
+                <span className="text-xs text-white/70">Logo Alcaldía</span>
+              </div>
+              <p className="text-sm font-semibold leading-tight">
+                Sistema de Ayuda Social
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="icon-button hover:bg-white/10 lg:hidden"
+              aria-label="Cerrar menú"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="layout-sidebar-section">
+          <div className="flex items-center gap-3">
+            <div className="layout-sidebar-avatar">
+              <span className="text-sm font-medium">
+                {user?.name
+                  ?.split(' ')
+                  .map(name => name[0])
+                  .join('')
+                  .slice(0, 2)}
+              </span>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{user?.name}</p>
+              <p className="text-sm text-white/70">{roleLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-1 p-4">
+          {links.map(link => {
+            const Icon = link.icon
+            const isActive = location.pathname === link.path
+
+            return (
+              <button
+                key={link.path}
+                type="button"
+                onClick={() => handleNavigation(link.path)}
+                className={`layout-sidebar-link hover:bg-white/10 ${
+                  isActive ? 'layout-sidebar-link-active' : ''
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span>{link.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="layout-sidebar-footer">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="layout-sidebar-link hover:bg-white/10"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }

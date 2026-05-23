@@ -1,17 +1,8 @@
-// src/lib/stores/authStore.ts
-
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { User, UserStatus, UserFormData } from '@/lib/types'
 
-import type {
-  User,
-  UserFormData,
-} from '@/lib/types'
-
-/**
- * Mock base de usuarios del sistema
- * (NO eliminar — usado como seed inicial)
- */
+// Mock users data
 const mockUsers: User[] = [
   {
     id: '1',
@@ -42,156 +33,90 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   rememberSession: boolean
-
   users: User[]
-
-  login: (
-    username: string,
-    password: string,
-    remember: boolean
-  ) => LoginResult
-
+  login: (username: string, password: string, remember: boolean) => LoginResult
   logout: () => void
-
-  updateUser: (
-    userId: string,
-    updates: Partial<User>
-  ) => void
-
+  updateUser: (userId: string, updates: Partial<User>) => void
   addUser: (newUser: UserFormData) => User
-
   toggleUserStatus: (userId: string) => void
 }
 
-/**
- * STORE PRINCIPAL
- * - auth + admin users management
- * - persist opcional según rememberSession
- */
 const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
       rememberSession: false,
-
-      /**
-       * Se inicializa con mockUsers
-       * y luego puede evolucionar en runtime
-       */
       users: mockUsers,
 
-      /**
-       * LOGIN
-       * ahora acepta:
-       * - email o username (flexible para UI)
-       * - password mock fijo
-       */
-      login: (username, password, remember) => {
-        const normalizedInput = username
-          .trim()
-          .toLowerCase()
-
+      login: (username: string, password: string, remember: boolean): LoginResult => {
+        // Mock login - in production this would call an API
         const user = get().users.find(
-          (u) =>
-            u.status === 'active' &&
-            (
-              u.email.toLowerCase() ===
-                normalizedInput ||
-              u.name.toLowerCase() ===
-                normalizedInput
-            )
+          u => u.email === username && u.status === 'active'
         )
 
-        // MOCK PASSWORD (seguro solo para dev)
-        const VALID_PASSWORD = 'admin123'
-
-        if (user && password === VALID_PASSWORD) {
+        if (user && password === 'admin123') {
           set({
             user,
             isAuthenticated: true,
             rememberSession: remember,
           })
-
           return { success: true }
         }
 
         return {
           success: false,
-          error:
-            'Credenciales inválidas o usuario inactivo',
+          error: 'Credenciales incorrectas. Verifique su usuario y contraseña.',
         }
       },
 
       logout: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-        })
+        set({ user: null, isAuthenticated: false })
       },
 
-      updateUser: (userId, updates) => {
-        set((state) => ({
-          users: state.users.map((u) =>
-            u.id === userId
-              ? { ...u, ...updates }
-              : u
+      updateUser: (userId: string, updates: Partial<User>) => {
+        set(state => ({
+          users: state.users.map(u =>
+            u.id === userId ? { ...u, ...updates } : u
           ),
         }))
       },
 
-      addUser: (newUser) => {
+      addUser: (newUser: UserFormData): User => {
         const user: User = {
           ...newUser,
           id: String(Date.now()),
           avatar: null,
-          createdAt:
-            new Date()
-              .toISOString()
-              .split('T')[0],
+          createdAt: new Date().toISOString().split('T')[0],
         }
 
-        set((state) => ({
+        set(state => ({
           users: [...state.users, user],
         }))
 
         return user
       },
 
-      toggleUserStatus: (userId) => {
-        set((state) => ({
-          users: state.users.map((u) =>
+      toggleUserStatus: (userId: string) => {
+        set(state => ({
+          users: state.users.map(u =>
             u.id === userId
-              ? {
-                  ...u,
-                  status:
-                    u.status === 'active'
-                      ? 'inactive'
-                      : 'active',
-                }
+              ? { ...u, status: (u.status === 'active' ? 'inactive' : 'active') as UserStatus }
               : u
           ),
         }))
       },
     }),
-
     {
       name: 'auth-storage',
-
-      /**
-       * FIX IMPORTANTE:
-       * persistía solo si rememberSession === true
-       *
-       * Eso en Zustand NO es estable porque depende del runtime state.
-       *
-       * Mejor: persistir SIEMPRE user + flag,
-       * y controlar logout manualmente.
-       */
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        rememberSession: state.rememberSession,
-      }),
+      partialize: state =>
+        state.rememberSession
+          ? {
+              user: state.user,
+              isAuthenticated: state.isAuthenticated,
+              rememberSession: state.rememberSession,
+            }
+          : {},
     }
   )
 )

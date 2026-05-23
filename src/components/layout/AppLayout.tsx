@@ -1,49 +1,25 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import Header from '@/components/layout/Header'
+import type { ReactNode } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
-import '../../styles/globals.css'
+import Header from '@/components/layout/Header'
 
-type AppLayoutProps = {
-  title: string
+interface AppLayoutProps {
+  children: ReactNode
+  title?: string
 }
 
-export default function AppLayout({ title }: AppLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+export default function AppLayout({ children, title }: AppLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="app-shell">
-      {isSidebarOpen && (
-        <div
-          aria-hidden
-          onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
-        />
-      )}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <aside
-        className={`
-          sidebar-container
-          lg:translate-x-0
-          lg:sticky
-          lg:z-0
-          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-[-105%]'}
-        `}
-      >
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-      </aside>
+      <div className="app-content lg:pl-64">
+        <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
 
-      <div className="content-wrapper lg:ml-70">
-        <Header
-          title={title}
-          onMenuClick={() => setIsSidebarOpen((prev) => !prev)}
-        />
-
-        <main className="page-content">
-          <Outlet />
+        <main className="app-main lg:p-6">
+          {children}
         </main>
       </div>
     </div>
