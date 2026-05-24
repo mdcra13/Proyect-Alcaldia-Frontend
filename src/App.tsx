@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
-import AppLayout from '@/components/layout/AppLayout'
 
 // Auth
 import LoginPage from '@/components/auth/LoginPage'
@@ -35,10 +34,6 @@ interface ProtectedRouteProps {
   allowedRoles?: UserRole[]
 }
 
-interface ProtectedLayoutRouteProps extends ProtectedRouteProps {
-  title: string
-}
-
 function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, user } = useAuthStore()
 
@@ -55,18 +50,6 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   }
 
   return <>{children}</>
-}
-
-function ProtectedLayoutRoute({
-  children,
-  allowedRoles,
-  title,
-}: ProtectedLayoutRouteProps) {
-  return (
-    <ProtectedRoute allowedRoles={allowedRoles}>
-      <AppLayout title={title}>{children}</AppLayout>
-    </ProtectedRoute>
-  )
 }
 
 function AuthRedirect() {
@@ -95,62 +78,50 @@ export default function App() {
           <Route
             path="/alcalde"
             element={
-              <ProtectedLayoutRoute allowedRoles={['alcalde']} title="Dashboard">
+              <ProtectedRoute allowedRoles={['alcalde']}>
                 <AlcaldeDashboard />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/alcalde/pendientes"
             element={
-              <ProtectedLayoutRoute allowedRoles={['alcalde']} title="Asuntos Pendientes">
+              <ProtectedRoute allowedRoles={['alcalde']}>
                 <AsuntosPendientes />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/alcalde/usuarios"
             element={
-              <ProtectedLayoutRoute
-                allowedRoles={['alcalde', 'administrador']}
-                title="Gestion de Usuarios"
-              >
+              <ProtectedRoute allowedRoles={['alcalde', 'administrador']}>
                 <GestionUsuarios />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="/secretaria"
             element={
-              <ProtectedLayoutRoute
-                allowedRoles={['secretaria', 'administrador']}
-                title="Dashboard"
-              >
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
                 <SecretariaDashboard />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/secretaria/seguimiento"
             element={
-              <ProtectedLayoutRoute
-                allowedRoles={['secretaria', 'administrador']}
-                title="Seguimiento de Solicitudes"
-              >
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
                 <SeguimientoSolicitudes />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/secretaria/subir"
             element={
-              <ProtectedLayoutRoute
-                allowedRoles={['secretaria', 'administrador']}
-                title="Subir Documento"
-              >
+              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
                 <SubirDocumento />
-              </ProtectedLayoutRoute>
+              </ProtectedRoute>
             }
           />
 
