@@ -4,6 +4,7 @@ export type UserStatus = 'active' | 'inactive'
 export interface User {
   id: string
   name: string
+  username: string
   email: string
   role: UserRole
   avatar: string | null
@@ -19,6 +20,7 @@ export interface LoginFormData {
 
 export interface UserFormData {
   name: string
+  username: string
   email: string
   role: UserRole
   status: UserStatus
