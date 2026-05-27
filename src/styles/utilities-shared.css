@@ -1,0 +1,61 @@
+@utility bg-institutional-texture {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 25% 25%, color-mix(in srgb, var(--primary) 2%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, color-mix(in srgb, var(--accent) 2%, transparent) 0%, transparent 50%);
+}
+
+@utility icon-button {
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+@utility dropdown-panel {
+  position: absolute;
+  right: 0;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+@utility dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  transition: background-color 150ms ease;
+}
+
+@utility responsive-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@utility skeleton-card {
+  min-height: 8rem;
+  border-radius: 0.75rem;
+  background-color: var(--muted);
+  animation: skeleton-pulse 2s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 2s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--muted) 25%, var(--background) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+}

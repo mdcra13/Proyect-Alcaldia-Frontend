@@ -6,8 +6,6 @@ import type { UserRole } from '@/lib/types'
 
 // Auth
 import LoginPage from '@/components/auth/LoginPage'
-import ForgotPasswordPage from '@/components/auth/ForgotPasswordPage'
-import ResetPasswordPage from '@/components/auth/ResetPasswordPage'
 
 // Alcalde screens
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
@@ -72,9 +70,6 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AuthRedirect />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
           <Route
             path="/alcalde"
             element={

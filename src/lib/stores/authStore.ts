@@ -2,11 +2,11 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, UserStatus, UserFormData } from '@/lib/types'
 
-// Mock users data
 const mockUsers: User[] = [
   {
     id: '1',
     name: 'Carlos Rodríguez',
+    username: 'carlos',
     email: 'alcalde@municipio.gov',
     role: 'alcalde',
     avatar: null,
@@ -16,6 +16,7 @@ const mockUsers: User[] = [
   {
     id: '2',
     name: 'María García',
+    username: 'maria',
     email: 'secretaria@municipio.gov',
     role: 'secretaria',
     avatar: null,
@@ -50,9 +51,13 @@ const useAuthStore = create<AuthState>()(
       users: mockUsers,
 
       login: (username: string, password: string, remember: boolean): LoginResult => {
-        // Mock login - in production this would call an API
+        // TODO: Replace mock login with POST /api/v1/auth/login when backend is ready.
+        const normalizedUsername = username.trim().toLowerCase()
+
         const user = get().users.find(
-          u => u.email === username && u.status === 'active'
+          item =>
+            item.username.toLowerCase() === normalizedUsername &&
+            item.status === 'active'
         )
 
         if (user && password === 'admin123') {
@@ -61,6 +66,7 @@ const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             rememberSession: remember,
           })
+
           return { success: true }
         }
 
@@ -76,8 +82,8 @@ const useAuthStore = create<AuthState>()(
 
       updateUser: (userId: string, updates: Partial<User>) => {
         set(state => ({
-          users: state.users.map(u =>
-            u.id === userId ? { ...u, ...updates } : u
+          users: state.users.map(user =>
+            user.id === userId ? { ...user, ...updates } : user
           ),
         }))
       },
@@ -99,10 +105,13 @@ const useAuthStore = create<AuthState>()(
 
       toggleUserStatus: (userId: string) => {
         set(state => ({
-          users: state.users.map(u =>
-            u.id === userId
-              ? { ...u, status: (u.status === 'active' ? 'inactive' : 'active') as UserStatus }
-              : u
+          users: state.users.map(user =>
+            user.id === userId
+              ? {
+                  ...user,
+                  status: (user.status === 'active' ? 'inactive' : 'active') as UserStatus,
+                }
+              : user
           ),
         }))
       },

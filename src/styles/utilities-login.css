@@ -1,0 +1,44 @@
+@utility login-wrapper {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@utility login-card {
+  background-color: var(--card);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--border);
+  padding: 2rem;
+}
+
+@utility login-input {
+  width: 100%;
+  padding-block: 0.75rem;
+  background-color: color-mix(in srgb, var(--secondary) 50%, transparent);
+  border: 1px solid var(--input);
+  border-radius: 0.5rem;
+  transition: all 150ms ease;
+}
+
+@utility login-input-focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+@utility login-submit {
+  width: 100%;
+  padding-block: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 150ms ease;
+}
+
+@utility login-submit-hover {
+  background-color: color-mix(in srgb, var(--primary) 90%, transparent);
+}
