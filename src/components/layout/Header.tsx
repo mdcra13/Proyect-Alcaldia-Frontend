@@ -7,6 +7,7 @@ import useNotificationStore from '@/lib/stores/notificationStore'
 interface HeaderProps {
   title?: string
   onMenuClick: () => void
+  showMenuButton?: boolean
 }
 
 function formatTimeAgo(dateString: string): string {
@@ -21,7 +22,11 @@ function formatTimeAgo(dateString: string): string {
   return `Hace ${Math.floor(diffInSeconds / 86400)} días`
 }
 
-export default function Header({ title, onMenuClick }: HeaderProps) {
+export default function Header({
+  title,
+  onMenuClick,
+  showMenuButton = true,
+}: HeaderProps) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore()
@@ -65,14 +70,16 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
     <header className="layout-header">
       <div className="layout-header-inner lg:px-6">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={onMenuClick}
-            className="icon-button hover:bg-secondary lg:hidden"
-            aria-label="Abrir menú"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          {showMenuButton && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              className="icon-button hover:bg-secondary lg:hidden"
+              aria-label="Abrir menú"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
 
           <h1 className="font-serif text-lg font-semibold text-foreground">
             {title || 'Sistema de Ayuda Social'}

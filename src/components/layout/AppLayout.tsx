@@ -16,20 +16,26 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
 
   return (
     <div className="app-shell">
-      <Sidebar
-        isOpen={isMobile && sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {!isMobile && (
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
 
       <div className="app-content lg:pl-64">
-        <Header title={title} onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          title={title}
+          onMenuClick={() => setSidebarOpen(true)}
+          showMenuButton={false}
+        />
 
         <main className="app-main layout-main-with-mobile-nav lg:p-6">
           {children}
         </main>
       </div>
 
-      <MobileNav />
+      {isMobile && <MobileNav />}
     </div>
   )
 }
