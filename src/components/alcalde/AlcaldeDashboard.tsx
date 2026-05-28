@@ -161,6 +161,17 @@ export default function AlcaldeDashboard() {
     )
   }
 
+  if (stats.total === 0) {
+    return (
+      <AppLayout title="Dashboard">
+        <section className="dashboard-section">
+          <h1 className="dashboard-title">No hay datos</h1>
+          <p className="dashboard-subtitle">No hay datos</p>
+        </section>
+      </AppLayout>
+    )
+  }
+
   return (
     <AppLayout title="Dashboard">
       <div className="dashboard-section">
@@ -171,11 +182,7 @@ export default function AlcaldeDashboard() {
       </div>
 
       <div className="dashboard-stats-grid lg:grid-cols-4">
-        <StatCard
-          title="Total Solicitudes"
-          value={stats.total}
-          icon={FileText}
-        />
+        <StatCard title="Total Solicitudes" value={stats.total} icon={FileText} />
         <StatCard
           title="Pendientes"
           value={stats.pendientes}
