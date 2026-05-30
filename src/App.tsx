@@ -13,7 +13,7 @@ import AsuntosPendientes from '@/components/alcalde/AsuntosPendientes'
 import GestionUsuarios from '@/components/alcalde/GestionUsuarios'
 
 // Secretaria screens
-import SecretariaDashboard from '@/components/secretaria/SecretariaDashboard'
+import { SecretariaDashboard } from '@/components/secretaria/SecretariaDashboard'
 import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
 import SubirDocumento from '@/components/secretaria/SubirDocumento'
 
