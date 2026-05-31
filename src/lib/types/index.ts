@@ -16,8 +16,7 @@ export interface User {
 // Solicitud types
 export type SolicitudCategoria = 'salud' | 'educacion' | 'familiar' | 'comunidad'
 export type SolicitudEstado = 'pendiente' | 'en_revision' | 'aprobado' | 'declinado'
-export type SolicitudPrioridad = 'baja' | 'media' | 'alta'
-
+export type SolicitudPrioridad = 'baja' | 'media' | 'alta' | 'urgente'
 export interface Solicitud {
   id: string
   radicado: string

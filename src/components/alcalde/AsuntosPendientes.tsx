@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, Filter, ChevronDown, Eye, Check, X, Calendar, SortAsc, FileText, Heart, GraduationCap, Users, Building, type LucideIcon } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import EmptyState from '@/components/ui/empty-state'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
-import type { Solicitud, SolicitudCategoria, SolicitudEstado } from '@/lib/types'
+import type { Solicitud, SolicitudCategoria, SolicitudEstado, SolicitudPrioridad } from '@/lib/types'
 
 const categoryIcons: Record<SolicitudCategoria, LucideIcon> = {
   salud: Heart,
@@ -24,6 +25,40 @@ const statusLabels: Record<SolicitudEstado, StatusConfig> = {
   aprobado:    { label: 'Aprobado',    color: 'status-aprobado' },
   declinado:   { label: 'Declinado',   color: 'status-declinado' },
 }
+
+type EstadoFilter = 'todos' | 'pendientes' | SolicitudEstado
+type PrioridadFilter = 'todas' | SolicitudPrioridad
+type SortBy = 'reciente' | 'antiguo' | 'nombre'
+
+const estadoOptions: { value: EstadoFilter; label: string }[] = [
+  { value: 'pendientes', label: 'Pendientes' },
+  { value: 'todos', label: 'Todos' },
+  { value: 'pendiente', label: 'Pendiente' },
+  { value: 'en_revision', label: 'En revisión' },
+  { value: 'aprobado', label: 'Aprobado' },
+  { value: 'declinado', label: 'Declinado' },
+]
+
+const prioridadOptions: { value: PrioridadFilter; label: string }[] = [
+  { value: 'todas', label: 'Todas' },
+  { value: 'baja', label: 'LOW' },
+  { value: 'media', label: 'MEDIUM' },
+  { value: 'alta', label: 'HIGH' },
+  { value: 'urgente', label: 'URGENT' },
+]
+
+const sortOptions: { value: SortBy; label: string }[] = [
+  { value: 'reciente', label: 'Más reciente' },
+  { value: 'antiguo', label: 'Más antiguo' },
+  { value: 'nombre', label: 'Nombre del solicitante' },
+]
+
+const validEstados = new Set<EstadoFilter>(estadoOptions.map(option => option.value))
+const validPrioridades = new Set<PrioridadFilter>(prioridadOptions.map(option => option.value))
+const validSortOptions = new Set<SortBy>(sortOptions.map(option => option.value))
+const validCategorias = new Set<SolicitudCategoria>(
+  Object.keys(CATEGORIES) as SolicitudCategoria[]
+)
 
 /* ─── StatusBadge ─────────────────────────────────────────── */
 interface StatusBadgeProps { status: SolicitudEstado }
@@ -182,12 +217,8 @@ function DeclineModal({ solicitud, onClose, onConfirm }: DeclineModalProps) {
 
 /* ─── Page ────────────────────────────────────────────────── */
 export default function AsuntosPendientes() {
-  const [searchQuery, setSearchQuery]           = useState('')
-  const [selectedCategories, setSelectedCategories] = useState<SolicitudCategoria[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
   const [showFilters, setShowFilters]           = useState(false)
-  const [sortBy, setSortBy]                     = useState<'reciente' | 'antiguo' | 'nombre'>('reciente')
-  const [fechaDesde, setFechaDesde]             = useState('')
-  const [fechaHasta, setFechaHasta]             = useState('')
   const [currentPage, setCurrentPage]           = useState(1)
   const itemsPerPage = 5
 
@@ -197,16 +228,134 @@ export default function AsuntosPendientes() {
 
   const { search, aprobar, declinar } = useSolicitudesStore()
   const addNotification = useNotificationStore(state => state.addNotification)
+  const searchQuery = searchParams.get('q') ?? ''
+  const fechaDesde = searchParams.get('desde') ?? ''
+  const fechaHasta = searchParams.get('hasta') ?? ''
+
+  const estadoParam = searchParams.get('estado') as EstadoFilter | null
+  const prioridadParam = searchParams.get('prioridad') as PrioridadFilter | null
+  const sortParam = searchParams.get('orden') as SortBy | null
+
+  const estadoFilter: EstadoFilter =
+    estadoParam && validEstados.has(estadoParam) ? estadoParam : 'pendientes'
+
+  const prioridadFilter: PrioridadFilter =
+    prioridadParam && validPrioridades.has(prioridadParam) ? prioridadParam : 'todas'
+
+  const sortBy: SortBy =
+    sortParam && validSortOptions.has(sortParam) ? sortParam : 'reciente'
+
+  const selectedCategories = (searchParams.get('categoria') ?? '')
+    .split(',')
+    .filter((category): category is SolicitudCategoria =>
+      validCategorias.has(category as SolicitudCategoria)
+    )
+
+  const activeFiltersCount = [
+    searchQuery,
+    selectedCategories.length > 0,
+    estadoFilter !== 'pendientes',
+    prioridadFilter !== 'todas',
+    fechaDesde,
+    fechaHasta,
+    sortBy !== 'reciente',
+  ].filter(Boolean).length
+
+  const updateFilters = (updates: {
+    q?: string
+    categoria?: SolicitudCategoria[]
+    estado?: EstadoFilter
+    prioridad?: PrioridadFilter
+    desde?: string
+    hasta?: string
+    orden?: SortBy
+  }) => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (updates.q !== undefined) {
+      if (updates.q) {
+        nextParams.set('q', updates.q)
+      } else {
+        nextParams.delete('q')
+      }
+    }
+
+    if (updates.categoria !== undefined) {
+      if (updates.categoria.length > 0) {
+        nextParams.set('categoria', updates.categoria.join(','))
+      } else {
+        nextParams.delete('categoria')
+      }
+    }
+
+    if (updates.estado !== undefined) {
+      if (updates.estado !== 'pendientes') {
+        nextParams.set('estado', updates.estado)
+      } else {
+        nextParams.delete('estado')
+      }
+    }
+
+    if (updates.prioridad !== undefined) {
+      if (updates.prioridad !== 'todas') {
+        nextParams.set('prioridad', updates.prioridad)
+      } else {
+        nextParams.delete('prioridad')
+      }
+    }
+
+    if (updates.desde !== undefined) {
+      if (updates.desde) {
+        nextParams.set('desde', updates.desde)
+      } else {
+        nextParams.delete('desde')
+      }
+    }
+
+    if (updates.hasta !== undefined) {
+      if (updates.hasta) {
+        nextParams.set('hasta', updates.hasta)
+      } else {
+        nextParams.delete('hasta')
+      }
+    }
+
+    if (updates.orden !== undefined) {
+      if (updates.orden !== 'reciente') {
+        nextParams.set('orden', updates.orden)
+      } else {
+        nextParams.delete('orden')
+      }
+    }
+
+    setSearchParams(nextParams, { replace: true })
+    setCurrentPage(1)
+  }
+
+  const clearFilters = () => {
+    setSearchParams({}, { replace: true })
+    setCurrentPage(1)
+  }
 
   const filteredSolicitudes = useMemo(() =>
     search(searchQuery, {
       categorias: selectedCategories,
-      estado: 'pendientes',
+      estado: estadoFilter,
+      prioridad: prioridadFilter,
       fechaDesde,
       fechaHasta,
       ordenar: sortBy,
     }),
-    [search, searchQuery, selectedCategories, fechaDesde, fechaHasta, sortBy]
+    [
+      search,
+      searchQuery,
+      selectedCategories,
+      estadoFilter,
+      prioridadFilter,
+      fechaDesde,
+      fechaHasta,
+      sortBy,
+    ]
   )
 
   const totalPages          = Math.ceil(filteredSolicitudes.length / itemsPerPage)
@@ -216,10 +365,11 @@ export default function AsuntosPendientes() {
   )
 
   const toggleCategory = (category: SolicitudCategoria) => {
-    setSelectedCategories(prev =>
-      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    updateFilters(
+      selectedCategories.includes(category)
+        ? { categoria: selectedCategories.filter(c => c !== category) }
+        : { categoria: [...selectedCategories, category] }
     )
-    setCurrentPage(1)
   }
 
   const handleApprove = (id: string) => {
@@ -261,7 +411,7 @@ export default function AsuntosPendientes() {
           )
         })}
         <button
-          onClick={() => setSelectedCategories([])}
+          onClick={() => updateFilters({ categoria: [] })}
           className={`filter-pill ${selectedCategories.length === 0 ? 'filter-pill-active' : 'filter-pill-inactive'}`}
         >
           Todas
@@ -276,7 +426,7 @@ export default function AsuntosPendientes() {
             type="text"
             placeholder="Buscar por nombre, radicado o título..."
             value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1) }}
+            onChange={e => updateFilters({ q: e.target.value })}
             className="search-input"
           />
         </div>
@@ -286,6 +436,11 @@ export default function AsuntosPendientes() {
         >
           <Filter className="h-5 w-5" />
           <span>Filtros</span>
+          {activeFiltersCount > 0 && (
+            <span className="notification-badge static h-5 min-w-5">
+              {activeFiltersCount}
+            </span>
+          )}
           <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
         </button>
       </div>
@@ -294,11 +449,41 @@ export default function AsuntosPendientes() {
       {showFilters && (
         <div className="filter-panel">
           <div>
+            <label className="field-label block mb-1.5">Estado</label>
+            <select
+              value={estadoFilter}
+              onChange={e => updateFilters({ estado: e.target.value as EstadoFilter })}
+              className="date-input appearance-none"
+            >
+              {estadoOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="field-label block mb-1.5">Prioridad</label>
+            <select
+              value={prioridadFilter}
+              onChange={e => updateFilters({ prioridad: e.target.value as PrioridadFilter })}
+              className="date-input appearance-none"
+            >
+              {prioridadOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="field-label block mb-1.5">Desde</label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input type="date" value={fechaDesde}
-                onChange={e => { setFechaDesde(e.target.value); setCurrentPage(1) }}
+                onChange={e => updateFilters({ desde: e.target.value })}
                 className="date-input" />
             </div>
           </div>
@@ -307,7 +492,7 @@ export default function AsuntosPendientes() {
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input type="date" value={fechaHasta}
-                onChange={e => { setFechaHasta(e.target.value); setCurrentPage(1) }}
+                onChange={e => updateFilters({ hasta: e.target.value })}
                 className="date-input" />
             </div>
           </div>
@@ -316,13 +501,26 @@ export default function AsuntosPendientes() {
             <div className="relative">
               <SortAsc className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <select value={sortBy}
-                onChange={e => setSortBy(e.target.value as 'reciente' | 'antiguo' | 'nombre')}
+                onChange={e => updateFilters({ orden: e.target.value as SortBy })}
                 className="date-input appearance-none">
-                <option value="reciente">Más reciente</option>
-                <option value="antiguo">Más antiguo</option>
-                <option value="nombre">Nombre</option>
+                {sortOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="btn-secondary w-full"
+              disabled={activeFiltersCount === 0}
+            >
+              Limpiar filtros
+            </button>
           </div>
         </div>
       )}
