@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Building,
@@ -21,6 +21,8 @@ import EmptyState from '@/components/ui/empty-state'
 import ConfirmActionModal from '@/components/shared/ConfirmActionModal'
 import DeclineModal from '@/components/shared/DeclineModal'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
+import Pagination from '@/components/shared/Pagination'
+import usePagination from '@/lib/hooks/usePagination'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type {
@@ -49,6 +51,13 @@ const statusLabels: Record<SolicitudEstado, StatusConfig> = {
   declinado: { label: 'Declinado', color: 'status-declinado' },
 }
 
+const priorityLabels: Record<SolicitudPrioridad, string> = {
+  baja: 'BAJA',
+  media: 'MEDIA',
+  alta: 'ALTA',
+  urgente: 'URGENTE',
+}
+
 type EstadoFilter = 'todos' | 'pendientes' | SolicitudEstado
 type PrioridadFilter = 'todas' | SolicitudPrioridad
 type SortBy = 'reciente' | 'antiguo' | 'nombre'
@@ -64,9 +73,10 @@ const estadoOptions: { value: EstadoFilter; label: string }[] = [
 
 const prioridadOptions: { value: PrioridadFilter; label: string }[] = [
   { value: 'todas', label: 'Todas' },
-  { value: 'baja', label: 'LOW' },
-  { value: 'media', label: 'MEDIUM' },
-  { value: 'alta', label: 'HIGH' },
+  { value: 'baja', label: 'BAJA' },
+  { value: 'media', label: 'MEDIA' },
+  { value: 'alta', label: 'ALTA' },
+  { value: 'urgente', label: 'URGENTE' },
 ]
 
 const sortOptions: { value: SortBy; label: string }[] = [
@@ -92,6 +102,18 @@ function StatusBadge({ status }: StatusBadgeProps) {
   return <span className={`status-badge ${config.color}`}>{config.label}</span>
 }
 
+interface PriorityBadgeProps {
+  prioridad: SolicitudPrioridad
+}
+
+function PriorityBadge({ prioridad }: PriorityBadgeProps) {
+  return (
+    <span className={`priority-badge priority-${prioridad}`}>
+      {priorityLabels[prioridad]}
+    </span>
+  )
+}
+
 interface CategoryBadgeProps {
   category: SolicitudCategoria
 }
@@ -111,7 +133,6 @@ function CategoryBadge({ category }: CategoryBadgeProps) {
 export default function AsuntosPendientes() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [showFilters, setShowFilters] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
   const [previewSolicitud, setPreviewSolicitud] = useState<Solicitud | null>(null)
@@ -129,6 +150,9 @@ export default function AsuntosPendientes() {
   const prioridadParam = searchParams.get('prioridad') as PrioridadFilter | null
   const sortParam = searchParams.get('orden') as SortBy | null
 
+  const pageParam = Number(searchParams.get('page') ?? '1')
+  const currentPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1
+
   const estadoFilter: EstadoFilter =
     estadoParam && validEstados.has(estadoParam) ? estadoParam : 'pendientes'
 
@@ -138,11 +162,15 @@ export default function AsuntosPendientes() {
   const sortBy: SortBy =
     sortParam && validSortOptions.has(sortParam) ? sortParam : 'reciente'
 
-  const selectedCategories = (searchParams.get('categoria') ?? '')
-    .split(',')
-    .filter((category): category is SolicitudCategoria =>
-      validCategorias.has(category as SolicitudCategoria),
-    )
+  const selectedCategories = useMemo(
+    () =>
+      (searchParams.get('categoria') ?? '')
+        .split(',')
+        .filter((category): category is SolicitudCategoria =>
+          validCategorias.has(category as SolicitudCategoria),
+        ),
+    [searchParams],
+  )
 
   const activeFiltersCount = [
     searchQuery,
@@ -153,6 +181,21 @@ export default function AsuntosPendientes() {
     fechaHasta,
     sortBy !== 'reciente',
   ].filter(Boolean).length
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      const nextParams = new URLSearchParams(searchParams)
+
+      if (page > 1) {
+        nextParams.set('page', String(page))
+      } else {
+        nextParams.delete('page')
+      }
+
+      setSearchParams(nextParams, { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
 
   const updateFilters = (updates: {
     q?: string
@@ -201,13 +244,12 @@ export default function AsuntosPendientes() {
         : nextParams.delete('orden')
     }
 
+    nextParams.delete('page')
     setSearchParams(nextParams, { replace: true })
-    setCurrentPage(1)
   }
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true })
-    setCurrentPage(1)
   }
 
   const filteredSolicitudes = useMemo(
@@ -232,11 +274,15 @@ export default function AsuntosPendientes() {
     ],
   )
 
-  const totalPages = Math.ceil(filteredSolicitudes.length / itemsPerPage)
-  const paginatedSolicitudes = filteredSolicitudes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  )
+  const {
+    paginatedItems: paginatedSolicitudes,
+    totalItems,
+  } = usePagination({
+    items: filteredSolicitudes,
+    itemsPerPage,
+    currentPage,
+    onPageChange: handlePageChange,
+  })
 
   const toggleCategory = (category: SolicitudCategoria) => {
     updateFilters(
@@ -441,16 +487,22 @@ export default function AsuntosPendientes() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Categoría', 'Título', 'Solicitante', 'Fecha', 'Estado', 'Acciones'].map(
-                    (heading, index) => (
-                      <th
-                        key={heading}
-                        className={`table-th ${index === 5 ? 'text-right' : 'text-left'}`}
-                      >
-                        {heading}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    'Categoría',
+                    'Título',
+                    'Solicitante',
+                    'Prioridad',
+                    'Fecha',
+                    'Estado',
+                    'Acciones',
+                  ].map((heading, index) => (
+                    <th
+                      key={heading}
+                      className={`table-th ${index === 6 ? 'text-right' : 'text-left'}`}
+                    >
+                      {heading}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
@@ -470,6 +522,11 @@ export default function AsuntosPendientes() {
                     </td>
 
                     <td className="table-td text-foreground">{solicitud.solicitante}</td>
+
+                    <td className="table-td">
+                      <PriorityBadge prioridad={solicitud.prioridad} />
+                    </td>
+
                     <td className="table-td text-muted-foreground">{solicitud.fechaIngreso}</td>
 
                     <td className="table-td">
@@ -517,13 +574,17 @@ export default function AsuntosPendientes() {
               <div key={solicitud.id} className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-start justify-between mb-3">
                   <CategoryBadge category={solicitud.categoria} />
-                  <StatusBadge status={solicitud.estado} />
+
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusBadge status={solicitud.estado} />
+                    <PriorityBadge prioridad={solicitud.prioridad} />
+                  </div>
                 </div>
 
                 <h3 className="font-medium text-foreground mb-1">{solicitud.titulo}</h3>
                 <p className="text-sm text-muted-foreground mb-2">{solicitud.solicitante}</p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  {solicitud.radicado} — {solicitud.fechaIngreso}
+                  {solicitud.radicado} - {solicitud.fechaIngreso}
                 </p>
 
                 <div className="flex gap-2">
@@ -555,31 +616,12 @@ export default function AsuntosPendientes() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-
-              <span className="px-4 py-2 text-sm text-muted-foreground">
-                Página {currentPage} de {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
-            </div>
-          )}
+          <Pagination
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
 
