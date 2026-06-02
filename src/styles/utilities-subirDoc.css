@@ -1,0 +1,81 @@
+@utility page-container-sm {
+  max-width: 28rem;
+  margin-inline: auto;
+  margin-top: 3rem;
+}
+
+@utility page-container-md {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+@utility card-base {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+@utility form-input-base {
+  width: 100%;
+  border: 1px solid var(--input);
+  border-radius: 0.5rem;
+  background-color: var(--background);
+  padding: 0.625rem 0.75rem;
+}
+
+@utility form-input-icon {
+  padding-left: 2.5rem;
+}
+
+@utility btn-primary {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  transition: all 0.15s ease;
+}
+
+@utility btn-secondary {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  transition: all 0.15s ease;
+}
+
+@utility success-icon-wrapper {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  background-color: color-mix(
+    in srgb,
+    var(--success) 10%,
+    transparent
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  margin-bottom: 1rem;
+}
+
+@utility upload-zone {
+  border-width: 2px;
+  border-style: dashed;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+@utility file-preview {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
