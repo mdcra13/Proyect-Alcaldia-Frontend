@@ -1,21 +1,39 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Suspense, lazy } from 'react'
 import type { ReactNode } from 'react'
+import { Toaster } from 'sonner'
 import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
 
 // Auth
 import LoginPage from '@/components/auth/LoginPage'
 
-// Alcalde screens
+// Alcalde — disponibles
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
 import AsuntosPendientes from '@/components/alcalde/AsuntosPendientes'
-import GestionUsuarios from '@/components/alcalde/GestionUsuarios'
 
-// Secretaria screens
+// Alcalde — pendientes de otras issues
+const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
+
+// Secretaria — disponibles
 import { SecretariaDashboard } from '@/components/secretaria/SecretariaDashboard'
 import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
 import SubirDocumento from '@/components/secretaria/SubirDocumento'
+
+// Secretaria — pendientes de otras issues
+const SecretariaNotas = lazy(() => import('@/components/secretaria/SecretariaNotas'))
+
+// Departamento — pendientes de otras issues
+const DepartamentoDashboard = lazy(() => import('@/components/departamento/DepartamentoDashboard'))
+
+// IT — pendientes de otras issues
+const ITDashboard = lazy(() => import('@/components/it/ITDashboard'))
+const ITGestionUsuarios = lazy(() => import('@/components/it/ITGestionUsuarios'))
+const ITGestionDepartamentos = lazy(() => import('@/components/it/ITGestionDepartamentos'))
+
+// Shared — pendientes de otras issues
+const PerfilUsuario = lazy(() => import('@/components/shared/PerfilUsuario'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,11 +58,18 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    if (user.role === 'alcalde') {
-      return <Navigate to="/alcalde" replace />
+    switch (user.role) {
+      case 'alcalde':
+        return <Navigate to="/alcalde" replace />
+      case 'secretaria':
+        return <Navigate to="/secretaria" replace />
+      case 'departamento':
+        return <Navigate to="/departamento" replace />
+      case 'it':
+        return <Navigate to="/it" replace />
+      default:
+        return <Navigate to="/" replace />
     }
-
-    return <Navigate to="/secretaria" replace />
   }
 
   return <>{children}</>
@@ -54,11 +79,18 @@ function AuthRedirect() {
   const { isAuthenticated, user } = useAuthStore()
 
   if (isAuthenticated && user) {
-    if (user.role === 'alcalde') {
-      return <Navigate to="/alcalde" replace />
+    switch (user.role) {
+      case 'alcalde':
+        return <Navigate to="/alcalde" replace />
+      case 'secretaria':
+        return <Navigate to="/secretaria" replace />
+      case 'departamento':
+        return <Navigate to="/departamento" replace />
+      case 'it':
+        return <Navigate to="/it" replace />
+      default:
+        return <Navigate to="/" replace />
     }
-
-    return <Navigate to="/secretaria" replace />
   }
 
   return <LoginPage />
@@ -68,60 +100,128 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AuthRedirect />} />
-          <Route
-            path="/alcalde"
-            element={
-              <ProtectedRoute allowedRoles={['alcalde']}>
-                <AlcaldeDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/alcalde/pendientes"
-            element={
-              <ProtectedRoute allowedRoles={['alcalde']}>
-                <AsuntosPendientes />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/alcalde/usuarios"
-            element={
-              <ProtectedRoute allowedRoles={['alcalde', 'administrador']}>
-                <GestionUsuarios />
-              </ProtectedRoute>
-            }
-          />
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/" element={<AuthRedirect />} />
 
-          <Route
-            path="/secretaria"
-            element={
-              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
-                <SecretariaDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/secretaria/seguimiento"
-            element={
-              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
-                <SeguimientoSolicitudes />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/secretaria/subir"
-            element={
-              <ProtectedRoute allowedRoles={['secretaria', 'administrador']}>
-                <SubirDocumento />
-              </ProtectedRoute>
-            }
-          />
+            {/* Alcalde */}
+            <Route
+              path="/alcalde"
+              element={
+                <ProtectedRoute allowedRoles={['alcalde']}>
+                  <AlcaldeDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alcalde/pendientes"
+              element={
+                <ProtectedRoute allowedRoles={['alcalde']}>
+                  <AsuntosPendientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alcalde/notas"
+              element={
+                <ProtectedRoute allowedRoles={['alcalde']}>
+                  <AlcaldeNotas />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Secretaria */}
+            <Route
+              path="/secretaria"
+              element={
+                <ProtectedRoute allowedRoles={['secretaria']}>
+                  <SecretariaDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/secretaria/notas"
+              element={
+                <ProtectedRoute allowedRoles={['secretaria']}>
+                  <SecretariaNotas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/secretaria/subir"
+              element={
+                <ProtectedRoute allowedRoles={['secretaria']}>
+                  <SubirDocumento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/secretaria/seguimiento"
+              element={
+                <ProtectedRoute allowedRoles={['secretaria']}>
+                  <SeguimientoSolicitudes />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Departamento */}
+            <Route
+              path="/departamento"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <DepartamentoDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departamento/solicitudes"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <DepartamentoDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* IT */}
+            <Route
+              path="/it"
+              element={
+                <ProtectedRoute allowedRoles={['it']}>
+                  <ITDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/it/usuarios"
+              element={
+                <ProtectedRoute allowedRoles={['it']}>
+                  <ITGestionUsuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/it/departamentos"
+              element={
+                <ProtectedRoute allowedRoles={['it']}>
+                  <ITGestionDepartamentos />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Perfil — accesible para todos los roles */}
+            <Route
+              path="/perfil"
+              element={
+                <ProtectedRoute>
+                  <PerfilUsuario />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+        <Toaster richColors position="top-right" />
       </BrowserRouter>
     </QueryClientProvider>
   )
