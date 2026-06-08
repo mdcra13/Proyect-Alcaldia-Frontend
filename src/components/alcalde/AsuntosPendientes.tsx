@@ -219,13 +219,13 @@ export default function AsuntosPendientes() {
     }
 
     if (updates.estado !== undefined) {
-      if (updates.estado === 'pendientes') nextParams.delete('estado')
-      else nextParams.set('estado', updates.estado)
+      if (updates.estado !== 'pendientes') nextParams.set('estado', updates.estado)
+      else nextParams.delete('estado')
     }
 
     if (updates.prioridad !== undefined) {
-      if (updates.prioridad === 'todas') nextParams.delete('prioridad')
-      else nextParams.set('prioridad', updates.prioridad)
+      if (updates.prioridad !== 'todas') nextParams.set('prioridad', updates.prioridad)
+      else nextParams.delete('prioridad')
     }
 
     if (updates.desde !== undefined) {
@@ -239,8 +239,8 @@ export default function AsuntosPendientes() {
     }
 
     if (updates.orden !== undefined) {
-      if (updates.orden === 'reciente') nextParams.delete('orden')
-      else nextParams.set('orden', updates.orden)
+      if (updates.orden !== 'reciente') nextParams.set('orden', updates.orden)
+      else nextParams.delete('orden')
     }
 
     nextParams.delete('page')
