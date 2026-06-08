@@ -1,5 +1,5 @@
 // User types
-export type UserRole = 'alcalde' | 'secretaria' | 'administrador'
+export type UserRole = 'alcalde' | 'secretaria' | 'departamento' | 'it'
 export type UserStatus = 'active' | 'inactive'
 
 export interface User {
