@@ -5,34 +5,19 @@ import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
-
-// Auth
 import LoginPage from '@/components/auth/LoginPage'
-
-// Alcalde — disponibles
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
 import AsuntosPendientes from '@/components/alcalde/AsuntosPendientes'
-
-// Alcalde — pendientes de otras issues
-const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
-
-// Secretaria — disponibles
 import { SecretariaDashboard } from '@/components/secretaria/SecretariaDashboard'
 import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
 import SubirDocumento from '@/components/secretaria/SubirDocumento'
 
-// Secretaria — pendientes de otras issues
+const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
 const SecretariaNotas = lazy(() => import('@/components/secretaria/SecretariaNotas'))
-
-// Departamento — pendientes de otras issues
 const DepartamentoDashboard = lazy(() => import('@/components/departamento/DepartamentoDashboard'))
-
-// IT — pendientes de otras issues
 const ITDashboard = lazy(() => import('@/components/it/ITDashboard'))
 const ITGestionUsuarios = lazy(() => import('@/components/it/ITGestionUsuarios'))
 const ITGestionDepartamentos = lazy(() => import('@/components/it/ITGestionDepartamentos'))
-
-// Shared — pendientes de otras issues
 const PerfilUsuario = lazy(() => import('@/components/shared/PerfilUsuario'))
 
 const queryClient = new QueryClient({

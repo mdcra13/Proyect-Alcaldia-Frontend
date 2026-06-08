@@ -209,39 +209,38 @@ export default function AsuntosPendientes() {
     const nextParams = new URLSearchParams(searchParams)
 
     if (updates.q !== undefined) {
-      updates.q ? nextParams.set('q', updates.q) : nextParams.delete('q')
+      if (updates.q) nextParams.set('q', updates.q)
+      else nextParams.delete('q')
     }
 
     if (updates.categoria !== undefined) {
-      updates.categoria.length > 0
-        ? nextParams.set('categoria', updates.categoria.join(','))
-        : nextParams.delete('categoria')
+      if (updates.categoria.length > 0) nextParams.set('categoria', updates.categoria.join(','))
+      else nextParams.delete('categoria')
     }
 
     if (updates.estado !== undefined) {
-      updates.estado !== 'pendientes'
-        ? nextParams.set('estado', updates.estado)
-        : nextParams.delete('estado')
+      if (updates.estado !== 'pendientes') nextParams.set('estado', updates.estado)
+      else nextParams.delete('estado')
     }
 
     if (updates.prioridad !== undefined) {
-      updates.prioridad !== 'todas'
-        ? nextParams.set('prioridad', updates.prioridad)
-        : nextParams.delete('prioridad')
+      if (updates.prioridad !== 'todas') nextParams.set('prioridad', updates.prioridad)
+      else nextParams.delete('prioridad')
     }
 
     if (updates.desde !== undefined) {
-      updates.desde ? nextParams.set('desde', updates.desde) : nextParams.delete('desde')
+      if (updates.desde) nextParams.set('desde', updates.desde)
+      else nextParams.delete('desde')
     }
 
     if (updates.hasta !== undefined) {
-      updates.hasta ? nextParams.set('hasta', updates.hasta) : nextParams.delete('hasta')
+      if (updates.hasta) nextParams.set('hasta', updates.hasta)
+      else nextParams.delete('hasta')
     }
 
     if (updates.orden !== undefined) {
-      updates.orden !== 'reciente'
-        ? nextParams.set('orden', updates.orden)
-        : nextParams.delete('orden')
+      if (updates.orden !== 'reciente') nextParams.set('orden', updates.orden)
+      else nextParams.delete('orden')
     }
 
     nextParams.delete('page')
