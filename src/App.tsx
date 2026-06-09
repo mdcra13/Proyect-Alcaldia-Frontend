@@ -38,23 +38,12 @@ interface ProtectedRouteProps {
 function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, user } = useAuthStore()
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/" replace />
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    switch (user.role) {
-      case 'alcalde':
-        return <Navigate to="/alcalde" replace />
-      case 'secretaria':
-        return <Navigate to="/secretaria" replace />
-      case 'departamento':
-        return <Navigate to="/departamento" replace />
-      case 'it':
-        return <Navigate to="/it" replace />
-      default:
-        return <Navigate to="/" replace />
-    }
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
