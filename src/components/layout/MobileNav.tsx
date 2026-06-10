@@ -1,13 +1,16 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  Building2,
   ClipboardList,
   FileSearch,
   LayoutDashboard,
   Upload,
+  User,
   Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
+import type { UserRole } from '@/lib/types'
 
 interface MobileNavLink {
   path: string
@@ -15,20 +18,39 @@ interface MobileNavLink {
   icon: LucideIcon
 }
 
-const alcaldeLinks: MobileNavLink[] = [
-  { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/alcalde/pendientes', label: 'Pendientes', icon: ClipboardList },
-  { path: '/alcalde/usuarios', label: 'Usuarios', icon: Users },
-]
+const navLinksByRole: Record<UserRole, MobileNavLink[]> = {
+  alcalde: [
+    { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/alcalde/notas', label: 'Notas', icon: ClipboardList },
+  ],
+  secretaria: [
+    { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/secretaria/notas', label: 'Mis Notas', icon: ClipboardList },
+    { path: '/secretaria/subir', label: 'Subir', icon: Upload },
+    { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
+  ],
+  departamento: [
+    { path: '/departamento', label: 'Dashboard', icon: LayoutDashboard },
+  ],
+  it: [
+    { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/it/usuarios', label: 'Usuarios', icon: Users },
+    { path: '/it/departamentos', label: 'Deptos.', icon: Building2 },
+  ],
+}
 
-const secretariaLinks: MobileNavLink[] = [
-  { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/secretaria/seguimiento', label: 'Solicitudes', icon: FileSearch },
-  { path: '/secretaria/subir', label: 'Subir', icon: Upload },
-]
+const profileLink: MobileNavLink = {
+  path: '/perfil',
+  label: 'Perfil',
+  icon: User,
+}
+
+const exactActivePaths = new Set(['/alcalde', '/secretaria', '/it', '/perfil'])
 
 function isActiveRoute(currentPath: string, linkPath: string) {
-  return currentPath === linkPath
+  if (exactActivePaths.has(linkPath)) return currentPath === linkPath
+
+  return currentPath === linkPath || currentPath.startsWith(`${linkPath}/`)
 }
 
 export default function MobileNav() {
@@ -36,7 +58,7 @@ export default function MobileNav() {
   const navigate = useNavigate()
   const user = useAuthStore(state => state.user)
 
-  const links = user?.role === 'alcalde' ? alcaldeLinks : secretariaLinks
+  const links = user ? [...navLinksByRole[user.role], profileLink] : [profileLink]
 
   return (
     <nav className="mobile-nav lg:hidden" aria-label="Navegacion movil">
