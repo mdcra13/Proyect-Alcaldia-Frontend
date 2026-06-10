@@ -1,5 +1,11 @@
+import type { ClassValue } from 'clsx'
+import { clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 import type { Solicitud } from '@/lib/types'
 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 const CATEGORIA_LABELS: Record<string, string> = {
   salud: 'Salud',
   educacion: 'Educación',
