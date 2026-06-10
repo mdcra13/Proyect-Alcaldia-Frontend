@@ -18,39 +18,49 @@ interface MobileNavLink {
   icon: LucideIcon
 }
 
+const createDashboardLink = (path: string): MobileNavLink => ({
+  path,
+  label: 'Dashboard',
+  icon: LayoutDashboard,
+})
+
 const navLinksByRole: Record<UserRole, MobileNavLink[]> = {
   alcalde: [
-    { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
+    createDashboardLink('/alcalde'),
     { path: '/alcalde/notas', label: 'Notas', icon: ClipboardList },
   ],
   secretaria: [
-    { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
+    createDashboardLink('/secretaria'),
     { path: '/secretaria/notas', label: 'Mis Notas', icon: ClipboardList },
     { path: '/secretaria/subir', label: 'Subir', icon: Upload },
     { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
   departamento: [
-    { path: '/departamento', label: 'Dashboard', icon: LayoutDashboard },
+    createDashboardLink('/departamento'),
   ],
   it: [
-    { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
+    createDashboardLink('/it'),
     { path: '/it/usuarios', label: 'Usuarios', icon: Users },
     { path: '/it/departamentos', label: 'Deptos.', icon: Building2 },
   ],
 }
 
-const profileLink: MobileNavLink = {
-  path: '/perfil',
-  label: 'Perfil',
-  icon: User,
-}
-
-const exactActivePaths = new Set(['/alcalde', '/secretaria', '/it', '/perfil'])
+const exactActivePaths = new Set([
+  '/alcalde',
+  '/secretaria',
+  '/it',
+  '/perfil',
+])
 
 function isActiveRoute(currentPath: string, linkPath: string) {
-  if (exactActivePaths.has(linkPath)) return currentPath === linkPath
+  if (exactActivePaths.has(linkPath)) {
+    return currentPath === linkPath
+  }
 
-  return currentPath === linkPath || currentPath.startsWith(`${linkPath}/`)
+  return (
+    currentPath === linkPath ||
+    currentPath.startsWith(`${linkPath}/`)
+  )
 }
 
 export default function MobileNav() {
@@ -58,7 +68,15 @@ export default function MobileNav() {
   const navigate = useNavigate()
   const user = useAuthStore(state => state.user)
 
-  const links = user ? [...navLinksByRole[user.role], profileLink] : [profileLink]
+  const profileItem: MobileNavLink = {
+    path: '/perfil',
+    label: 'Perfil',
+    icon: User,
+  }
+
+  const links = user
+    ? [...navLinksByRole[user.role], profileItem]
+    : [profileItem]
 
   return (
     <nav className="mobile-nav lg:hidden" aria-label="Navegacion movil">
@@ -78,7 +96,9 @@ export default function MobileNav() {
               aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{link.label}</span>
+              <span className="text-xs font-medium">
+                {link.label}
+              </span>
             </button>
           )
         })}
