@@ -6,6 +6,7 @@ import EmptyState from '@/components/ui/empty-state'
 import Pagination from '@/components/shared/Pagination'
 import usePagination from '@/lib/hooks/usePagination'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import { ESTADO_CONFIG } from '@/lib/types'
 import type { Solicitud, SolicitudEstado } from '@/lib/types'
 import { exportToCSV } from '@/lib/utils'
 
@@ -13,18 +14,16 @@ type TabFilter = 'todos' | SolicitudEstado
 
 const TABS: { value: TabFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
-  { value: 'pendiente', label: 'Pendientes' },
-  { value: 'en_revision', label: 'En Revisión' },
-  { value: 'aprobado', label: 'Aprobados' },
-  { value: 'declinado', label: 'Declinados' },
+  { value: 'received', label: 'Recibidas' },
+  { value: 'assigned_to_department', label: 'Asignadas' },
+  { value: 'in_review', label: 'En revisión' },
+  { value: 'approved_by_department', label: 'Aprobadas por depto.' },
+  { value: 'awaiting_mayor_signature', label: 'Pendientes de firma' },
+  { value: 'signed', label: 'Firmadas' },
+  { value: 'closed', label: 'Cerradas' },
+  { value: 'rejected_by_department', label: 'Rechazadas por depto.' },
+  { value: 'rejected_by_mayor_office', label: 'Rechazadas por Alcaldía' },
 ]
-
-const STATUS_LABELS: Record<SolicitudEstado, { label: string; className: string }> = {
-  pendiente: { label: 'Pendiente', className: 'status-pendiente' },
-  en_revision: { label: 'En Revisión', className: 'status-en-revision' },
-  aprobado: { label: 'Aprobado', className: 'status-aprobado' },
-  declinado: { label: 'Declinado', className: 'status-declinado' },
-}
 
 const ITEMS_PER_PAGE = 8
 
@@ -39,15 +38,18 @@ export default function SeguimientoSolicitudes() {
     let results = solicitudes
 
     if (activeTab !== 'todos') {
-      results = results.filter(s => s.estado === activeTab)
+      results = results.filter(solicitud => solicitud.estado === activeTab)
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase()
+
       results = results.filter(
-        s =>
-          s.radicado.toLowerCase().includes(q) ||
-          s.solicitante.toLowerCase().includes(q),
+        solicitud =>
+          solicitud.radicado.toLowerCase().includes(query) ||
+          solicitud.solicitante.toLowerCase().includes(query) ||
+          solicitud.identificacion.toLowerCase().includes(query) ||
+          solicitud.titulo.toLowerCase().includes(query),
       )
     }
 
@@ -77,7 +79,7 @@ export default function SeguimientoSolicitudes() {
 
   return (
     <AppLayout title="Seguimiento de Solicitudes">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-2xl font-serif font-bold text-foreground">
             Seguimiento de Solicitudes
@@ -88,14 +90,14 @@ export default function SeguimientoSolicitudes() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar por radicado o nombre..."
+              placeholder="Buscar por radicado, nombre o título..."
               value={searchQuery}
-              onChange={e => handleSearch(e.target.value)}
+              onChange={event => handleSearch(event.target.value)}
               className="search-input sm:w-72"
             />
           </div>
@@ -107,13 +109,12 @@ export default function SeguimientoSolicitudes() {
         </div>
       </div>
 
-      {/* Estado tabs */}
       <div className="seguimiento-tabs">
         {TABS.map(tab => {
           const count =
             tab.value === 'todos'
               ? solicitudes.length
-              : solicitudes.filter(s => s.estado === tab.value).length
+              : solicitudes.filter(solicitud => solicitud.estado === tab.value).length
 
           return (
             <button
@@ -124,7 +125,9 @@ export default function SeguimientoSolicitudes() {
             >
               {tab.label}
               <span
-                className={`seguimiento-tab-count ${activeTab === tab.value ? 'seguimiento-tab-count-active' : ''}`}
+                className={`seguimiento-tab-count ${
+                  activeTab === tab.value ? 'seguimiento-tab-count-active' : ''
+                }`}
               >
                 {count}
               </span>
@@ -133,7 +136,6 @@ export default function SeguimientoSolicitudes() {
         })}
       </div>
 
-      {/* Tabla desktop / tarjetas mobile */}
       {paginatedItems.length === 0 ? (
         <EmptyState
           title="No hay solicitudes"
@@ -141,27 +143,32 @@ export default function SeguimientoSolicitudes() {
         />
       ) : (
         <>
-          {/* Desktop */}
-          <div className="hidden lg:block bg-card rounded-xl border border-border overflow-hidden">
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['# Radicado', 'Solicitante', 'Categoría', 'Fecha', 'Subido por', 'Estado', 'Acciones'].map(
-                    (heading, index) => (
-                      <th
-                        key={heading}
-                        className={`table-th ${index === 6 ? 'text-right' : 'text-left'}`}
-                      >
-                        {heading}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    '# Radicado',
+                    'Solicitante',
+                    'Categoría',
+                    'Fecha límite',
+                    'Subido por',
+                    'Estado',
+                    'Acciones',
+                  ].map((heading, index) => (
+                    <th
+                      key={heading}
+                      className={`table-th ${index === 6 ? 'text-right' : 'text-left'}`}
+                    >
+                      {heading}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
                 {paginatedItems.map(solicitud => {
-                  const status = STATUS_LABELS[solicitud.estado]
+                  const status = ESTADO_CONFIG[solicitud.estado]
                   const category = CATEGORIES[solicitud.categoria]
 
                   return (
@@ -174,8 +181,12 @@ export default function SeguimientoSolicitudes() {
                       </td>
 
                       <td className="table-td">
-                        <p className="font-medium text-foreground">{solicitud.solicitante}</p>
-                        <p className="text-sm text-muted-foreground">{solicitud.identificacion}</p>
+                        <p className="font-medium text-foreground">
+                          {solicitud.solicitante}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {solicitud.identificacion}
+                        </p>
                       </td>
 
                       <td className="table-td">
@@ -184,12 +195,14 @@ export default function SeguimientoSolicitudes() {
                         </span>
                       </td>
 
-                      <td className="table-td text-muted-foreground">{solicitud.fechaIngreso}</td>
+                      <td className="table-td text-muted-foreground">
+                        {solicitud.fechaLimite}
+                      </td>
 
                       <td className="table-td text-foreground">{solicitud.subidoPor}</td>
 
                       <td className="table-td">
-                        <span className={`status-badge ${status.className}`}>
+                        <span className={`status-badge ${status.color}`}>
                           {status.label}
                         </span>
                       </td>
@@ -210,39 +223,40 @@ export default function SeguimientoSolicitudes() {
             </table>
           </div>
 
-          {/* Mobile */}
-          <div className="lg:hidden space-y-3">
+          <div className="space-y-3 lg:hidden">
             {paginatedItems.map(solicitud => {
-              const status = STATUS_LABELS[solicitud.estado]
+              const status = ESTADO_CONFIG[solicitud.estado]
               const category = CATEGORIES[solicitud.categoria]
 
               return (
                 <div
                   key={solicitud.id}
-                  className="bg-card rounded-xl border border-border p-4"
+                  className="rounded-xl border border-border bg-card p-4"
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3 flex items-start justify-between">
                     <span className={`category-badge ${category.color}`}>
                       {category.icon} {category.label}
                     </span>
-                    <span className={`status-badge ${status.className}`}>
+                    <span className={`status-badge ${status.color}`}>
                       {status.label}
                     </span>
                   </div>
 
-                  <p className="font-mono font-medium text-primary text-sm mb-1">
+                  <p className="mb-1 font-mono text-sm font-medium text-primary">
                     {solicitud.radicado}
                   </p>
                   <p className="font-medium text-foreground">{solicitud.solicitante}</p>
-                  <p className="text-sm text-muted-foreground">{solicitud.identificacion}</p>
-                  <p className="text-sm text-muted-foreground mt-1 mb-4">
-                    {solicitud.fechaIngreso} · Subido por {solicitud.subidoPor}
+                  <p className="text-sm text-muted-foreground">
+                    {solicitud.identificacion}
+                  </p>
+                  <p className="mb-4 mt-1 text-sm text-muted-foreground">
+                    Límite {solicitud.fechaLimite} · Subido por {solicitud.subidoPor}
                   </p>
 
                   <button
                     type="button"
                     onClick={() => setPreviewSolicitud(solicitud)}
-                    className="mobile-card-btn bg-secondary text-secondary-foreground w-full"
+                    className="mobile-card-btn w-full bg-secondary text-secondary-foreground"
                   >
                     Ver detalle
                   </button>

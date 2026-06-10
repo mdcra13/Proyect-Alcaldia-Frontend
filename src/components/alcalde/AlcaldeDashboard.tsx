@@ -176,7 +176,7 @@ export default function AlcaldeDashboard() {
     <AppLayout title="Dashboard">
       <div className="dashboard-section">
         <h2 className="dashboard-title">
-          Bienvenido, {user?.name?.split(' ')[0] || 'Alcalde'}
+          Bienvenido, {user?.nombre?.split(' ')[0] || 'Alcalde'}
         </h2>
         <p className="dashboard-subtitle capitalize">{currentDate}</p>
       </div>

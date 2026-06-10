@@ -37,6 +37,14 @@ export default function Header({
   const notificationRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
+  const fullName = user ? `${user.nombre} ${user.apellido}` : ''
+  const initials = fullName
+    .split(' ')
+    .filter(Boolean)
+    .map(namePart => namePart[0])
+    .join('')
+    .slice(0, 2)
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -62,6 +70,11 @@ export default function Header({
   const handleLogout = () => {
     logout()
     navigate('/')
+  }
+
+  const handleProfileClick = () => {
+    setShowUserMenu(false)
+    navigate('/perfil')
   }
 
   const unreadNotifications = unreadCount()
@@ -154,13 +167,7 @@ export default function Header({
               aria-label="Menú de usuario"
             >
               <div className="header-avatar">
-                <span className="text-sm font-medium">
-                  {user?.name
-                    ?.split(' ')
-                    .map(name => name[0])
-                    .join('')
-                    .slice(0, 2)}
-                </span>
+                <span className="text-sm font-medium">{initials}</span>
               </div>
 
               <ChevronDown className="hidden h-4 w-4 sm:block" />
@@ -169,16 +176,16 @@ export default function Header({
             {showUserMenu && (
               <div className="dropdown-panel w-52">
                 <div className="border-b border-border px-4 py-3">
-                  <p className="truncate font-medium">{user?.name}</p>
+                  <p className="truncate font-medium">{fullName}</p>
                   <p className="truncate text-sm text-muted-foreground">
-                    {user?.email}
+                    {user?.username}
                   </p>
                 </div>
 
                 <div className="py-1">
                   <button
                     type="button"
-                    onClick={() => setShowUserMenu(false)}
+                    onClick={handleProfileClick}
                     className="dropdown-item hover:bg-secondary"
                   >
                     <User className="h-4 w-4" />
