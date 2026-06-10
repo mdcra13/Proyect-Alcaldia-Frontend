@@ -96,21 +96,13 @@ const validCategorias = new Set<SolicitudCategoria>(
   Object.keys(CATEGORIES) as SolicitudCategoria[],
 )
 
-interface StatusBadgeProps {
-  status: SolicitudEstado
-}
-
-function StatusBadge({ status }: StatusBadgeProps) {
+function StatusBadge({ status }: { status: SolicitudEstado }) {
   const config = ESTADO_CONFIG[status]
 
   return <span className={`status-badge ${config.color}`}>{config.label}</span>
 }
 
-interface PriorityBadgeProps {
-  prioridad: SolicitudPrioridad
-}
-
-function PriorityBadge({ prioridad }: PriorityBadgeProps) {
+function PriorityBadge({ prioridad }: { prioridad: SolicitudPrioridad }) {
   return (
     <span className={`priority-badge ${priorityClassNames[prioridad]}`}>
       {priorityLabels[prioridad]}
@@ -118,11 +110,7 @@ function PriorityBadge({ prioridad }: PriorityBadgeProps) {
   )
 }
 
-interface CategoryBadgeProps {
-  category: SolicitudCategoria
-}
-
-function CategoryBadge({ category }: CategoryBadgeProps) {
+function CategoryBadge({ category }: { category: SolicitudCategoria }) {
   const config = CATEGORIES[category]
   const Icon = categoryIcons[category] ?? FileText
 
@@ -190,11 +178,8 @@ export default function AsuntosPendientes() {
     (page: number) => {
       const nextParams = new URLSearchParams(searchParams)
 
-      if (page > 1) {
-        nextParams.set('page', String(page))
-      } else {
-        nextParams.delete('page')
-      }
+      if (page > 1) nextParams.set('page', String(page))
+      else nextParams.delete('page')
 
       setSearchParams(nextParams, { replace: true })
     },
@@ -256,8 +241,7 @@ export default function AsuntosPendientes() {
   }
 
   const filteredSolicitudes = useMemo(() => {
-    const estadoForSearch =
-      estadoFilter === 'pendientes' ? undefined : estadoFilter
+    const estadoForSearch = estadoFilter === 'pendientes' ? undefined : estadoFilter
 
     const results = search(searchQuery, {
       categorias: selectedCategories,
@@ -286,10 +270,7 @@ export default function AsuntosPendientes() {
     sortBy,
   ])
 
-  const {
-    paginatedItems: paginatedSolicitudes,
-    totalItems,
-  } = usePagination({
+  const { paginatedItems: paginatedSolicitudes, totalItems } = usePagination({
     items: filteredSolicitudes,
     itemsPerPage,
     currentPage,
@@ -367,8 +348,12 @@ export default function AsuntosPendientes() {
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
+          <label htmlFor="search-filter" className="sr-only">
+            Buscar solicitudes
+          </label>
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
+            id="search-filter"
             type="text"
             placeholder="Buscar por nombre, radicado o título..."
             value={searchQuery}
@@ -400,8 +385,11 @@ export default function AsuntosPendientes() {
       {showFilters && (
         <div className="filter-panel">
           <div>
-            <label className="field-label mb-1.5 block">Estado</label>
+            <label htmlFor="estado-filter" className="field-label mb-1.5 block">
+              Estado
+            </label>
             <select
+              id="estado-filter"
               value={estadoFilter}
               onChange={event => updateFilters({ estado: event.target.value as EstadoFilter })}
               className="date-input appearance-none"
@@ -415,8 +403,11 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label mb-1.5 block">Prioridad</label>
+            <label htmlFor="prioridad-filter" className="field-label mb-1.5 block">
+              Prioridad
+            </label>
             <select
+              id="prioridad-filter"
               value={prioridadFilter}
               onChange={event =>
                 updateFilters({ prioridad: event.target.value as PrioridadFilter })
@@ -432,10 +423,13 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label mb-1.5 block">Desde</label>
+            <label htmlFor="desde-filter" className="field-label mb-1.5 block">
+              Desde
+            </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="desde-filter"
                 type="date"
                 value={fechaDesde}
                 onChange={event => updateFilters({ desde: event.target.value })}
@@ -445,10 +439,13 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label mb-1.5 block">Hasta</label>
+            <label htmlFor="hasta-filter" className="field-label mb-1.5 block">
+              Hasta
+            </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
+                id="hasta-filter"
                 type="date"
                 value={fechaHasta}
                 onChange={event => updateFilters({ hasta: event.target.value })}
@@ -458,10 +455,13 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label mb-1.5 block">Ordenar por</label>
+            <label htmlFor="orden-filter" className="field-label mb-1.5 block">
+              Ordenar por
+            </label>
             <div className="relative">
               <SortAsc className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <select
+                id="orden-filter"
                 value={sortBy}
                 onChange={event => updateFilters({ orden: event.target.value as SortBy })}
                 className="date-input appearance-none"
