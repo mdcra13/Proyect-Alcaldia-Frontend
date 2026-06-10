@@ -59,7 +59,6 @@ export interface Solicitud {
   categoria: SolicitudCategoria
   departamentoId?: string
   departamento?: Departamento
-  fechaIngreso: string
   fechaSolicitud: string
   fechaLimite: string
   estado: SolicitudEstado
@@ -141,7 +140,7 @@ export interface SolicitudFormData {
   titulo: string
   categoria: SolicitudCategoria | ''
   departamentoId?: string
-  fechaEntrada: string
+  fechaSolicitud: string
   fechaLimite: string
   solicitante: string
   identificacion: string
