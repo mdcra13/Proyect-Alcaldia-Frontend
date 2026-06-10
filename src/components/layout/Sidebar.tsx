@@ -1,16 +1,18 @@
-
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard,
+  Building2,
   ClipboardList,
-  Users,
-  Upload,
   FileSearch,
+  LayoutDashboard,
   LogOut,
+  Upload,
+  Users,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
+import type { UserRole } from '@/lib/types'
+import { ROLE_LABELS } from '@/lib/types'
 
 interface NavLink {
   path: string
@@ -23,22 +25,25 @@ interface SidebarProps {
   onClose: () => void
 }
 
-const alcaldeLinks: NavLink[] = [
-  { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/alcalde/pendientes', label: 'Asuntos Pendientes', icon: ClipboardList },
-  { path: '/alcalde/usuarios', label: 'Usuarios', icon: Users },
-]
-
-const secretariaLinks: NavLink[] = [
-  { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/secretaria/subir', label: 'Subir Documento', icon: Upload },
-  { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
-]
-
-function getRoleLabel(role?: string) {
-  if (role === 'alcalde') return 'Alcalde'
-  if (role === 'administrador') return 'Administrador'
-  return 'Secretaria'
+const navLinksByRole: Record<UserRole, NavLink[]> = {
+  alcalde: [
+    { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/alcalde/notas', label: 'Listado de Notas', icon: ClipboardList },
+  ],
+  secretaria: [
+    { path: '/secretaria', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/secretaria/notas', label: 'Mis Notas', icon: ClipboardList },
+    { path: '/secretaria/subir', label: 'Subir Nota', icon: Upload },
+    { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
+  ],
+  departamento: [
+    { path: '/departamento', label: 'Dashboard', icon: LayoutDashboard },
+  ],
+  it: [
+    { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/it/usuarios', label: 'Usuarios', icon: Users },
+    { path: '/it/departamentos', label: 'Departamentos', icon: Building2 },
+  ],
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -46,9 +51,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
 
-  const isAlcalde = user?.role === 'alcalde'
-  const links = isAlcalde ? alcaldeLinks : secretariaLinks
-  const roleLabel = getRoleLabel(user?.role)
+  const links = user ? navLinksByRole[user.role] : []
+  const roleLabel = user ? ROLE_LABELS[user.role] : ''
+  const fullName = user ? `${user.nombre} ${user.apellido}` : ''
+  const initials = fullName
+    .split(' ')
+    .filter(Boolean)
+    .map(namePart => namePart[0])
+    .join('')
+    .slice(0, 2)
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -101,18 +112,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="layout-sidebar-section">
           <div className="flex items-center gap-3">
             <div className="layout-sidebar-avatar">
-              <span className="text-sm font-medium">
-                {user?.name
-                  ?.split(' ')
-                  .map(name => name[0])
-                  .join('')
-                  .slice(0, 2)}
-              </span>
+              <span className="text-sm font-medium">{initials}</span>
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{user?.name}</p>
-              <p className="text-sm text-white/70">{roleLabel}</p>
+              <p className="truncate font-medium">{fullName}</p>
+              <p className="text-sm text-white/70">
+                {user?.departamento?.nombre ?? roleLabel}
+              </p>
             </div>
           </div>
         </div>

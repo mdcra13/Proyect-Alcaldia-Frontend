@@ -25,10 +25,12 @@ import Pagination from '@/components/shared/Pagination'
 import usePagination from '@/lib/hooks/usePagination'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
+import { ESTADO_CONFIG } from '@/lib/types'
 import type {
   Solicitud,
   SolicitudCategoria,
   SolicitudEstado,
+  SolicitudFilters,
   SolicitudPrioridad,
 } from '@/lib/types'
 
@@ -39,47 +41,49 @@ const categoryIcons: Record<SolicitudCategoria, LucideIcon> = {
   comunidad: Building,
 }
 
-interface StatusConfig {
-  label: string
-  color: string
-}
-
-const statusLabels: Record<SolicitudEstado, StatusConfig> = {
-  pendiente: { label: 'Pendiente', color: 'status-pendiente' },
-  en_revision: { label: 'En revisión', color: 'status-en-revision' },
-  aprobado: { label: 'Aprobado', color: 'status-aprobado' },
-  declinado: { label: 'Declinado', color: 'status-declinado' },
-}
-
 const priorityLabels: Record<SolicitudPrioridad, string> = {
-  baja: 'BAJA',
-  media: 'MEDIA',
-  alta: 'ALTA',
-  urgente: 'URGENTE',
+  LOW: 'BAJA',
+  MEDIUM: 'MEDIA',
+  HIGH: 'ALTA',
+  URGENT: 'URGENTE',
+}
+
+const priorityClassNames: Record<SolicitudPrioridad, string> = {
+  LOW: 'priority-baja',
+  MEDIUM: 'priority-media',
+  HIGH: 'priority-alta',
+  URGENT: 'priority-urgente',
 }
 
 type EstadoFilter = 'todos' | 'pendientes' | SolicitudEstado
 type PrioridadFilter = 'todas' | SolicitudPrioridad
-type SortBy = 'reciente' | 'antiguo' | 'nombre'
+type SortBy = NonNullable<SolicitudFilters['ordenar']>
 
 const estadoOptions: { value: EstadoFilter; label: string }[] = [
-  { value: 'pendientes', label: 'Pendientes' },
+  { value: 'pendientes', label: 'Pendientes de firma' },
   { value: 'todos', label: 'Todos' },
-  { value: 'pendiente', label: 'Pendiente' },
-  { value: 'en_revision', label: 'En revisión' },
-  { value: 'aprobado', label: 'Aprobado' },
-  { value: 'declinado', label: 'Declinado' },
+  { value: 'received', label: 'Recibida' },
+  { value: 'assigned_to_department', label: 'Asignada a departamento' },
+  { value: 'in_review', label: 'En revisión' },
+  { value: 'approved_by_department', label: 'Aprobada por departamento' },
+  { value: 'rejected_by_department', label: 'Rechazada por departamento' },
+  { value: 'awaiting_mayor_signature', label: 'Pendiente de firma' },
+  { value: 'returned_to_department', label: 'Devuelta a departamento' },
+  { value: 'rejected_by_mayor_office', label: 'Rechazada por Alcaldía' },
+  { value: 'signed', label: 'Firmada' },
+  { value: 'closed', label: 'Cerrada' },
 ]
 
 const prioridadOptions: { value: PrioridadFilter; label: string }[] = [
   { value: 'todas', label: 'Todas' },
-  { value: 'baja', label: 'BAJA' },
-  { value: 'media', label: 'MEDIA' },
-  { value: 'alta', label: 'ALTA' },
-  { value: 'urgente', label: 'URGENTE' },
+  { value: 'LOW', label: 'BAJA' },
+  { value: 'MEDIUM', label: 'MEDIA' },
+  { value: 'HIGH', label: 'ALTA' },
+  { value: 'URGENT', label: 'URGENTE' },
 ]
 
 const sortOptions: { value: SortBy; label: string }[] = [
+  { value: 'fecha_limite', label: 'Fecha límite' },
   { value: 'reciente', label: 'Más reciente' },
   { value: 'antiguo', label: 'Más antiguo' },
   { value: 'nombre', label: 'Nombre del solicitante' },
@@ -97,7 +101,7 @@ interface StatusBadgeProps {
 }
 
 function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusLabels[status] ?? statusLabels.pendiente
+  const config = ESTADO_CONFIG[status]
 
   return <span className={`status-badge ${config.color}`}>{config.label}</span>
 }
@@ -108,7 +112,7 @@ interface PriorityBadgeProps {
 
 function PriorityBadge({ prioridad }: PriorityBadgeProps) {
   return (
-    <span className={`priority-badge priority-${prioridad}`}>
+    <span className={`priority-badge ${priorityClassNames[prioridad]}`}>
       {priorityLabels[prioridad]}
     </span>
   )
@@ -160,7 +164,7 @@ export default function AsuntosPendientes() {
     prioridadParam && validPrioridades.has(prioridadParam) ? prioridadParam : 'todas'
 
   const sortBy: SortBy =
-    sortParam && validSortOptions.has(sortParam) ? sortParam : 'reciente'
+    sortParam && validSortOptions.has(sortParam) ? sortParam : 'fecha_limite'
 
   const selectedCategories = useMemo(
     () =>
@@ -179,7 +183,7 @@ export default function AsuntosPendientes() {
     prioridadFilter !== 'todas',
     fechaDesde,
     fechaHasta,
-    sortBy !== 'reciente',
+    sortBy !== 'fecha_limite',
   ].filter(Boolean).length
 
   const handlePageChange = useCallback(
@@ -239,7 +243,7 @@ export default function AsuntosPendientes() {
     }
 
     if (updates.orden !== undefined) {
-      if (updates.orden !== 'reciente') nextParams.set('orden', updates.orden)
+      if (updates.orden !== 'fecha_limite') nextParams.set('orden', updates.orden)
       else nextParams.delete('orden')
     }
 
@@ -251,27 +255,36 @@ export default function AsuntosPendientes() {
     setSearchParams({}, { replace: true })
   }
 
-  const filteredSolicitudes = useMemo(
-    () =>
-      search(searchQuery, {
-        categorias: selectedCategories,
-        estado: estadoFilter,
-        prioridad: prioridadFilter,
-        fechaDesde,
-        fechaHasta,
-        ordenar: sortBy,
-      }),
-    [
-      search,
-      searchQuery,
-      selectedCategories,
-      estadoFilter,
-      prioridadFilter,
+  const filteredSolicitudes = useMemo(() => {
+    const estadoForSearch =
+      estadoFilter === 'pendientes' ? undefined : estadoFilter
+
+    const results = search(searchQuery, {
+      categorias: selectedCategories,
+      estado: estadoForSearch,
+      prioridad: prioridadFilter,
       fechaDesde,
       fechaHasta,
-      sortBy,
-    ],
-  )
+      ordenar: sortBy,
+    })
+
+    if (estadoFilter === 'pendientes') {
+      return results.filter(
+        solicitud => solicitud.estado === 'awaiting_mayor_signature',
+      )
+    }
+
+    return results
+  }, [
+    search,
+    searchQuery,
+    selectedCategories,
+    estadoFilter,
+    prioridadFilter,
+    fechaDesde,
+    fechaHasta,
+    sortBy,
+  ])
 
   const {
     paginatedItems: paginatedSolicitudes,
@@ -319,7 +332,7 @@ export default function AsuntosPendientes() {
           Asuntos Pendientes
         </h2>
         <p className="text-muted-foreground">
-          {filteredSolicitudes.length} solicitudes pendientes de revisión
+          {filteredSolicitudes.length} solicitudes pendientes de firma
         </p>
       </div>
 
@@ -352,9 +365,9 @@ export default function AsuntosPendientes() {
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Buscar por nombre, radicado o título..."
@@ -387,7 +400,7 @@ export default function AsuntosPendientes() {
       {showFilters && (
         <div className="filter-panel">
           <div>
-            <label className="field-label block mb-1.5">Estado</label>
+            <label className="field-label mb-1.5 block">Estado</label>
             <select
               value={estadoFilter}
               onChange={event => updateFilters({ estado: event.target.value as EstadoFilter })}
@@ -402,7 +415,7 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label block mb-1.5">Prioridad</label>
+            <label className="field-label mb-1.5 block">Prioridad</label>
             <select
               value={prioridadFilter}
               onChange={event =>
@@ -419,9 +432,9 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label block mb-1.5">Desde</label>
+            <label className="field-label mb-1.5 block">Desde</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="date"
                 value={fechaDesde}
@@ -432,9 +445,9 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label block mb-1.5">Hasta</label>
+            <label className="field-label mb-1.5 block">Hasta</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="date"
                 value={fechaHasta}
@@ -445,9 +458,9 @@ export default function AsuntosPendientes() {
           </div>
 
           <div>
-            <label className="field-label block mb-1.5">Ordenar por</label>
+            <label className="field-label mb-1.5 block">Ordenar por</label>
             <div className="relative">
-              <SortAsc className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <SortAsc className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <select
                 value={sortBy}
                 onChange={event => updateFilters({ orden: event.target.value as SortBy })}
@@ -482,7 +495,7 @@ export default function AsuntosPendientes() {
         />
       ) : (
         <>
-          <div className="hidden lg:block bg-card rounded-xl border border-border overflow-hidden">
+          <div className="hidden overflow-hidden rounded-xl border border-border bg-card lg:block">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -491,7 +504,7 @@ export default function AsuntosPendientes() {
                     'Título',
                     'Solicitante',
                     'Prioridad',
-                    'Fecha',
+                    'Fecha límite',
                     'Estado',
                     'Acciones',
                   ].map((heading, index) => (
@@ -526,7 +539,9 @@ export default function AsuntosPendientes() {
                       <PriorityBadge prioridad={solicitud.prioridad} />
                     </td>
 
-                    <td className="table-td text-muted-foreground">{solicitud.fechaIngreso}</td>
+                    <td className="table-td text-muted-foreground">
+                      {solicitud.fechaLimite}
+                    </td>
 
                     <td className="table-td">
                       <StatusBadge status={solicitud.estado} />
@@ -568,10 +583,10 @@ export default function AsuntosPendientes() {
             </table>
           </div>
 
-          <div className="lg:hidden space-y-3">
+          <div className="space-y-3 lg:hidden">
             {paginatedSolicitudes.map(solicitud => (
-              <div key={solicitud.id} className="bg-card rounded-xl border border-border p-4">
-                <div className="flex items-start justify-between mb-3">
+              <div key={solicitud.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-3 flex items-start justify-between">
                   <CategoryBadge category={solicitud.categoria} />
 
                   <div className="flex flex-col items-end gap-2">
@@ -580,10 +595,10 @@ export default function AsuntosPendientes() {
                   </div>
                 </div>
 
-                <h3 className="font-medium text-foreground mb-1">{solicitud.titulo}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{solicitud.solicitante}</p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  {solicitud.radicado} - {solicitud.fechaIngreso}
+                <h3 className="mb-1 font-medium text-foreground">{solicitud.titulo}</h3>
+                <p className="mb-2 text-sm text-muted-foreground">{solicitud.solicitante}</p>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  {solicitud.radicado} - límite {solicitud.fechaLimite}
                 </p>
 
                 <div className="flex gap-2">
@@ -629,12 +644,12 @@ export default function AsuntosPendientes() {
           open={Boolean(previewSolicitud)}
           solicitud={previewSolicitud}
           onClose={() => setPreviewSolicitud(null)}
-          onApprove={(id) => {
+          onApprove={id => {
             setPreviewSolicitud(null)
             const solicitud = filteredSolicitudes.find(item => item.id === id)
             if (solicitud) setApproveSolicitud(solicitud)
           }}
-          onDecline={(id) => {
+          onDecline={id => {
             setPreviewSolicitud(null)
             const solicitud = filteredSolicitudes.find(item => item.id === id)
             if (solicitud) setDeclineSolicitud(solicitud)
