@@ -132,6 +132,7 @@ export interface SolicitudFormData {
   titulo: string
   categoria: SolicitudCategoria | ''
   departamentoId?: string
+  fechaEntrada: string
   fechaLimite: string
   solicitante: string
   identificacion: string

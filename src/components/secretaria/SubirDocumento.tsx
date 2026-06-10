@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import { mockDepartamentos } from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData } from '@/lib/types'
@@ -38,7 +39,7 @@ export default function SubirDocumento() {
       categoria: '',
       solicitante: '',
       identificacion: '',
-      fechaSolicitud: new Date().toISOString().split('T')[0],
+      fechaLimite: new Date().toISOString().split('T')[0],
       descripcion: '',
     }
   })
@@ -102,7 +103,7 @@ export default function SubirDocumento() {
       descripcion: data.descripcion,
       titulo: `Solicitud de ${CATEGORIES[data.categoria as SolicitudCategoria]?.label || data.categoria}`,
       documento: file.name,
-      subidoPor: user?.name || 'Usuario',
+      subidoPor: user?.nombre || 'Usuario',
     })
     
     addNotification({
@@ -172,6 +173,22 @@ export default function SubirDocumento() {
         <div className="bg-card rounded-xl border border-border p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Categoría */}
+            {/* Título de la petición */}
+            <div>
+              <label className="form-label">
+                Título<span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <User className="form-icon" />
+                <input
+                  type="text"
+                  {...register('titulo', { required: 'El título es requerido' })}
+                  placeholder="Título de solicitud..."
+                  className="form-input pl-10"
+                />
+              </div>
+            </div>
+            {/*Categoría*/}
             <div>
               <label className="form-label">
                 Categoría <span className="text-destructive">*</span>
@@ -189,7 +206,6 @@ export default function SubirDocumento() {
                 <p className="form-error">{errors.categoria.message}</p>
               )}
             </div>
-            
             {/* Nombre del solicitante */}
             <div>
               <label className="form-label">
@@ -224,7 +240,6 @@ export default function SubirDocumento() {
                 />
               </div>
             </div>
-            
             {/* Fecha de solicitud */}
             <div>
               <label className="form-label">
@@ -234,15 +249,14 @@ export default function SubirDocumento() {
                 <Calendar className="form-icon" />
                 <input
                   type="date"
-                  {...register('fechaSolicitud', { required: 'La fecha es requerida' })}
+                  {...register('fechaEntrada', { required: 'La fecha de entrada es requerida' })}
                   className="form-input pl-10"
                 />
               </div>
-              {errors.fechaSolicitud && (
-                <p className="form-error">{errors.fechaSolicitud.message}</p>
+              {errors.fechaEntrada && (
+                <p className="form-error">{errors.fechaEntrada.message}</p>
               )}
             </div>
-            
             {/* Descripción */}
             <div>
               <label className="form-label">
@@ -262,7 +276,6 @@ export default function SubirDocumento() {
                 {descripcion.length}/300 caracteres
               </p>
             </div>
-            
             {/* File upload */}
             <div>
               <label className="form-label">
@@ -322,7 +335,23 @@ export default function SubirDocumento() {
                 <p className="mt-1 text-sm text-destructive">{fileError}</p>
               )}
             </div>
-            
+            {/* Fecha límite */}
+            <div>
+              <label className="form-label">
+                Fecha límite<span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <Calendar className="form-icon" />
+                <input
+                  type="date"
+                  {...register('fechaLimite', { required: 'La fecha límite es requerida, introducir N/A si no tiene.' })}
+                  className="form-input pl-10"
+                />
+              </div>
+              {errors.fechaEntrada && (
+                <p className="form-error">{errors.fechaEntrada.message}</p>
+              )}
+            </div>
             {/* Subido por */}
             <div>
               <label className="form-label">
@@ -330,12 +359,31 @@ export default function SubirDocumento() {
               </label>
               <input
                 type="text"
-                value={user?.name || ''}
+                value={user?.nombre || ''}
                 readOnly
                 className="form-input bg-muted text-muted-foreground cursor-not-allowed"
               />
             </div>
-            
+            {/*Departamento*/}
+            <div>
+              <label className="form-label">
+                Departamento <span className="text-destructive">*</span>
+              </label>
+              <select
+                {...register('departamentoId', { required: 'El departamento es requerido' })}
+                className="form-input custom-select"
+              >
+                <option value="">Seleccione un departamento</option>
+                {mockDepartamentos.map(departamento => (
+                  <option key={departamento.id} value={departamento.id}>
+                    {departamento.nombre}
+                  </option>
+                ))}
+              </select>
+              {errors.departamentoId && (
+                <p className="form-error">{errors.departamentoId.message}</p>
+              )}
+            </div>
             {/* Buttons */}
             <div className="flex gap-3 pt-4">
               <button

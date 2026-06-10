@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Departamento } from '@/lib/types'
 
-const mockDepartamentos: Departamento[] = [
+export const mockDepartamentos: Departamento[] = [
   {
     id: 'dep-1',
     nombre: 'Salud',

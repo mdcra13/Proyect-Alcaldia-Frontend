@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const links = user ? navLinksByRole[user.role] : []
   const roleLabel = user ? ROLE_LABELS[user.role] : ''
-  const fullName = user ? `${user.nombre} ${user.apellido}` : ''
+  const fullName = user ? `${user.nombre}` : ''
   const initials = fullName
     .split(' ')
     .filter(Boolean)
