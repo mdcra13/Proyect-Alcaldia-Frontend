@@ -60,6 +60,7 @@ export interface Solicitud {
   departamentoId?: string
   departamento?: Departamento
   fechaIngreso: string
+  fechaSolicitud: string
   fechaLimite: string
   estado: SolicitudEstado
   prioridad: SolicitudPrioridad
@@ -81,9 +82,17 @@ export interface SolicitudStats {
   finalizadas: number
 }
 
+export type SolicitudEstadoFiltro =
+  | SolicitudEstado
+  | 'todos'
+  | 'pendientes'
+  | 'en_proceso'
+  | 'aprobado'
+  | 'declinado'
+
 export interface SolicitudFilters {
   categorias?: SolicitudCategoria[]
-  estado?: SolicitudEstado | 'todos'
+  estado?: SolicitudEstadoFiltro
   departamentoId?: string
   prioridad?: SolicitudPrioridad | 'todas'
   fechaDesde?: string

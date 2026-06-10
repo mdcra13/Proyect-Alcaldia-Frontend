@@ -25,7 +25,7 @@ interface SidebarProps {
   onClose: () => void
 }
 
-const navLinksByRole: Record<UserRole, NavLink[]> = {
+const linksByRole: Record<UserRole, NavLink[]> = {
   alcalde: [
     { path: '/alcalde', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/alcalde/notas', label: 'Listado de Notas', icon: ClipboardList },
@@ -41,7 +41,7 @@ const navLinksByRole: Record<UserRole, NavLink[]> = {
   ],
   it: [
     { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/it/usuarios', label: 'Usuarios', icon: Users },
+    { path: '/it/usuarios', label: 'Gestión de Usuarios', icon: Users },
     { path: '/it/departamentos', label: 'Departamentos', icon: Building2 },
   ],
 }
@@ -117,9 +117,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{fullName}</p>
-              <p className="text-sm text-white/70">
-                {user?.departamento?.nombre ?? roleLabel}
-              </p>
+              <p className="text-sm text-white/70">{roleDetail}</p>
             </div>
           </div>
         </div>
