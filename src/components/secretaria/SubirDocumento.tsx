@@ -34,15 +34,24 @@ export default function SubirDocumento() {
   const addSolicitud = useSolicitudesStore(state => state.addSolicitud)
   const addNotification = useNotificationStore(state => state.addNotification)
   
-  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<SolicitudFormData>({
-    defaultValues: {
-      categoria: '',
-      solicitante: '',
-      identificacion: '',
-      fechaLimite: new Date().toISOString().split('T')[0],
-      descripcion: '',
-    }
-  })
+  const {
+  register,
+  handleSubmit,
+  watch,
+  formState: { errors },
+  reset,
+} = useForm<SolicitudFormData>({
+  defaultValues: {
+    titulo: '',
+    categoria: '',
+    departamentoId: '',
+    fechaLimite: '',
+    solicitante: '',
+    identificacion: '',
+    descripcion: '',
+    documento: null,
+  },
+})
   
   const descripcion = watch('descripcion', '')
   
@@ -82,39 +91,45 @@ export default function SubirDocumento() {
   }
   
   const onSubmit = async (data: SolicitudFormData) => {
-    if (!file) {
-      setFileError('Debe adjuntar un documento')
-      return
-    }
-    
-    if (!data.categoria) {
-      return
-    }
-    
-    setIsSubmitting(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const solicitud = addSolicitud({
-      categoria: data.categoria as SolicitudCategoria,
-      solicitante: data.solicitante,
-      identificacion: data.identificacion,
-      descripcion: data.descripcion,
-      titulo: `Solicitud de ${CATEGORIES[data.categoria as SolicitudCategoria]?.label || data.categoria}`,
-      documento: file.name,
-      subidoPor: user?.nombre || 'Usuario',
-    })
-    
-    addNotification({
-      message: `Nueva solicitud registrada: ${solicitud.radicado}`,
-      type: 'success'
-    })
-    
-    setNewRadicado(solicitud.radicado)
-    setShowSuccess(true)
-    setIsSubmitting(false)
+  if (!file) {
+    setFileError('Debe adjuntar un documento')
+    return
   }
+
+  if (!data.categoria) {
+    return
+  }
+
+  setIsSubmitting(true)
+
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  const fullName = user
+    ? `${user.nombre} ${user.apellido}`
+    : 'Usuario'
+
+  const solicitud = addSolicitud({
+    titulo: data.titulo,
+    categoria: data.categoria as SolicitudCategoria,
+    departamentoId: data.departamentoId || undefined,
+    fechaLimite: data.fechaLimite,
+    solicitante: data.solicitante,
+    identificacion: data.identificacion,
+    descripcion: data.descripcion,
+    documento: file.name,
+    subidoPor: fullName,
+    subidoPorId: user?.id ?? 'system',
+  })
+
+  addNotification({
+    message: `Nueva solicitud registrada: ${solicitud.radicado}`,
+    type: 'success',
+  })
+
+  setNewRadicado(solicitud.radicado)
+  setShowSuccess(true)
+  setIsSubmitting(false)
+}
   
   const handleNewSolicitud = () => {
     reset()
@@ -249,12 +264,12 @@ export default function SubirDocumento() {
                 <Calendar className="form-icon" />
                 <input
                   type="date"
-                  {...register('fechaEntrada', { required: 'La fecha de entrada es requerida' })}
+                  {...register('fechaSolicitud', { required: 'La fecha de solicitud es requerida' })}
                   className="form-input pl-10"
                 />
               </div>
-              {errors.fechaEntrada && (
-                <p className="form-error">{errors.fechaEntrada.message}</p>
+              {errors.fechaSolicitud && (
+                <p className="form-error">{errors.fechaSolicitud.message}</p>
               )}
             </div>
             {/* Descripción */}
@@ -348,8 +363,8 @@ export default function SubirDocumento() {
                   className="form-input pl-10"
                 />
               </div>
-              {errors.fechaEntrada && (
-                <p className="form-error">{errors.fechaEntrada.message}</p>
+              {errors.fechaSolicitud && (
+                <p className="form-error">{errors.fechaSolicitud.message}</p>
               )}
             </div>
             {/* Subido por */}

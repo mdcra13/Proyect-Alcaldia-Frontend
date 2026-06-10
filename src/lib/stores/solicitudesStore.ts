@@ -130,7 +130,6 @@ const mockSolicitudes: Solicitud[] = [
     solicitante: 'Juan Pérez García',
     identificacion: '8-123-456',
     categoria: 'salud',
-    fechaIngreso: getDate(-10),
     fechaSolicitud: getDate(-10),
     fechaLimite: getDate(-2),
     estado: 'received',
@@ -152,7 +151,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'educacion',
     departamentoId: 'dep-2',
     departamento: mockDepartamentos['dep-2'],
-    fechaIngreso: getDate(-8),
     fechaSolicitud: getDate(-8),
     fechaLimite: getDate(1),
     estado: 'assigned_to_department',
@@ -175,7 +173,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'familiar',
     departamentoId: 'dep-4',
     departamento: mockDepartamentos['dep-4'],
-    fechaIngreso: getDate(-7),
     fechaSolicitud: getDate(-7),
     fechaLimite: getDate(2),
     estado: 'in_review',
@@ -199,7 +196,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'comunidad',
     departamentoId: 'dep-3',
     departamento: mockDepartamentos['dep-3'],
-    fechaIngreso: getDate(-12),
     fechaSolicitud: getDate(-12),
     fechaLimite: getDate(5),
     estado: 'approved_by_department',
@@ -224,7 +220,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'salud',
     departamentoId: 'dep-1',
     departamento: mockDepartamentos['dep-1'],
-    fechaIngreso: getDate(-15),
     fechaSolicitud: getDate(-15),
     fechaLimite: getDate(10),
     estado: 'signed',
@@ -251,7 +246,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'educacion',
     departamentoId: 'dep-2',
     departamento: mockDepartamentos['dep-2'],
-    fechaIngreso: getDate(-20),
     fechaSolicitud: getDate(-20),
     fechaLimite: getDate(-5),
     estado: 'rejected_by_department',
@@ -277,7 +271,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'familiar',
     departamentoId: 'dep-4',
     departamento: mockDepartamentos['dep-4'],
-    fechaIngreso: getDate(-5),
     fechaSolicitud: getDate(-5),
     fechaLimite: getDate(4),
     estado: 'awaiting_mayor_signature',
@@ -303,7 +296,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'comunidad',
     departamentoId: 'dep-3',
     departamento: mockDepartamentos['dep-3'],
-    fechaIngreso: getDate(-3),
     fechaSolicitud: getDate(-3),
     fechaLimite: getDate(6),
     estado: 'returned_to_department',
@@ -330,7 +322,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'salud',
     departamentoId: 'dep-1',
     departamento: mockDepartamentos['dep-1'],
-    fechaIngreso: getDate(-4),
     fechaSolicitud: getDate(-4),
     fechaLimite: getDate(8),
     estado: 'rejected_by_mayor_office',
@@ -357,7 +348,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'educacion',
     departamentoId: 'dep-5',
     departamento: mockDepartamentos['dep-5'],
-    fechaIngreso: getDate(-25),
     fechaSolicitud: getDate(-25),
     fechaLimite: getDate(15),
     estado: 'closed',
@@ -384,7 +374,6 @@ const mockSolicitudes: Solicitud[] = [
     categoria: 'familiar',
     departamentoId: 'dep-6',
     departamento: mockDepartamentos['dep-6'],
-    fechaIngreso: getDate(-2),
     fechaSolicitud: getDate(-2),
     fechaLimite: getDate(12),
     estado: 'assigned_to_department',
@@ -405,7 +394,6 @@ const mockSolicitudes: Solicitud[] = [
     solicitante: 'Comité Nuevo Amanecer',
     identificacion: 'COM-1012',
     categoria: 'comunidad',
-    fechaIngreso: getDate(-1),
     fechaSolicitud: getDate(-1),
     fechaLimite: getDate(20),
     estado: 'received',
@@ -822,8 +810,7 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
       categoria: solicitud.categoria,
       departamentoId: solicitud.departamentoId,
       departamento,
-      fechaIngreso: fechaSolicitud,
-      fechaSolicitud,
+      fechaSolicitud: fechaSolicitud,
       fechaLimite: solicitud.fechaLimite,
       solicitante: solicitud.solicitante,
       identificacion: solicitud.identificacion,
@@ -883,15 +870,15 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     }
 
     if (filters.fechaDesde) {
-      results = results.filter(s => s.fechaIngreso >= filters.fechaDesde!)
+      results = results.filter(s => s.fechaSolicitud >= filters.fechaDesde!)
     }
 
     if (filters.fechaHasta) {
-      results = results.filter(s => s.fechaIngreso <= filters.fechaHasta!)
+      results = results.filter(s => s.fechaSolicitud <= filters.fechaHasta!)
     }
 
     if (filters.ordenar === 'antiguo') {
-      return [...results].sort((a, b) => new Date(a.fechaIngreso).getTime() - new Date(b.fechaIngreso).getTime())
+      return [...results].sort((a, b) => new Date(a.fechaSolicitud).getTime() - new Date(b.fechaSolicitud).getTime())
     }
 
     if (filters.ordenar === 'nombre') {
@@ -899,7 +886,7 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     }
 
     if (filters.ordenar === 'reciente') {
-      return [...results].sort((a, b) => new Date(b.fechaIngreso).getTime() - new Date(a.fechaIngreso).getTime())
+      return [...results].sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
     }
 
     return ordenarPorFechaLimite(results)

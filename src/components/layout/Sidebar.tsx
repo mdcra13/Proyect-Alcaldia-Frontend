@@ -117,11 +117,12 @@ export default function Sidebar({
 
   const firstName =
     (user as any).nombre ??
-    user.name ??
+    user.nombre ??
     ''
 
   const lastName =
     (user as any).apellido ??
+    user.apellido ??
     ''
 
   const fullName =
