@@ -3,6 +3,7 @@ import { Bell, ChevronDown, LogOut, Menu, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
+import { ROLE_LABELS } from '@/lib/types'
 
 interface HeaderProps {
   title?: string
@@ -37,13 +38,10 @@ export default function Header({
   const notificationRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
+  const unreadNotifications = unreadCount()
   const fullName = user ? `${user.nombre} ${user.apellido}` : ''
-  const initials = fullName
-    .split(' ')
-    .filter(Boolean)
-    .map(namePart => namePart[0])
-    .join('')
-    .slice(0, 2)
+  const initials = `${user?.nombre?.[0] ?? ''}${user?.apellido?.[0] ?? ''}`.toUpperCase()
+  const roleLabel = user ? ROLE_LABELS[user.role] : ''
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,17 +65,15 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
-
   const handleProfileClick = () => {
     setShowUserMenu(false)
     navigate('/perfil')
   }
 
-  const unreadNotifications = unreadCount()
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
 
   return (
     <header className="layout-header">
@@ -174,24 +170,26 @@ export default function Header({
             </button>
 
             {showUserMenu && (
-              <div className="dropdown-panel w-52">
+              <div className="dropdown-panel w-56">
                 <div className="border-b border-border px-4 py-3">
                   <p className="truncate font-medium">{fullName}</p>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {user?.username}
-                  </p>
+                  <span className="mt-2 inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                    {roleLabel}
+                  </span>
                 </div>
 
-                <div className="py-1">
+                <div className="border-b border-border py-1">
                   <button
                     type="button"
                     onClick={handleProfileClick}
                     className="dropdown-item hover:bg-secondary"
                   >
                     <User className="h-4 w-4" />
-                    <span>Ver perfil</span>
+                    <span>Mi perfil</span>
                   </button>
+                </div>
 
+                <div className="py-1">
                   <button
                     type="button"
                     onClick={handleLogout}
