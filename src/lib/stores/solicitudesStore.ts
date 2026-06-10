@@ -500,7 +500,7 @@ function createHistorialEntry(
   motivo?: string
 ): HistorialEntry {
   return {
-    id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: crypto.randomUUID(),
     fecha: new Date().toISOString(),
     accion: estado,
     descripcion: buildHistorialDescripcion(estado, userName, departamentoNombre, motivo),
