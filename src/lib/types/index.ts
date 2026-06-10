@@ -141,7 +141,7 @@ export interface SolicitudFormData {
   titulo: string
   categoria: SolicitudCategoria | ''
   departamentoId?: string
-  fechaSolicitud: string
+  fechaEntrada: string
   fechaLimite: string
   solicitante: string
   identificacion: string
@@ -174,7 +174,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   departamento: 'Departamento',
   alcalde: 'Alcalde',
   it: 'Operador IT',
-}
+} as const
 
 export const PRIORIDAD_LABELS: Record<SolicitudPrioridad, string> = {
   LOW: 'Baja',

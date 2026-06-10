@@ -5,9 +5,9 @@ import type { User, UserStatus, UserFormData } from '@/lib/types'
 const mockUsers: User[] = [
   {
     id: '1',
-    name: 'Carlos Rodríguez',
+    nombre: 'Carlos Rodríguez',
     username: 'carlos',
-    email: 'alcalde@municipio.gov',
+    apellido: 'Rodríguez',
     role: 'alcalde',
     avatar: null,
     status: 'active',
@@ -15,9 +15,9 @@ const mockUsers: User[] = [
   },
   {
     id: '2',
-    name: 'María García',
+    nombre: 'María García',
     username: 'maria',
-    email: 'secretaria@municipio.gov',
+    apellido: 'García',
     role: 'secretaria',
     avatar: null,
     status: 'active',
