@@ -1,6 +1,8 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { getCurrentUser, login as loginRequest } from '@/lib/api'
 import type { Departamento, User, UserFormData, UserRole, UserStatus } from '@/lib/types'
+import type { AuthenticatedUser } from '@/lib/types/api'
 
 const mockDepartamentos: Record<string, Departamento> = {
   'dep-1': {
@@ -67,10 +69,12 @@ interface PasswordChangeResult {
 
 interface AuthState {
   user: User | null
+  accessToken: string | null
   isAuthenticated: boolean
   rememberSession: boolean
   users: User[]
   login: (username: string, password: string, remember: boolean) => LoginResult
+  loginWithApi: (email: string, password: string, remember: boolean) => Promise<LoginResult>
   logout: () => void
   updateUser: (userId: string, updates: Partial<User>) => void
   updateCurrentUser: (updates: Partial<User>) => void
@@ -82,10 +86,42 @@ interface AuthState {
   getUsersByDepartamento: (departamentoId: string) => User[]
 }
 
+function mapRole(roleName: string): UserRole {
+  const role = roleName.trim().toLowerCase()
+
+  if (role === 'recepcionista' || role === 'receptionist') return 'secretaria'
+  if (role === 'revisor' || role === 'officer') return 'departamento'
+  if (role === 'alcalde' || role === 'mayor') return 'alcalde'
+  return 'it'
+}
+
+function mapAuthenticatedUser(user: AuthenticatedUser): User {
+  return {
+    id: user.id,
+    nombre: user.firstName,
+    apellido: user.lastName,
+    username: user.email,
+    role: mapRole(user.role.name),
+    departamentoId: user.departmentId,
+    departamento: user.department
+      ? {
+          id: user.department.id,
+          nombre: user.department.name,
+          descripcion: user.department.description,
+          activo: user.department.isActive,
+        }
+      : undefined,
+    status: user.isActive ? 'active' : 'inactive',
+    avatar: null,
+    createdAt: user.createdAt,
+  }
+}
+
 const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      accessToken: null,
       isAuthenticated: false,
       rememberSession: false,
       users: mockUsers,
@@ -115,9 +151,38 @@ const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginWithApi: async (
+        email: string,
+        password: string,
+        remember: boolean,
+      ): Promise<LoginResult> => {
+        try {
+          const tokens = await loginRequest(email.trim(), password)
+          const currentUser = await getCurrentUser(tokens.access_token)
+
+          set({
+            user: mapAuthenticatedUser(currentUser),
+            accessToken: tokens.access_token,
+            isAuthenticated: true,
+            rememberSession: remember,
+          })
+
+          return { success: true }
+        } catch (error) {
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'No fue posible iniciar sesion.',
+          }
+        }
+      },
+
       logout: () => {
         set({
           user: null,
+          accessToken: null,
           isAuthenticated: false,
           rememberSession: false,
         })
@@ -232,14 +297,14 @@ const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => sessionStorage),
       partialize: state =>
-        state.rememberSession
-          ? {
-              user: state.user,
-              isAuthenticated: state.isAuthenticated,
-              rememberSession: state.rememberSession,
-            }
-          : {},
+        ({
+          user: state.user,
+          accessToken: state.accessToken,
+          isAuthenticated: state.isAuthenticated,
+          rememberSession: state.rememberSession,
+        }),
     },
   ),
 )
