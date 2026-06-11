@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Eye, EyeOff, User, Lock, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
 import type { LoginFormData } from '@/lib/types'
 
@@ -12,7 +12,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const login = useAuthStore(state => state.login)
+  const login = useAuthStore(state => state.loginWithApi)
 
   const {
     register,
@@ -20,7 +20,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     formState: { errors },
   } = useForm<LoginFormData>({
     defaultValues: {
-      username: '',
+      email: 'recepcionista@demo.local',
       password: '',
       remember: false,
     },
@@ -30,9 +30,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true)
     setLoginError(null)
 
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    const result = login(data.username, data.password, data.remember)
+    const result = await login(data.email, data.password, data.remember)
 
     if (result.success) {
       onLoginSuccess?.()
@@ -64,21 +62,28 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label htmlFor="username" className="sr-only">
-                Usuario
+              <label htmlFor="email" className="sr-only">
+                Correo electronico
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <input
-                  id="username"
-                  type="text"
-                  placeholder="Usuario"
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Correo electronico"
                   className="login-input pl-10 pr-4 focus:login-input-focus"
-                  {...register('username', { required: 'El usuario es requerido' })}
+                  {...register('email', {
+                    required: 'El correo es requerido',
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: 'Ingrese un correo valido',
+                    },
+                  })}
                 />
               </div>
-              {errors.username && (
-                <p className="mt-1 text-sm text-destructive">{errors.username.message}</p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>
               )}
             </div>
 
@@ -91,6 +96,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="Contraseña"
                   className="login-input pl-10 pr-12 focus:login-input-focus"
                   {...register('password', { required: 'La contraseña es requerida' })}

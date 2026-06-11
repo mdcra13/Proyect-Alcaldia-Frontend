@@ -7,7 +7,6 @@ import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { Solicitud } from '@/lib/types'
 
-
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -29,7 +28,6 @@ beforeAll(() => {
   })
 })
 
-
 function renderDashboard() {
   return render(
     <BrowserRouter>
@@ -41,16 +39,19 @@ function renderDashboard() {
 const mockSolicitud: Solicitud = {
   id: '1001',
   radicado: '#1001',
-  titulo: 'Solicitud de apoyo médico',
-  solicitante: 'Juan Pérez García',
+  titulo: 'Solicitud de apoyo medico',
+  solicitante: 'Juan Perez Garcia',
   identificacion: '12345678',
   categoria: 'salud',
-  fechaIngreso: '2024-03-15',
-  descripcion: 'Solicitud de apoyo para tratamiento médico especializado.',
-  estado: 'pendiente',
-  prioridad: 'alta',
-  subidoPor: 'María García',
+  fechaSolicitud: '2024-03-15',
+  fechaLimite: '2024-03-30',
+  descripcion: 'Solicitud de apoyo para tratamiento medico especializado.',
+  estado: 'received',
+  prioridad: 'HIGH',
+  subidoPor: 'Maria Garcia',
+  subidoPorId: '2',
   documento: 'solicitud_1001.pdf',
+  historial: [],
 }
 
 describe('AlcaldeDashboard', () => {
@@ -58,14 +59,15 @@ describe('AlcaldeDashboard', () => {
     useAuthStore.setState({
       user: {
         id: '1',
-        name: 'Carlos Rodríguez',
+        nombre: 'Carlos',
+        apellido: 'Rodriguez',
         username: 'carlos.rodriguez',
-        email: 'alcalde@municipio.gov',
         role: 'alcalde',
         avatar: null,
         status: 'active',
         createdAt: '2024-01-15',
       },
+      accessToken: null,
       isAuthenticated: true,
       rememberSession: false,
     })

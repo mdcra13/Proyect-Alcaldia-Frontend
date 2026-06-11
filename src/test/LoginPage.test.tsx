@@ -16,7 +16,7 @@ describe('LoginPage', () => {
     renderLoginPage()
 
     expect(screen.getByRole('heading', { name: /sistema de ayuda social/i })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/usuario/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/correo electronico/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/contraseña/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument()
   })

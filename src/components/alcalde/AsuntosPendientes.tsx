@@ -25,6 +25,7 @@ import Pagination from '@/components/shared/Pagination'
 import usePagination from '@/lib/hooks/usePagination'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
+import useAuthStore from '@/lib/stores/authStore'
 import { ESTADO_CONFIG } from '@/lib/types'
 import type {
   Solicitud,
@@ -133,6 +134,7 @@ export default function AsuntosPendientes() {
 
   const { search, aprobar } = useSolicitudesStore()
   const addNotification = useNotificationStore(state => state.addNotification)
+  const user = useAuthStore(state => state.user)
 
   const searchQuery = searchParams.get('q') ?? ''
   const fechaDesde = searchParams.get('desde') ?? ''
@@ -288,7 +290,11 @@ export default function AsuntosPendientes() {
   const handleApprove = () => {
     if (!approveSolicitud) return
 
-    aprobar(approveSolicitud.id)
+    aprobar(
+      approveSolicitud.id,
+      user?.id ?? 'system',
+      user ? `${user.nombre} ${user.apellido}` : 'Usuario',
+    )
     addNotification({
       message: `Solicitud ${approveSolicitud.radicado} aprobada exitosamente`,
       type: 'success',

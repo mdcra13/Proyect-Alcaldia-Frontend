@@ -54,7 +54,7 @@ export default function DocumentPreviewModal({
 
             <div>
               <p className="text-sm font-medium text-muted-foreground">Fecha</p>
-              <p className="font-semibold text-foreground">{solicitud.fechaIngreso}</p>
+              <p className="font-semibold text-foreground">{solicitud.fechaSolicitud}</p>
             </div>
 
             <div>

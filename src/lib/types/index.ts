@@ -122,10 +122,12 @@ export type CategoriesMap = Record<SolicitudCategoria, CategoryConfig>
 
 // Form types
 export interface LoginFormData {
-  username: string
+  email: string
   password: string
   remember: boolean
 }
+
+export type AppNotification = Notification
 
 export interface UserFormData {
   nombre: string
@@ -137,15 +139,13 @@ export interface UserFormData {
 }
 
 export interface SolicitudFormData {
-  titulo: string
-  categoria: SolicitudCategoria | ''
-  departamentoId?: string
-  fechaSolicitud: string
-  fechaLimite: string
-  solicitante: string
-  identificacion: string
-  descripcion: string
-  documento?: File | null
+  subject: string
+  categoryId: string
+  departmentId: string
+  applicantName: string
+  applicantContact: string
+  description: string
+  priority: 'Baja' | 'Media' | 'Alta' | 'Urgente'
 }
 
 export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<

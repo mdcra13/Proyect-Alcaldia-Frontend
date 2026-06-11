@@ -115,15 +115,8 @@ export default function Sidebar({
     ROLE_LABELS[user.role] ??
     user.role
 
-  const firstName =
-    (user as any).nombre ??
-    user.nombre ??
-    ''
-
-  const lastName =
-    (user as any).apellido ??
-    user.apellido ??
-    ''
+  const firstName = user.nombre ?? ''
+  const lastName = user.apellido ?? ''
 
   const fullName =
     `${firstName} ${lastName}`.trim()
@@ -200,9 +193,7 @@ export default function Sidebar({
               </p>
 
               <p className="text-sm text-white/70">
-                {(user as any)
-                  ?.departamento?.nombre ??
-                  roleLabel}
+                {user.departamento?.nombre ?? roleLabel}
               </p>
             </div>
           </div>
