@@ -1,3 +1,5 @@
+/* ========== UTILIDADES DASHBOARD ========== */
+
 @utility dashboard-section {
   margin-bottom: 1.5rem;
 }
@@ -47,10 +49,18 @@
   border-color: color-mix(in srgb, var(--destructive) 20%, transparent);
 }
 
+/* Icono a la derecha: el bloque de texto crece y empuja el icono al borde */
 @utility stat-card-inner {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+
+  & > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 }
 
 @utility stat-label {
@@ -110,7 +120,7 @@
 @utility dashboard-nav-card-content {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 @utility dashboard-nav-icon {
@@ -127,4 +137,55 @@
 @utility dashboard-nav-icon-green {
   background-color: color-mix(in srgb, var(--success) 10%, transparent);
   color: var(--success);
+}
+
+/* ---------- Sección "Notas próximas a vencer" ---------- */
+
+@utility dashboard-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+@utility dashboard-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary);
+  transition: opacity 150ms ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+@utility nota-urgente-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  transition: background-color 150ms ease;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+}
+
+/* ---------- Logo del sidebar (sin borde punteado, más grande) ---------- */
+/* OJO: si ya tienes .layout-sidebar-logo definida en otra parte de tu CSS,
+   reemplaza aquella por esta. No debe quedar declarada dos veces. */
+
+@utility layout-sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  /* sin border ni background: se elimina el recuadro punteado del placeholder */
 }
