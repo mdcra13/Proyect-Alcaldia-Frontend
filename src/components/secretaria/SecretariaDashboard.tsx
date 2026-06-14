@@ -1,4 +1,3 @@
-// src/components/secretaria/SecretariaDashboard.tsx
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -18,7 +17,6 @@ import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { SolicitudEstado } from '@/lib/types'
 
-// Estados que ya no requieren acción de la secretaria
 const ESTADOS_TERMINALES: SolicitudEstado[] = [
   'signed',
   'closed',
@@ -42,7 +40,6 @@ export function SecretariaDashboard() {
     [],
   )
 
-  // Solo las solicitudes registradas por la secretaria logueada
   const misSolicitudes = useMemo(
     () => solicitudes.filter((s) => s.subidoPorId === user?.id),
     [solicitudes, user?.id],
@@ -53,30 +50,23 @@ export function SecretariaDashboard() {
       misSolicitudes.filter((s) => estados.includes(s.estado)).length
     return {
       total: misSolicitudes.length,
-      // "Sin respuesta": recibidas, asignadas y en revisión
       sinRespuesta: contar('received', 'assigned_to_department', 'in_review'),
-      // "Aprobadas": firmadas por Alcaldía y cerradas
       aprobadas: contar('signed', 'closed'),
-      // "Declinadas": rechazadas por depto. o por Alcaldía
       declinadas: contar('rejected_by_department', 'rejected_by_mayor_office'),
     }
   }, [misSolicitudes])
 
   const activas = useMemo(
-    () =>
-      misSolicitudes.filter((s) => !ESTADOS_TERMINALES.includes(s.estado))
-        .length,
+    () => misSolicitudes.filter((s) => !ESTADOS_TERMINALES.includes(s.estado)).length,
     [misSolicitudes],
   )
 
-  // Las 5 notas más urgentes (fecha límite ascendente), sin importar el estado
   const proximasAVencer = useMemo(
     () =>
       [...misSolicitudes]
         .sort(
           (a, b) =>
-            new Date(a.fechaLimite).getTime() -
-            new Date(b.fechaLimite).getTime(),
+            new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime(),
         )
         .slice(0, 5),
     [misSolicitudes],
@@ -84,66 +74,63 @@ export function SecretariaDashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      {/* Saludo personalizado */}
       <div className="dashboard-section">
-        <h1 className="dashboard-title">
-          Hola, {user?.nombre ?? 'Secretaria'}
-        </h1>
+        <h1 className="dashboard-title">Hola, {user?.nombre ?? 'Secretaria'}</h1>
         <p className="dashboard-subtitle capitalize">{fechaHoy}</p>
       </div>
 
-      {/* Resumen rápido de estados */}
+      {/* Tarjetas con iconos forzados a la derecha */}
       <div className="dashboard-stats-grid">
         <div className="stat-card">
-          <div className="stat-card-inner">
+          <div className="flex justify-between items-start">
             <div>
               <p className="stat-label">Total</p>
               <p className="stat-value">{stats.total}</p>
             </div>
-            <div className="stat-icon">
+            <div className="stat-icon ml-5">
               <FileText className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         <div className="stat-card stat-card-amber">
-          <div className="stat-card-inner">
+          <div className="flex justify-between items-start">
             <div>
               <p className="stat-label">Sin respuesta</p>
               <p className="stat-value">{stats.sinRespuesta}</p>
             </div>
-            <div className="stat-icon stat-icon-amber">
+            <div className="stat-icon stat-icon-amber ml-5">
               <Clock className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         <div className="stat-card stat-card-green">
-          <div className="stat-card-inner">
+          <div className="flex justify-between items-start">
             <div>
               <p className="stat-label">Aprobadas</p>
               <p className="stat-value">{stats.aprobadas}</p>
             </div>
-            <div className="stat-icon stat-icon-green">
+            <div className="stat-icon stat-icon-green ml-5">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         <div className="stat-card stat-card-red">
-          <div className="stat-card-inner">
+          <div className="flex justify-between items-start">
             <div>
               <p className="stat-label">Declinadas</p>
               <p className="stat-value">{stats.declinadas}</p>
             </div>
-            <div className="stat-icon stat-icon-red">
+            <div className="stat-icon stat-icon-red ml-5">
               <XCircle className="h-5 w-5" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Cards de navegación grandes */}
+      {/* Botones de navegación (sin cambios) */}
       <div className="dashboard-nav-grid sm:grid-cols-2">
         <button
           type="button"
@@ -155,9 +142,7 @@ export function SecretariaDashboard() {
               <FileUp className="h-6 w-6" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-foreground">
-                Subir Documento
-              </h2>
+              <h2 className="text-lg font-semibold text-foreground">Subir Documento</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Registrar nueva solicitud ciudadana
               </p>
@@ -188,12 +173,10 @@ export function SecretariaDashboard() {
         </button>
       </div>
 
-      {/* Notas próximas a vencer */}
+      {/* Notas próximas a vencer (sin cambios) */}
       <div className="dashboard-section">
         <div className="dashboard-section-header">
-          <h2 className="text-lg font-semibold text-foreground">
-            Notas próximas a vencer
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Notas próximas a vencer</h2>
           <button
             type="button"
             onClick={() => navigate('/secretaria/notas')}
@@ -205,9 +188,7 @@ export function SecretariaDashboard() {
         </div>
 
         {proximasAVencer.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No tienes notas registradas.
-          </p>
+          <p className="text-sm text-muted-foreground">No tienes notas registradas.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {proximasAVencer.map((solicitud) => (
@@ -219,9 +200,7 @@ export function SecretariaDashboard() {
                   <span className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span className="font-mono">{solicitud.radicado}</span>
                     <span>·</span>
-                    <span>
-                      {solicitud.departamento?.nombre ?? 'Sin asignar'}
-                    </span>
+                    <span>{solicitud.departamento?.nombre ?? 'Sin asignar'}</span>
                   </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
