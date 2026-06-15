@@ -27,7 +27,7 @@ export function exportToCSV(solicitudes: Solicitud[], filename = 'solicitudes.cs
     s.radicado,
     s.solicitante,
     CATEGORIA_LABELS[s.categoria] ?? s.categoria,
-    s.fechaIngreso,
+    s.fechaSolicitud,
     s.subidoPor,
     ESTADO_LABELS[s.estado] ?? s.estado,
   ])
