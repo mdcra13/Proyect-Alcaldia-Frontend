@@ -7,7 +7,6 @@ import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { Solicitud } from '@/lib/types'
 
-
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -29,7 +28,6 @@ beforeAll(() => {
   })
 })
 
-
 function renderDashboard() {
   return render(
     <BrowserRouter>
@@ -42,15 +40,35 @@ const mockSolicitud: Solicitud = {
   id: '1001',
   radicado: '#1001',
   titulo: 'Solicitud de apoyo médico',
+  descripcion: 'Solicitud de apoyo para tratamiento médico especializado.',
   solicitante: 'Juan Pérez García',
   identificacion: '12345678',
   categoria: 'salud',
-  fechaIngreso: '2024-03-15',
-  descripcion: 'Solicitud de apoyo para tratamiento médico especializado.',
-  estado: 'pendiente',
-  prioridad: 'alta',
+  departamentoId: 'dep-1',
+  departamento: {
+    id: 'dep-1',
+    nombre: 'Salud',
+    descripcion: 'Departamento encargado de solicitudes relacionadas con salud.',
+    activo: true,
+  },
+  fechaSolicitud: '2024-03-15',
+  fechaLimite: '2024-03-25',
+  estado: 'awaiting_mayor_signature',
+  prioridad: 'HIGH',
   subidoPor: 'María García',
+  subidoPorId: '2',
   documento: 'solicitud_1001.pdf',
+  motivoRechazo: null,
+  historial: [
+    {
+      id: 'h-1001-1',
+      fecha: '2024-03-15',
+      accion: 'received',
+      descripcion: 'Solicitud registrada por María García',
+      usuario: 'María García',
+      usuarioId: '2',
+    },
+  ],
 }
 
 describe('AlcaldeDashboard', () => {
@@ -58,9 +76,9 @@ describe('AlcaldeDashboard', () => {
     useAuthStore.setState({
       user: {
         id: '1',
-        name: 'Carlos Rodríguez',
-        username: 'carlos.rodriguez',
-        email: 'alcalde@municipio.gov',
+        nombre: 'Carlos',
+        apellido: 'Rodríguez',
+        username: 'alcalde',
         role: 'alcalde',
         avatar: null,
         status: 'active',
@@ -69,37 +87,50 @@ describe('AlcaldeDashboard', () => {
       isAuthenticated: true,
       rememberSession: false,
     })
-  })
 
-  it('renders empty state when there are no solicitudes', () => {
     useSolicitudesStore.setState({
       solicitudes: [],
     })
+  })
 
+  it('renders empty urgent notes state when there are no solicitudes', () => {
     renderDashboard()
 
     expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: /no hay datos/i,
-      }),
+      screen.getByRole('heading', { name: /panel del alcalde/i }),
     ).toBeInTheDocument()
 
-    expect(screen.getByText(/no hay datos/i, { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText(/no hay notas pendientes/i)).toBeInTheDocument()
   })
 
-  it('renders dashboard when there are solicitudes', () => {
+  it('renders dashboard metrics when there are solicitudes', () => {
     useSolicitudesStore.setState({
       solicitudes: [mockSolicitud],
     })
 
     renderDashboard()
 
-    expect(screen.getByRole('heading', { name: /bienvenido/i })).toBeInTheDocument()
-    expect(screen.getByText('Total Solicitudes')).toBeInTheDocument()
-    expect(screen.getAllByText('Pendientes').length).toBeGreaterThan(0)
-    expect(screen.getByText('Aprobadas')).toBeInTheDocument()
-    expect(screen.getByText('Declinadas')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /panel del alcalde/i }),
+    ).toBeInTheDocument()
+
+    expect(screen.getByText(/total notas/i)).toBeInTheDocument()
+    expect(screen.getByText(/pendientes de firma/i)).toBeInTheDocument()
+    expect(screen.getByText(/firmadas/i)).toBeInTheDocument()
+    expect(screen.getByText(/devueltas/i)).toBeInTheDocument()
+    expect(screen.getByText(/cerradas/i)).toBeInTheDocument()
+  })
+
+  it('renders urgent notes list when there are solicitudes awaiting mayor signature', () => {
+    useSolicitudesStore.setState({
+      solicitudes: [mockSolicitud],
+    })
+
+    renderDashboard()
+
+    expect(screen.getByText('Solicitud de apoyo médico')).toBeInTheDocument()
+    expect(screen.getByText('#1001')).toBeInTheDocument()
+    expect(screen.getAllByText('Salud').length).toBeGreaterThan(0)
   })
 
   it('has no basic accessibility violations', async () => {
