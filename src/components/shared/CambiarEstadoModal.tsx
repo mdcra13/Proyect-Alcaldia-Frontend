@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { RefreshCw, PenLine, CornerDownLeft, XCircle, X } from 'lucide-react'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
@@ -21,6 +21,11 @@ const ESTADOS_CON_MOTIVO: SolicitudEstado[] = [
 ]
 
 const MOTIVO_MIN_LENGTH = 10
+
+function getValidTransitions(estado: SolicitudEstado, role?: string): SolicitudEstado[] {
+  if (role === 'alcalde') return ESTADO_TRANSITIONS_ALCALDE[estado] ?? []
+  return ESTADO_TRANSITIONS_DEPARTAMENTO[estado] ?? []
+}
 
 function getHeaderConfig(estado: SolicitudEstado | '') {
   if (estado === 'signed') return { icon: PenLine, label: 'Firmar Solicitud', color: 'text-success' }
@@ -49,12 +54,7 @@ export function CambiarEstadoModal({
     }
   }, [open, presetEstado])
 
-  const validTransitions = useMemo(() => {
-    if (user?.role === 'alcalde') {
-      return ESTADO_TRANSITIONS_ALCALDE[solicitud.estado] || []
-    }
-    return ESTADO_TRANSITIONS_DEPARTAMENTO[solicitud.estado] || []
-  }, [solicitud.estado, user?.role])
+  const validTransitions = getValidTransitions(solicitud.estado, user?.role)
 
   const isSign = selectedEstado === 'signed'
   const isMotivoRequired = !!selectedEstado && ESTADOS_CON_MOTIVO.includes(selectedEstado as SolicitudEstado)
@@ -96,6 +96,8 @@ export function CambiarEstadoModal({
   const HeaderIcon = headerConfig.icon
 
   const isPreset = !!presetEstado
+  const noTransitions = !isPreset && validTransitions.length === 0
+  const isSubmitDisabled = isSubmitting || !isValid || noTransitions
 
   if (!open) return null
 
@@ -138,7 +140,7 @@ export function CambiarEstadoModal({
             </div>
           </div>
 
-          {!isPreset && validTransitions.length === 0 ? (
+          {noTransitions ? (
             <div className="rounded-lg bg-muted p-4 text-center text-sm text-muted-foreground">
               No hay transiciones disponibles para el estado actual.
             </div>
@@ -222,7 +224,7 @@ export function CambiarEstadoModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !isValid || (!isPreset && validTransitions.length === 0)}
+            disabled={isSubmitDisabled}
             className={isSign ? 'modal-btn-success' : 'modal-btn-primary'}
           >
             {isSubmitting
