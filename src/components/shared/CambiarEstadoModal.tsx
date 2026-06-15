@@ -22,6 +22,13 @@ const ESTADOS_CON_MOTIVO: SolicitudEstado[] = [
 
 const MOTIVO_MIN_LENGTH = 10
 
+function getHeaderConfig(estado: SolicitudEstado | '') {
+  if (estado === 'signed') return { icon: PenLine, label: 'Firmar Solicitud', color: 'text-success' }
+  if (estado === 'returned_to_department') return { icon: CornerDownLeft, label: 'Devolver a Departamento', color: 'text-warning' }
+  if (estado === 'rejected_by_mayor_office' || estado === 'rejected_by_department') return { icon: XCircle, label: 'Rechazar Solicitud', color: 'text-destructive' }
+  return { icon: RefreshCw, label: 'Cambiar Estado', color: 'text-primary' }
+}
+
 export function CambiarEstadoModal({
   solicitud,
   open,
@@ -85,12 +92,7 @@ export function CambiarEstadoModal({
     onOpenChange(false)
   }
 
-  const headerConfig = (() => {
-    if (isSign) return { icon: PenLine, label: 'Firmar Solicitud', color: 'text-success' }
-    if (selectedEstado === 'returned_to_department') return { icon: CornerDownLeft, label: 'Devolver a Departamento', color: 'text-warning' }
-    if (selectedEstado === 'rejected_by_mayor_office' || selectedEstado === 'rejected_by_department') return { icon: XCircle, label: 'Rechazar Solicitud', color: 'text-destructive' }
-    return { icon: RefreshCw, label: 'Cambiar Estado', color: 'text-primary' }
-  })()
+  const headerConfig = getHeaderConfig(selectedEstado)
   const HeaderIcon = headerConfig.icon
 
   const isPreset = !!presetEstado
