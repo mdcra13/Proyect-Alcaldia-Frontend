@@ -299,14 +299,22 @@ export default function SubirDocumento() {
               
               {!file ? (
                 <div
-                  onDrop={handleDrop}
-                  onDragOver={e => e.preventDefault()}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`
-                    border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                    ${fileError ? 'border-destructive bg-destructive/5' : 'border-input hover:border-primary hover:bg-primary/5'}
-                  `}
-                >
+                    role="button"
+                    tabIndex={0}
+                    onDrop={handleDrop}
+                    onDragOver={e => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    className={`
+                      border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary
+                      ${fileError ? 'border-destructive bg-destructive/5' : 'border-input hover:border-primary hover:bg-primary/5'}
+                    `}
+                  >
                   <input
                     ref={fileInputRef}
                     type="file"
