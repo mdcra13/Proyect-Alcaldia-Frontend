@@ -36,7 +36,7 @@ function renderDashboard() {
   )
 }
 
-const mockSolicitud: Solicitud = {
+const mockSolicitudAlcalde: Solicitud = {
   id: '1001',
   radicado: '#1001',
   titulo: 'Solicitud de apoyo médico',
@@ -71,6 +71,14 @@ const mockSolicitud: Solicitud = {
   ],
 }
 
+const mockSolicitudDepartamento: Solicitud = {
+  ...mockSolicitudAlcalde,
+  id: '1002',
+  radicado: '#1002',
+  titulo: 'Solicitud todavía en departamento',
+  estado: 'in_review',
+}
+
 describe('AlcaldeDashboard', () => {
   beforeEach(() => {
     useAuthStore.setState({
@@ -93,19 +101,19 @@ describe('AlcaldeDashboard', () => {
     })
   })
 
-  it('renders empty urgent notes state when there are no solicitudes', () => {
+  it('renders empty urgent notes state when there are no solicitudes for mayor', () => {
     renderDashboard()
 
     expect(
       screen.getByRole('heading', { name: /panel del alcalde/i }),
     ).toBeInTheDocument()
 
-    expect(screen.getByText(/no hay notas pendientes/i)).toBeInTheDocument()
+    expect(screen.getByText(/no hay notas pendientes de firma/i)).toBeInTheDocument()
   })
 
-  it('renders dashboard metrics when there are solicitudes', () => {
+  it('renders dashboard metrics using only mayor visible solicitudes', () => {
     useSolicitudesStore.setState({
-      solicitudes: [mockSolicitud],
+      solicitudes: [mockSolicitudAlcalde, mockSolicitudDepartamento],
     })
 
     renderDashboard()
@@ -115,15 +123,18 @@ describe('AlcaldeDashboard', () => {
     ).toBeInTheDocument()
 
     expect(screen.getByText(/total notas/i)).toBeInTheDocument()
-    expect(screen.getByText(/pendientes de firma/i)).toBeInTheDocument()
-    expect(screen.getByText(/firmadas/i)).toBeInTheDocument()
-    expect(screen.getByText(/devueltas/i)).toBeInTheDocument()
-    expect(screen.getByText(/cerradas/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/pendientes de firma/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/firmadas/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/devueltas/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/cerradas/i).length).toBeGreaterThan(0)
+
+    expect(screen.getByText('Solicitud de apoyo médico')).toBeInTheDocument()
+    expect(screen.queryByText('Solicitud todavía en departamento')).not.toBeInTheDocument()
   })
 
   it('renders urgent notes list when there are solicitudes awaiting mayor signature', () => {
     useSolicitudesStore.setState({
-      solicitudes: [mockSolicitud],
+      solicitudes: [mockSolicitudAlcalde],
     })
 
     renderDashboard()
@@ -135,7 +146,7 @@ describe('AlcaldeDashboard', () => {
 
   it('has no basic accessibility violations', async () => {
     useSolicitudesStore.setState({
-      solicitudes: [mockSolicitud],
+      solicitudes: [mockSolicitudAlcalde],
     })
 
     const { container } = renderDashboard()
