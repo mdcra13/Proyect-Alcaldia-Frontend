@@ -16,6 +16,7 @@ import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
+import { filterSolicitudes } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import {
@@ -59,96 +60,25 @@ export default function SeguimientoSolicitudes() {
   }
 
   const filteredSolicitudes = useMemo(() => {
-    let results = [...solicitudes]
-
-    if (filters.searchQuery.trim()) {
-      const query = filters.searchQuery.toLowerCase()
-
-      results = results.filter(solicitud =>
-        solicitud.radicado.toLowerCase().includes(query) ||
-        solicitud.titulo.toLowerCase().includes(query) ||
-        solicitud.solicitante.toLowerCase().includes(query) ||
-        solicitud.identificacion.toLowerCase().includes(query)
-      )
-    }
-
-    if (filters.estado !== 'todos') {
-      if (filters.estado === 'pendientes') {
-        results = results.filter(solicitud =>
-          ['received', 'assigned_to_department', 'in_review'].includes(
-            solicitud.estado
-          )
-        )
-      } else if (filters.estado === 'en_proceso') {
-        results = results.filter(solicitud =>
-          [
-            'assigned_to_department',
-            'in_review',
-            'approved_by_department',
-            'awaiting_mayor_signature',
-            'returned_to_department',
-          ].includes(solicitud.estado)
-        )
-      } else if (filters.estado === 'aprobado') {
-        results = results.filter(solicitud =>
-          [
-            'approved_by_department',
-            'awaiting_mayor_signature',
-            'signed',
-            'closed',
-          ].includes(solicitud.estado)
-        )
-      } else if (filters.estado === 'declinado') {
-        results = results.filter(solicitud =>
-          ['rejected_by_department', 'rejected_by_mayor_office'].includes(
-            solicitud.estado
-          )
-        )
-      } else {
-        results = results.filter(solicitud => solicitud.estado === filters.estado)
-      }
-    }
-
-    if (filters.departamento !== 'todos') {
-      results = results.filter(
-        solicitud => solicitud.departamentoId === filters.departamento
-      )
-    }
-
-    if (filters.categoria !== 'todos') {
-      results = results.filter(solicitud => solicitud.categoria === filters.categoria)
-    }
-
-    if (filters.prioridad !== 'todos') {
-      results = results.filter(solicitud => solicitud.prioridad === filters.prioridad)
-    }
-
-    if (filters.fechaDesde) {
-      results = results.filter(
-        solicitud => solicitud.fechaSolicitud >= filters.fechaDesde
-      )
-    }
-
-    if (filters.fechaHasta) {
-      results = results.filter(
-        solicitud => solicitud.fechaSolicitud <= filters.fechaHasta
-      )
-    }
-
-    return [...results].sort(
-      (a, b) =>
-        new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime()
-    )
-  }, [
-    solicitudes,
-    filters.searchQuery,
-    filters.estado,
-    filters.departamento,
-    filters.categoria,
-    filters.prioridad,
-    filters.fechaDesde,
-    filters.fechaHasta,
-  ])
+  return filterSolicitudes(solicitudes, {
+    searchQuery: filters.searchQuery,
+    estado: filters.estado,
+    departamento: filters.departamento,
+    categoria: filters.categoria,
+    prioridad: filters.prioridad,
+    fechaDesde: filters.fechaDesde,
+    fechaHasta: filters.fechaHasta,
+  })
+}, [
+  solicitudes,
+  filters.searchQuery,
+  filters.estado,
+  filters.departamento,
+  filters.categoria,
+  filters.prioridad,
+  filters.fechaDesde,
+  filters.fechaHasta,
+])
 
   const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
   const safeCurrentPage = Math.min(Math.max(filters.currentPage, 1), totalPages)
