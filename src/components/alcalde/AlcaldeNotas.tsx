@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   Building2,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -30,7 +29,6 @@ import {
 const ITEMS_PER_PAGE = 10
 
 const ALCALDE_VISIBLE_ESTADOS: SolicitudEstado[] = [
-  'approved_by_department',
   'awaiting_mayor_signature',
   'signed',
 ]
@@ -77,9 +75,7 @@ export default function AlcaldeNotas() {
       next.set(key, value)
     }
 
-    if (key !== 'page') {
-      next.delete('page')
-    }
+    if (key !== 'page') next.delete('page')
 
     setSearchParams(next)
   }
@@ -146,6 +142,7 @@ export default function AlcaldeNotas() {
 
   const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
   const safeCurrentPage = Math.min(currentPage, totalPages)
+
   const paginatedSolicitudes = filteredSolicitudes.slice(
     (safeCurrentPage - 1) * ITEMS_PER_PAGE,
     safeCurrentPage * ITEMS_PER_PAGE
@@ -175,21 +172,13 @@ export default function AlcaldeNotas() {
   }
 
   const handlePreviewApprove = () => {
-    if (!selectedSolicitud) return
+    if (!selectedSolicitud || selectedSolicitud.estado !== 'awaiting_mayor_signature') return
     setShowPreviewModal(false)
-
-    if (selectedSolicitud.estado === 'approved_by_department') {
-      handleAlcaldeAction(selectedSolicitud, 'awaiting_mayor_signature')
-      return
-    }
-
-    if (selectedSolicitud.estado === 'awaiting_mayor_signature') {
-      handleAlcaldeAction(selectedSolicitud, 'signed')
-    }
+    handleAlcaldeAction(selectedSolicitud, 'signed')
   }
 
   const handlePreviewDecline = () => {
-    if (!selectedSolicitud || selectedSolicitud.estado === 'signed') return
+    if (!selectedSolicitud || selectedSolicitud.estado !== 'awaiting_mayor_signature') return
     setShowPreviewModal(false)
     handleAlcaldeAction(selectedSolicitud, 'returned_to_department')
   }
@@ -202,7 +191,7 @@ export default function AlcaldeNotas() {
             Listado de Notas
           </h1>
           <p className="text-sm text-muted-foreground">
-            {filteredSolicitudes.length} de {baseSolicitudes.length} notas aprobadas por departamento
+            {filteredSolicitudes.length} de {baseSolicitudes.length} notas en revisión de Alcaldía
           </p>
         </div>
 
@@ -337,16 +326,12 @@ export default function AlcaldeNotas() {
                 {paginatedSolicitudes.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                      No hay notas aprobadas por departamento con los filtros seleccionados.
+                      No hay notas para Alcaldía con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
                   paginatedSolicitudes.map((solicitud) => {
-                    const canApprove = solicitud.estado === 'approved_by_department'
-                    const canReturn =
-                      solicitud.estado === 'approved_by_department' ||
-                      solicitud.estado === 'awaiting_mayor_signature'
-                    const canSign = solicitud.estado === 'awaiting_mayor_signature'
+                    const canAct = solicitud.estado === 'awaiting_mayor_signature'
                     const isSigned = solicitud.estado === 'signed'
 
                     return (
@@ -398,23 +383,8 @@ export default function AlcaldeNotas() {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                handleAlcaldeAction(solicitud, 'awaiting_mayor_signature')
-                              }
-                              disabled={!canApprove}
-                              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-                              title="Aprobar solicitud"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span className="hidden xl:inline">Aprobar</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleAlcaldeAction(solicitud, 'returned_to_department')
-                              }
-                              disabled={!canReturn}
+                              onClick={() => handleAlcaldeAction(solicitud, 'returned_to_department')}
+                              disabled={!canAct}
                               className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
                               title="Rechazar y devolver al departamento"
                             >
@@ -425,11 +395,11 @@ export default function AlcaldeNotas() {
                             <button
                               type="button"
                               onClick={() => handleAlcaldeAction(solicitud, 'signed')}
-                              disabled={!canSign}
+                              disabled={!canAct}
                               className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
                                 isSigned
                                   ? 'cursor-not-allowed bg-gray-200 text-gray-600'
-                                  : canSign
+                                  : canAct
                                     ? 'bg-orange-500 text-white hover:bg-orange-600'
                                     : 'cursor-not-allowed bg-gray-100 text-gray-500'
                               }`}

@@ -159,8 +159,11 @@ export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<
 export const ESTADO_TRANSITIONS_ALCALDE: Partial<
   Record<SolicitudEstado, SolicitudEstado[]>
 > = {
-  approved_by_department: ['awaiting_mayor_signature', 'returned_to_department'],
-  awaiting_mayor_signature: ['signed', 'returned_to_department'],
+  awaiting_mayor_signature: [
+    'signed',
+    'returned_to_department',
+    'rejected_by_mayor_office',
+  ],
   signed: ['closed'],
 }
 
