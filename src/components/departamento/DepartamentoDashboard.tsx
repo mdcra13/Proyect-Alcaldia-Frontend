@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { Building2, CheckCircle2, Clock, FileText, XCircle } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
@@ -22,6 +23,30 @@ const ESTADOS_RECHAZADAS_DEPTO: SolicitudEstado[] = [
   'rejected_by_department',
   'rejected_by_mayor_office',
 ]
+
+interface StatCardProps {
+  label: string
+  value: number
+  icon: LucideIcon
+  cardVariant?: string
+  iconVariant?: string
+}
+
+function StatCard({ label, value, icon: Icon, cardVariant = '', iconVariant = '' }: StatCardProps) {
+  return (
+    <div className={`stat-card ${cardVariant} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}>
+      <div className="flex items-center justify-between w-full h-full">
+        <div className="flex-1">
+          <p className="stat-label uppercase">{label}</p>
+          <p className="stat-value">{value}</p>
+        </div>
+        <div className={`stat-icon ${iconVariant} ml-auto`}>
+          <Icon className="h-7 w-7" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function DepartamentoDashboard() {
   const user = useAuthStore(state => state.user)
@@ -78,53 +103,10 @@ export default function DepartamentoDashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          <div className="stat-card stat-card-amber transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-center justify-between w-full h-full">
-              <div className="flex-1">
-                <p className="stat-label uppercase">Notas Pendientes</p>
-                <p className="stat-value">{stats.pendientes}</p>
-              </div>
-              <div className="stat-icon stat-icon-amber ml-auto">
-                <Clock className="h-7 w-7" />
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-center justify-between w-full h-full">
-              <div className="flex-1">
-                <p className="stat-label uppercase">Total Recibidas</p>
-                <p className="stat-value">{stats.total}</p>
-              </div>
-              <div className="stat-icon ml-auto">
-                <FileText className="h-7 w-7" />
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card-green transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-center justify-between w-full h-full">
-              <div className="flex-1">
-                <p className="stat-label uppercase">Aprobadas</p>
-                <p className="stat-value">{stats.aprobadas}</p>
-              </div>
-              <div className="stat-icon stat-icon-green ml-auto">
-                <CheckCircle2 className="h-7 w-7" />
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card stat-card-red transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-center justify-between w-full h-full">
-              <div className="flex-1">
-                <p className="stat-label uppercase">Rechazadas</p>
-                <p className="stat-value">{stats.rechazadas}</p>
-              </div>
-              <div className="stat-icon stat-icon-red ml-auto">
-                <XCircle className="h-7 w-7" />
-              </div>
-            </div>
-          </div>
+          <StatCard label="Notas Pendientes" value={stats.pendientes} icon={Clock}        cardVariant="stat-card-amber" iconVariant="stat-icon-amber" />
+          <StatCard label="Total Recibidas"  value={stats.total}      icon={FileText} />
+          <StatCard label="Aprobadas"        value={stats.aprobadas}  icon={CheckCircle2} cardVariant="stat-card-green" iconVariant="stat-icon-green" />
+          <StatCard label="Rechazadas"       value={stats.rechazadas} icon={XCircle}      cardVariant="stat-card-red"   iconVariant="stat-icon-red" />
         </div>
       </div>
     </AppLayout>
