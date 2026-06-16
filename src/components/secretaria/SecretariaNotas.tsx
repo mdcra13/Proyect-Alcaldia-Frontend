@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import {
   Building2,
   ChevronLeft,
   ChevronRight,
   Download,
   Eye,
-  Filter,
-  Search,
   X,
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
+import SolicitudFiltersPanel from '@/components/shared/SolicitudFiltersPanel'
 import { CambiarDepartamentoModal } from '@/components/shared/CambiarDepartamentoModal'
 import { EstadoBadge } from '@/components/shared/EstadoBadge'
 import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
 import { HistorialTimeline } from '@/components/shared/HistorialTimeline'
+import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
@@ -22,10 +21,7 @@ import {
   ESTADO_CONFIG,
   PRIORIDAD_LABELS,
   type Solicitud,
-  type SolicitudCategoria,
   type SolicitudEstado,
-  type SolicitudEstadoFiltro,
-  type SolicitudPrioridad,
 } from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
@@ -36,20 +32,6 @@ const ESTADOS_FINALES: SolicitudEstado[] = [
   'signed',
   'closed',
 ]
-
-type FilterKey =
-  | 'q'
-  | 'estado'
-  | 'departamento'
-  | 'categoria'
-  | 'prioridad'
-  | 'desde'
-  | 'hasta'
-  | 'page'
-
-function getParam(searchParams: URLSearchParams, key: FilterKey, fallback = 'todos') {
-  return searchParams.get(key) || fallback
-}
 
 function downloadCSV(filename: string, rows: string[][]) {
   const escapeCell = (cell: string) => {
@@ -70,7 +52,7 @@ function downloadCSV(filename: string, rows: string[][]) {
 }
 
 export default function SecretariaNotas() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const filters = useSolicitudFilters()
   const { user } = useAuthStore()
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
   const getDepartamentosActivos = useDepartamentosStore(
@@ -82,39 +64,6 @@ export default function SecretariaNotas() {
   const [showChangeDeptModal, setShowChangeDeptModal] = useState(false)
 
   const departamentos = getDepartamentosActivos()
-
-  const searchQuery = searchParams.get('q') || ''
-  const estadoFilter = getParam(searchParams, 'estado') as SolicitudEstadoFiltro
-  const departamentoFilter = getParam(searchParams, 'departamento')
-  const categoriaFilter = getParam(searchParams, 'categoria') as
-    | SolicitudCategoria
-    | 'todos'
-  const prioridadFilter = getParam(searchParams, 'prioridad') as
-    | SolicitudPrioridad
-    | 'todos'
-  const fechaDesde = searchParams.get('desde') || ''
-  const fechaHasta = searchParams.get('hasta') || ''
-  const currentPage = Number(searchParams.get('page') || '1')
-
-  const updateFilter = (key: FilterKey, value: string) => {
-    const next = new URLSearchParams(searchParams)
-
-    if (!value || value === 'todos') {
-      next.delete(key)
-    } else {
-      next.set(key, value)
-    }
-
-    if (key !== 'page') {
-      next.delete('page')
-    }
-
-    setSearchParams(next)
-  }
-
-  const clearFilters = () => {
-    setSearchParams({})
-  }
 
   const getDepartamentoNombre = (departamentoId?: string) => {
     if (!departamentoId) return 'Sin asignar'
@@ -129,8 +78,8 @@ export default function SecretariaNotas() {
 
     let results = solicitudes.filter(solicitud => solicitud.subidoPorId === user.id)
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+    if (filters.searchQuery.trim()) {
+      const query = filters.searchQuery.toLowerCase()
 
       results = results.filter(
         solicitud =>
@@ -141,14 +90,14 @@ export default function SecretariaNotas() {
       )
     }
 
-    if (estadoFilter !== 'todos') {
-      if (estadoFilter === 'pendientes') {
+    if (filters.estado !== 'todos') {
+      if (filters.estado === 'pendientes') {
         results = results.filter(solicitud =>
           ['received', 'assigned_to_department', 'in_review'].includes(
             solicitud.estado
           )
         )
-      } else if (estadoFilter === 'en_proceso') {
+      } else if (filters.estado === 'en_proceso') {
         results = results.filter(solicitud =>
           [
             'assigned_to_department',
@@ -158,7 +107,7 @@ export default function SecretariaNotas() {
             'returned_to_department',
           ].includes(solicitud.estado)
         )
-      } else if (estadoFilter === 'aprobado') {
+      } else if (filters.estado === 'aprobado') {
         results = results.filter(solicitud =>
           [
             'approved_by_department',
@@ -167,37 +116,41 @@ export default function SecretariaNotas() {
             'closed',
           ].includes(solicitud.estado)
         )
-      } else if (estadoFilter === 'declinado') {
+      } else if (filters.estado === 'declinado') {
         results = results.filter(solicitud =>
           ['rejected_by_department', 'rejected_by_mayor_office'].includes(
             solicitud.estado
           )
         )
       } else {
-        results = results.filter(solicitud => solicitud.estado === estadoFilter)
+        results = results.filter(solicitud => solicitud.estado === filters.estado)
       }
     }
 
-    if (departamentoFilter !== 'todos') {
+    if (filters.departamento !== 'todos') {
       results = results.filter(
-        solicitud => solicitud.departamentoId === departamentoFilter
+        solicitud => solicitud.departamentoId === filters.departamento
       )
     }
 
-    if (categoriaFilter !== 'todos') {
-      results = results.filter(solicitud => solicitud.categoria === categoriaFilter)
+    if (filters.categoria !== 'todos') {
+      results = results.filter(solicitud => solicitud.categoria === filters.categoria)
     }
 
-    if (prioridadFilter !== 'todos') {
-      results = results.filter(solicitud => solicitud.prioridad === prioridadFilter)
+    if (filters.prioridad !== 'todos') {
+      results = results.filter(solicitud => solicitud.prioridad === filters.prioridad)
     }
 
-    if (fechaDesde) {
-      results = results.filter(solicitud => solicitud.fechaSolicitud >= fechaDesde)
+    if (filters.fechaDesde) {
+      results = results.filter(
+        solicitud => solicitud.fechaSolicitud >= filters.fechaDesde
+      )
     }
 
-    if (fechaHasta) {
-      results = results.filter(solicitud => solicitud.fechaSolicitud <= fechaHasta)
+    if (filters.fechaHasta) {
+      results = results.filter(
+        solicitud => solicitud.fechaSolicitud <= filters.fechaHasta
+      )
     }
 
     return [...results].sort(
@@ -207,33 +160,21 @@ export default function SecretariaNotas() {
   }, [
     user,
     solicitudes,
-    searchQuery,
-    estadoFilter,
-    departamentoFilter,
-    categoriaFilter,
-    prioridadFilter,
-    fechaDesde,
-    fechaHasta,
+    filters.searchQuery,
+    filters.estado,
+    filters.departamento,
+    filters.categoria,
+    filters.prioridad,
+    filters.fechaDesde,
+    filters.fechaHasta,
   ])
 
   const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
-  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
+  const safeCurrentPage = Math.min(Math.max(filters.currentPage, 1), totalPages)
   const paginatedSolicitudes = filteredSolicitudes.slice(
     (safeCurrentPage - 1) * ITEMS_PER_PAGE,
     safeCurrentPage * ITEMS_PER_PAGE
   )
-
-  const activeFiltersCount = [
-    searchQuery,
-    estadoFilter !== 'todos',
-    departamentoFilter !== 'todos',
-    categoriaFilter !== 'todos',
-    prioridadFilter !== 'todos',
-    fechaDesde,
-    fechaHasta,
-  ].filter(Boolean).length
-
-  const hasActiveFilters = activeFiltersCount > 0
 
   const handleExportCSV = () => {
     const headers = [
@@ -306,151 +247,21 @@ export default function SecretariaNotas() {
           </button>
         </div>
 
-        <section className="rounded-xl border border-border bg-card p-4">
-          <div className="mb-4 flex items-center gap-2">
-            <Filter className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Filtros</h3>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="relative lg:col-span-2">
-              <label htmlFor="notas-search" className="sr-only">
-                Buscar notas
-              </label>
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                id="notas-search"
-                type="text"
-                placeholder="Buscar por radicado, título, solicitante o identificación..."
-                value={searchQuery}
-                onChange={event => updateFilter('q', event.target.value)}
-                className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="notas-estado-filter" className="sr-only">
-                Filtrar por estado
-              </label>
-              <select
-                id="notas-estado-filter"
-                value={estadoFilter}
-                onChange={event => updateFilter('estado', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="todos">Todos los estados</option>
-                <option value="pendientes">Pendientes</option>
-                <option value="en_proceso">En proceso</option>
-                <option value="aprobado">Aprobadas</option>
-                <option value="declinado">Declinadas</option>
-                {Object.entries(ESTADO_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>
-                    {config.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="notas-departamento-filter" className="sr-only">
-                Filtrar por departamento
-              </label>
-              <select
-                id="notas-departamento-filter"
-                value={departamentoFilter}
-                onChange={event => updateFilter('departamento', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="todos">Todos los departamentos</option>
-                {departamentos.map(departamento => (
-                  <option key={departamento.id} value={departamento.id}>
-                    {departamento.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="notas-categoria-filter" className="sr-only">
-                Filtrar por categoría
-              </label>
-              <select
-                id="notas-categoria-filter"
-                value={categoriaFilter}
-                onChange={event => updateFilter('categoria', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="todos">Todas las categorías</option>
-                {Object.entries(CATEGORIES).map(([key, category]) => (
-                  <option key={key} value={key}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="notas-prioridad-filter" className="sr-only">
-                Filtrar por prioridad
-              </label>
-              <select
-                id="notas-prioridad-filter"
-                value={prioridadFilter}
-                onChange={event => updateFilter('prioridad', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="todos">Todas las prioridades</option>
-                {Object.entries(PRIORIDAD_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="notas-fecha-desde" className="sr-only">
-                Fecha desde
-              </label>
-              <input
-                id="notas-fecha-desde"
-                type="date"
-                value={fechaDesde}
-                onChange={event => updateFilter('desde', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="notas-fecha-hasta" className="sr-only">
-                Fecha hasta
-              </label>
-              <input
-                id="notas-fecha-hasta"
-                type="date"
-                value={fechaHasta}
-                onChange={event => updateFilter('hasta', event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          {hasActiveFilters && (
-            <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-3">
-              <p className="text-sm text-muted-foreground">
-                Hay {activeFiltersCount} filtro(s) activo(s).
-              </p>
-
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-secondary"
-              >
-                Limpiar filtros
-              </button>
-            </div>
-          )}
-        </section>
+        <SolicitudFiltersPanel
+          idPrefix="secretaria-notas"
+          departamentos={departamentos}
+          searchQuery={filters.searchQuery}
+          estado={filters.estado}
+          departamento={filters.departamento}
+          categoria={filters.categoria}
+          prioridad={filters.prioridad}
+          fechaDesde={filters.fechaDesde}
+          fechaHasta={filters.fechaHasta}
+          activeFiltersCount={filters.activeFiltersCount}
+          hasActiveFilters={filters.hasActiveFilters}
+          updateFilter={filters.updateFilter}
+          clearFilters={filters.clearFilters}
+        />
 
         <div className="rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
@@ -594,7 +405,7 @@ export default function SecretariaNotas() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => updateFilter('page', String(safeCurrentPage - 1))}
+                  onClick={() => filters.updateFilter('page', String(safeCurrentPage - 1))}
                   disabled={safeCurrentPage === 1}
                   aria-label="Página anterior"
                   className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
@@ -608,7 +419,7 @@ export default function SecretariaNotas() {
 
                 <button
                   type="button"
-                  onClick={() => updateFilter('page', String(safeCurrentPage + 1))}
+                  onClick={() => filters.updateFilter('page', String(safeCurrentPage + 1))}
                   disabled={safeCurrentPage === totalPages}
                   aria-label="Página siguiente"
                   className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
