@@ -7,8 +7,7 @@ import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
 import LoginPage from '@/components/auth/LoginPage'
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
-import AsuntosPendientes from '@/components/alcalde/AsuntosPendientes'
-import SecretariaDashboard from '@/components/secretaria/SecretariaDashboard'
+import { SecretariaDashboard } from './components/secretaria/SecretariaDashboard';
 import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
 import SubirDocumento from '@/components/secretaria/SubirDocumento'
 
@@ -87,14 +86,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/alcalde/pendientes"
-              element={
-                <ProtectedRoute allowedRoles={['alcalde']}>
-                  <AsuntosPendientes />
-                </ProtectedRoute>
-              }
-            />
+            
             <Route
               path="/alcalde/notas"
               element={

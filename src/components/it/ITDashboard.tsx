@@ -1,3 +1,285 @@
+import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Activity,
+  Building2,
+  ChevronRight,
+  Settings,
+  Shield,
+  UserCheck,
+  Users,
+  UserX,
+} from 'lucide-react'
+import AppLayout from '@/components/layout/AppLayout'
+import useAuthStore from '@/lib/stores/authStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import { ROLE_LABELS } from '@/lib/types'
+import type { UserRole } from '@/lib/types'
+
 export default function ITDashboard() {
-  return null
+  const navigate = useNavigate()
+  const users = useAuthStore(state => state.users)
+  const departamentos = useDepartamentosStore(state => state.departamentos)
+
+  const activeUsers = users.filter(user => user.status === 'active').length
+  const inactiveUsers = users.filter(user => user.status === 'inactive').length
+  const activeDepartamentos = departamentos.filter(departamento => departamento.activo).length
+
+  const usersByRole: Record<UserRole, number> = {
+    alcalde: users.filter(user => user.role === 'alcalde').length,
+    secretaria: users.filter(user => user.role === 'secretaria').length,
+    departamento: users.filter(user => user.role === 'departamento').length,
+    it: users.filter(user => user.role === 'it').length,
+  }
+
+  const recentUsers = useMemo(
+    () =>
+      [...users]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(0, 5),
+    [users],
+  )
+
+  return (
+    <AppLayout title="Dashboard IT">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4">
+        <div>
+          <h1 className="font-serif text-2xl font-bold text-foreground">
+            Panel de Administración IT
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Gestión de usuarios, departamentos y configuración del sistema
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{users.length}</p>
+                <p className="text-sm text-muted-foreground">Total Usuarios</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-green-500/10 p-3">
+                <UserCheck className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{activeUsers}</p>
+                <p className="text-sm text-muted-foreground">Usuarios Activos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-red-500/10 p-3">
+                <UserX className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{inactiveUsers}</p>
+                <p className="text-sm text-muted-foreground">Usuarios Inactivos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-amber-500/10 p-3">
+                <Building2 className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {activeDepartamentos}
+                </p>
+                <p className="text-sm text-muted-foreground">Departamentos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => navigate('/it/usuarios')}
+            className="rounded-xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            <h2 className="font-serif text-xl font-semibold text-foreground">
+              Gestión de Usuarios
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crear, editar y administrar usuarios del sistema
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">
+                Alcaldes: {usersByRole.alcalde}
+              </span>
+              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">
+                Secretarias: {usersByRole.secretaria}
+              </span>
+              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">
+                Departamentos: {usersByRole.departamento}
+              </span>
+              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">
+                IT: {usersByRole.it}
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/it/departamentos')}
+            className="rounded-xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-lg bg-amber-500/10 p-3">
+                <Building2 className="h-6 w-6 text-amber-600" />
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            <h2 className="font-serif text-xl font-semibold text-foreground">
+              Gestión de Departamentos
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Administrar departamentos y asignar responsables
+            </p>
+
+            <p className="mt-4 text-sm text-muted-foreground">
+              {departamentos.length} departamentos registrados, {activeDepartamentos} activos
+            </p>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border p-5">
+              <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-foreground">
+                <Activity className="h-5 w-5 text-primary" />
+                Usuarios Recientes
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Últimos usuarios creados en el sistema
+              </p>
+            </div>
+
+            <div className="p-5">
+              {recentUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No hay usuarios registrados.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {recentUsers.map(user => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">
+                          {user.nombre} {user.apellido}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          @{user.username}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            user.status === 'active'
+                              ? 'bg-success/10 text-success'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}
+                        >
+                          {ROLE_LABELS[user.role]}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate('/it/usuarios')}
+                className="mt-4 w-full rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                Ver todos los usuarios
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card">
+            <div className="border-b border-border p-5">
+              <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-foreground">
+                <Shield className="h-5 w-5 text-primary" />
+                Información del Sistema
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Estado general de la plataforma
+              </p>
+            </div>
+
+            <div className="p-5">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-3 w-3 rounded-full bg-green-500" />
+                    <span className="text-foreground">Estado del Sistema</span>
+                  </div>
+                  <span className="rounded-full bg-green-600 px-2.5 py-1 text-xs font-medium text-white">
+                    Operativo
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                  <span className="text-foreground">Versión</span>
+                  <span className="font-mono text-sm">v1.0.0</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                  <span className="text-foreground">Último backup</span>
+                  <span className="text-sm text-muted-foreground">Hace 2 horas</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                  <span className="text-foreground">Sesiones activas</span>
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+                    {activeUsers}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled
+                className="mt-4 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-60"
+              >
+                <Settings className="h-4 w-4" />
+                Configuración Avanzada
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </AppLayout>
+  )
 }

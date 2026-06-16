@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import type { AppNotification, NotificationType } from '@/lib/types'
+import type { Notification as AppNotification, NotificationType } from '@/lib/types'
 
 const mockNotifications: AppNotification[] = [
   {
     id: '1',
-    message: 'La solicitud #1042 fue aprobada',
+    message: 'La solicitud #1042 fue aprobada por el departamento',
     type: 'success',
     read: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
@@ -18,60 +18,80 @@ const mockNotifications: AppNotification[] = [
   },
   {
     id: '3',
-    message: 'La solicitud #1039 fue declinada',
+    message: 'La solicitud #1039 fue devuelta al departamento',
     type: 'warning',
     read: true,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
     id: '4',
-    message: 'Se ha agregado un nuevo usuario al sistema',
-    type: 'info',
+    message: 'La solicitud #1038 fue rechazada por Alcaldía',
+    type: 'error',
     read: true,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
 ]
 
 interface NotificationState {
+  notificaciones: AppNotification[]
   notifications: AppNotification[]
-  unreadCount: () => number
+  addNotification: (notification: { message: string; type: NotificationType }) => void
   markAsRead: (id: string) => void
   markAllAsRead: () => void
-  addNotification: (notification: { message: string; type: NotificationType }) => void
+  unreadCount: () => number
 }
 
 const useNotificationStore = create<NotificationState>((set, get) => ({
+  notificaciones: mockNotifications,
   notifications: mockNotifications,
 
-  unreadCount: (): number => {
-    return get().notifications.filter((n) => !n.read).length
-  },
-
-  markAsRead: (id: string) => {
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n,
-      ),
-    }))
-  },
-
-  markAllAsRead: () => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
-    }))
-  },
-
-  addNotification: (notification: { message: string; type: NotificationType }) => {
+  addNotification: (notification) => {
     const newNotification: AppNotification = {
       ...notification,
-      id: String(Date.now()),
+      id: crypto.randomUUID(),
       read: false,
       createdAt: new Date().toISOString(),
     }
 
-    set((state) => ({
-      notifications: [newNotification, ...state.notifications],
-    }))
+    set((state) => {
+      const nextNotifications = [newNotification, ...state.notificaciones]
+
+      return {
+        notificaciones: nextNotifications,
+        notifications: nextNotifications,
+      }
+    })
+  },
+
+  markAsRead: (id: string) => {
+    set((state) => {
+      const nextNotifications = state.notificaciones.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      )
+
+      return {
+        notificaciones: nextNotifications,
+        notifications: nextNotifications,
+      }
+    })
+  },
+
+  markAllAsRead: () => {
+    set((state) => {
+      const nextNotifications = state.notificaciones.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+
+      return {
+        notificaciones: nextNotifications,
+        notifications: nextNotifications,
+      }
+    })
+  },
+
+  unreadCount: (): number => {
+    return get().notificaciones.filter((notification) => !notification.read).length
   },
 }))
 
