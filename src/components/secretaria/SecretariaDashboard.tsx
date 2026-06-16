@@ -51,8 +51,13 @@ export function SecretariaDashboard() {
 
     return {
       total: misSolicitudes.length,
-      sinRespuesta: contar('received', 'assigned_to_department', 'in_review'),
-      aprobadas: contar('signed', 'closed'),
+      sinRespuesta: contar(
+      'received',
+      'assigned_to_department',
+      'in_review',
+      'returned_to_department'
+      ),
+      aprobadas: contar('signed', 'closed', 'approved_by_department', 'awaiting_mayor_signature'),
       declinadas: contar('rejected_by_department', 'rejected_by_mayor_office'),
     }
   }, [misSolicitudes])
@@ -66,16 +71,17 @@ export function SecretariaDashboard() {
   )
 
   const proximasAVencer = useMemo(
-    () =>
-      [...misSolicitudes]
-        .sort(
-          (a, b) =>
-            new Date(a.fechaLimite).getTime() -
-            new Date(b.fechaLimite).getTime(),
-        )
-        .slice(0, 5),
-    [misSolicitudes],
-  )
+  () =>
+    [...misSolicitudes]
+      .filter(solicitud => !ESTADOS_TERMINALES.includes(solicitud.estado))
+      .sort(
+        (a, b) =>
+          new Date(a.fechaLimite).getTime() -
+          new Date(b.fechaLimite).getTime(),
+      )
+      .slice(0, 5),
+  [misSolicitudes],
+)
 
   return (
     <AppLayout title="Dashboard">

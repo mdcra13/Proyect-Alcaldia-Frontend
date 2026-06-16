@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Building2,
@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  Filter,
   Search,
   X,
 } from 'lucide-react'
@@ -16,9 +17,16 @@ import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
 import { HistorialTimeline } from '@/components/shared/HistorialTimeline'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
-import useSolicitudesStore from '@/lib/stores/solicitudesStore'
-import { ESTADO_CONFIG } from '@/lib/types'
-import type { Solicitud, SolicitudEstado } from '@/lib/types'
+import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import {
+  ESTADO_CONFIG,
+  PRIORIDAD_LABELS,
+  type Solicitud,
+  type SolicitudCategoria,
+  type SolicitudEstado,
+  type SolicitudEstadoFiltro,
+  type SolicitudPrioridad,
+} from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
 
@@ -29,7 +37,19 @@ const ESTADOS_FINALES: SolicitudEstado[] = [
   'closed',
 ]
 
-type EstadoFilter = SolicitudEstado | 'todos'
+type FilterKey =
+  | 'q'
+  | 'estado'
+  | 'departamento'
+  | 'categoria'
+  | 'prioridad'
+  | 'desde'
+  | 'hasta'
+  | 'page'
+
+function getParam(searchParams: URLSearchParams, key: FilterKey, fallback = 'todos') {
+  return searchParams.get(key) || fallback
+}
 
 function downloadCSV(filename: string, rows: string[][]) {
   const escapeCell = (cell: string) => {
@@ -54,32 +74,55 @@ export default function SecretariaNotas() {
   const { user } = useAuthStore()
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
   const getDepartamentosActivos = useDepartamentosStore(
-  state => state.getDepartamentosActivos,
+    state => state.getDepartamentosActivos
   )
-
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '')
-  const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>(
-    (searchParams.get('estado') as EstadoFilter | null) ?? 'todos',
-  )
-  const [departamentoFilter, setDepartamentoFilter] = useState(
-    searchParams.get('dep') ?? 'todos',
-  )
-  const [currentPage, setCurrentPage] = useState(1)
 
   const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showChangeDeptModal, setShowChangeDeptModal] = useState(false)
 
   const departamentos = getDepartamentosActivos()
-  useEffect(() => {
-    const params = new URLSearchParams()
 
-    if (searchQuery) params.set('q', searchQuery)
-    if (estadoFilter !== 'todos') params.set('estado', estadoFilter)
-    if (departamentoFilter !== 'todos') params.set('dep', departamentoFilter)
+  const searchQuery = searchParams.get('q') || ''
+  const estadoFilter = getParam(searchParams, 'estado') as SolicitudEstadoFiltro
+  const departamentoFilter = getParam(searchParams, 'departamento')
+  const categoriaFilter = getParam(searchParams, 'categoria') as
+    | SolicitudCategoria
+    | 'todos'
+  const prioridadFilter = getParam(searchParams, 'prioridad') as
+    | SolicitudPrioridad
+    | 'todos'
+  const fechaDesde = searchParams.get('desde') || ''
+  const fechaHasta = searchParams.get('hasta') || ''
+  const currentPage = Number(searchParams.get('page') || '1')
 
-    setSearchParams(params, { replace: true })
-  }, [searchQuery, estadoFilter, departamentoFilter, setSearchParams])
+  const updateFilter = (key: FilterKey, value: string) => {
+    const next = new URLSearchParams(searchParams)
+
+    if (!value || value === 'todos') {
+      next.delete(key)
+    } else {
+      next.set(key, value)
+    }
+
+    if (key !== 'page') {
+      next.delete('page')
+    }
+
+    setSearchParams(next)
+  }
+
+  const clearFilters = () => {
+    setSearchParams({})
+  }
+
+  const getDepartamentoNombre = (departamentoId?: string) => {
+    if (!departamentoId) return 'Sin asignar'
+
+    const departamento = departamentos.find(item => item.id === departamentoId)
+
+    return departamento?.nombre ?? 'Sin asignar'
+  }
 
   const filteredSolicitudes = useMemo(() => {
     if (!user) return []
@@ -92,40 +135,116 @@ export default function SecretariaNotas() {
       results = results.filter(
         solicitud =>
           solicitud.radicado.toLowerCase().includes(query) ||
+          solicitud.titulo.toLowerCase().includes(query) ||
           solicitud.solicitante.toLowerCase().includes(query) ||
-          solicitud.titulo.toLowerCase().includes(query),
+          solicitud.identificacion.toLowerCase().includes(query)
       )
     }
 
     if (estadoFilter !== 'todos') {
-      results = results.filter(solicitud => solicitud.estado === estadoFilter)
+      if (estadoFilter === 'pendientes') {
+        results = results.filter(solicitud =>
+          ['received', 'assigned_to_department', 'in_review'].includes(
+            solicitud.estado
+          )
+        )
+      } else if (estadoFilter === 'en_proceso') {
+        results = results.filter(solicitud =>
+          [
+            'assigned_to_department',
+            'in_review',
+            'approved_by_department',
+            'awaiting_mayor_signature',
+            'returned_to_department',
+          ].includes(solicitud.estado)
+        )
+      } else if (estadoFilter === 'aprobado') {
+        results = results.filter(solicitud =>
+          [
+            'approved_by_department',
+            'awaiting_mayor_signature',
+            'signed',
+            'closed',
+          ].includes(solicitud.estado)
+        )
+      } else if (estadoFilter === 'declinado') {
+        results = results.filter(solicitud =>
+          ['rejected_by_department', 'rejected_by_mayor_office'].includes(
+            solicitud.estado
+          )
+        )
+      } else {
+        results = results.filter(solicitud => solicitud.estado === estadoFilter)
+      }
     }
 
     if (departamentoFilter !== 'todos') {
       results = results.filter(
-        solicitud => solicitud.departamentoId === departamentoFilter,
+        solicitud => solicitud.departamentoId === departamentoFilter
       )
+    }
+
+    if (categoriaFilter !== 'todos') {
+      results = results.filter(solicitud => solicitud.categoria === categoriaFilter)
+    }
+
+    if (prioridadFilter !== 'todos') {
+      results = results.filter(solicitud => solicitud.prioridad === prioridadFilter)
+    }
+
+    if (fechaDesde) {
+      results = results.filter(solicitud => solicitud.fechaSolicitud >= fechaDesde)
+    }
+
+    if (fechaHasta) {
+      results = results.filter(solicitud => solicitud.fechaSolicitud <= fechaHasta)
     }
 
     return [...results].sort(
       (a, b) =>
-        new Date(a.fechaLimite).getTime() -
-        new Date(b.fechaLimite).getTime(),
+        new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime()
     )
-  }, [user, solicitudes, searchQuery, estadoFilter, departamentoFilter])
+  }, [
+    user,
+    solicitudes,
+    searchQuery,
+    estadoFilter,
+    departamentoFilter,
+    categoriaFilter,
+    prioridadFilter,
+    fechaDesde,
+    fechaHasta,
+  ])
 
-  const totalPages = Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE)
+  const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages)
   const paginatedSolicitudes = filteredSolicitudes.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+    safeCurrentPage * ITEMS_PER_PAGE
   )
+
+  const activeFiltersCount = [
+    searchQuery,
+    estadoFilter !== 'todos',
+    departamentoFilter !== 'todos',
+    categoriaFilter !== 'todos',
+    prioridadFilter !== 'todos',
+    fechaDesde,
+    fechaHasta,
+  ].filter(Boolean).length
+
+  const hasActiveFilters = activeFiltersCount > 0
 
   const handleExportCSV = () => {
     const headers = [
       'Radicado',
       'Título',
       'Solicitante',
+      'Identificación',
+      'Categoría',
       'Departamento',
+      'Prioridad',
+      'Fecha solicitud',
       'Fecha límite',
       'Estado',
     ]
@@ -134,30 +253,19 @@ export default function SecretariaNotas() {
       solicitud.radicado,
       solicitud.titulo,
       solicitud.solicitante,
-      solicitud.departamento?.nombre ?? '',
+      solicitud.identificacion,
+      CATEGORIES[solicitud.categoria]?.label ?? solicitud.categoria,
+      solicitud.departamento?.nombre ?? getDepartamentoNombre(solicitud.departamentoId),
+      PRIORIDAD_LABELS[solicitud.prioridad] ?? solicitud.prioridad,
+      solicitud.fechaSolicitud,
       solicitud.fechaLimite,
-      ESTADO_CONFIG[solicitud.estado].label,
+      ESTADO_CONFIG[solicitud.estado]?.label ?? solicitud.estado,
     ])
 
     downloadCSV(
       `notas_${new Date().toISOString().split('T')[0]}.csv`,
-      [headers, ...rows],
+      [headers, ...rows]
     )
-  }
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    setCurrentPage(1)
-  }
-
-  const handleEstadoChange = (value: string) => {
-    setEstadoFilter(value as EstadoFilter)
-    setCurrentPage(1)
-  }
-
-  const handleDepartamentoChange = (value: string) => {
-    setDepartamentoFilter(value)
-    setCurrentPage(1)
   }
 
   const handleViewDetail = (solicitud: Solicitud) => {
@@ -177,10 +285,10 @@ export default function SecretariaNotas() {
 
   return (
     <AppLayout title="Mis Notas">
-      <div className="space-y-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-serif font-bold text-primary">
+            <h1 className="font-serif text-2xl font-bold text-primary">
               Mis Notas
             </h1>
             <p className="text-muted-foreground">
@@ -198,67 +306,151 @@ export default function SecretariaNotas() {
           </button>
         </div>
 
-        <div className="rounded-xl border border-border bg-card">
-          <div className="p-4">
-            <div className="flex flex-col gap-4 lg:flex-row">
-              <div className="relative flex-1">
-                <label htmlFor="notas-search" className="sr-only">
-                  Buscar notas
-                </label>
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  id="notas-search"
-                  type="text"
-                  placeholder="Buscar por radicado, título o solicitante..."
-                  value={searchQuery}
-                  onChange={event => handleSearchChange(event.target.value)}
-                  className="form-input pl-9"
-                />
-              </div>
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold text-foreground">Filtros</h3>
+          </div>
 
-              <div>
-                <label htmlFor="estado-filter" className="sr-only">
-                  Filtrar por estado
-                </label>
-                <select
-                  id="estado-filter"
-                  value={estadoFilter}
-                  onChange={event => handleEstadoChange(event.target.value)}
-                  className="form-input custom-select w-full lg:w-[220px]"
-                >
-                  <option value="todos">Todos los estados</option>
-                  {(Object.entries(ESTADO_CONFIG) as [
-                    SolicitudEstado,
-                    typeof ESTADO_CONFIG[SolicitudEstado],
-                  ][]).map(([key, config]) => (
-                    <option key={key} value={key}>
-                      {config.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="relative lg:col-span-2">
+              <label htmlFor="notas-search" className="sr-only">
+                Buscar notas
+              </label>
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="notas-search"
+                type="text"
+                placeholder="Buscar por radicado, título, solicitante o identificación..."
+                value={searchQuery}
+                onChange={event => updateFilter('q', event.target.value)}
+                className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="departamento-filter" className="sr-only">
-                  Filtrar por departamento
-                </label>
-                <select
-                  id="departamento-filter"
-                  value={departamentoFilter}
-                  onChange={event => handleDepartamentoChange(event.target.value)}
-                  className="form-input custom-select w-full lg:w-[220px]"
-                >
-                  <option value="todos">Todos los departamentos</option>
-                  {departamentos.map(departamento => (
-                    <option key={departamento.id} value={departamento.id}>
-                      {departamento.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label htmlFor="notas-estado-filter" className="sr-only">
+                Filtrar por estado
+              </label>
+              <select
+                id="notas-estado-filter"
+                value={estadoFilter}
+                onChange={event => updateFilter('estado', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="pendientes">Pendientes</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="aprobado">Aprobadas</option>
+                <option value="declinado">Declinadas</option>
+                {Object.entries(ESTADO_CONFIG).map(([key, config]) => (
+                  <option key={key} value={key}>
+                    {config.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="notas-departamento-filter" className="sr-only">
+                Filtrar por departamento
+              </label>
+              <select
+                id="notas-departamento-filter"
+                value={departamentoFilter}
+                onChange={event => updateFilter('departamento', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="todos">Todos los departamentos</option>
+                {departamentos.map(departamento => (
+                  <option key={departamento.id} value={departamento.id}>
+                    {departamento.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="notas-categoria-filter" className="sr-only">
+                Filtrar por categoría
+              </label>
+              <select
+                id="notas-categoria-filter"
+                value={categoriaFilter}
+                onChange={event => updateFilter('categoria', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="todos">Todas las categorías</option>
+                {Object.entries(CATEGORIES).map(([key, category]) => (
+                  <option key={key} value={key}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="notas-prioridad-filter" className="sr-only">
+                Filtrar por prioridad
+              </label>
+              <select
+                id="notas-prioridad-filter"
+                value={prioridadFilter}
+                onChange={event => updateFilter('prioridad', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="todos">Todas las prioridades</option>
+                {Object.entries(PRIORIDAD_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="notas-fecha-desde" className="sr-only">
+                Fecha desde
+              </label>
+              <input
+                id="notas-fecha-desde"
+                type="date"
+                value={fechaDesde}
+                onChange={event => updateFilter('desde', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notas-fecha-hasta" className="sr-only">
+                Fecha hasta
+              </label>
+              <input
+                id="notas-fecha-hasta"
+                type="date"
+                value={fechaHasta}
+                onChange={event => updateFilter('hasta', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
             </div>
           </div>
-        </div>
+
+          {hasActiveFilters && (
+            <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-3">
+              <p className="text-sm text-muted-foreground">
+                Hay {activeFiltersCount} filtro(s) activo(s).
+              </p>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-secondary"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          )}
+        </section>
 
         <div className="rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
@@ -273,6 +465,9 @@ export default function SecretariaNotas() {
                   </th>
                   <th className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">
                     Departamento
+                  </th>
+                  <th className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">
+                    Prioridad
                   </th>
                   <th className="p-4 text-left font-medium text-muted-foreground">
                     Fecha límite
@@ -290,7 +485,7 @@ export default function SecretariaNotas() {
                 {paginatedSolicitudes.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-12 text-center text-muted-foreground"
                     >
                       No se encontraron notas con los filtros seleccionados.
@@ -310,7 +505,7 @@ export default function SecretariaNotas() {
 
                       <td className="p-4">
                         <div>
-                          <p className="max-w-[200px] truncate font-medium">
+                          <p className="max-w-[220px] truncate font-medium">
                             {solicitud.titulo}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -321,7 +516,14 @@ export default function SecretariaNotas() {
 
                       <td className="hidden p-4 md:table-cell">
                         <span className="text-sm">
-                          {solicitud.departamento?.nombre ?? 'Sin asignar'}
+                          {solicitud.departamento?.nombre ??
+                            getDepartamentoNombre(solicitud.departamentoId)}
+                        </span>
+                      </td>
+
+                      <td className="hidden p-4 lg:table-cell">
+                        <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
+                          {PRIORIDAD_LABELS[solicitud.prioridad]}
                         </span>
                       </td>
 
@@ -340,6 +542,7 @@ export default function SecretariaNotas() {
                             onClick={() => handleViewDetail(solicitud)}
                             className="icon-button hover:bg-secondary"
                             title="Ver detalle"
+                            aria-label={`Ver detalle de ${solicitud.radicado}`}
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -363,6 +566,7 @@ export default function SecretariaNotas() {
                               disabled={ESTADOS_FINALES.includes(solicitud.estado)}
                               className="icon-button hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
                               title="Cambiar departamento"
+                              aria-label={`Cambiar departamento de ${solicitud.radicado}`}
                             >
                               <Building2 className="h-4 w-4" />
                             </button>
@@ -376,19 +580,22 @@ export default function SecretariaNotas() {
             </table>
           </div>
 
-          {totalPages > 1 && (
+          {filteredSolicitudes.length > ITEMS_PER_PAGE && (
             <div className="flex items-center justify-between border-t p-4">
               <p className="text-sm text-muted-foreground">
-                Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredSolicitudes.length)} de{' '}
-                {filteredSolicitudes.length} notas
+                Mostrando {(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
+                {Math.min(
+                  safeCurrentPage * ITEMS_PER_PAGE,
+                  filteredSolicitudes.length
+                )}{' '}
+                de {filteredSolicitudes.length} notas
               </p>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentPage(page => page - 1)}
-                  disabled={currentPage === 1}
+                  onClick={() => updateFilter('page', String(safeCurrentPage - 1))}
+                  disabled={safeCurrentPage === 1}
                   aria-label="Página anterior"
                   className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -396,13 +603,13 @@ export default function SecretariaNotas() {
                 </button>
 
                 <span className="text-sm">
-                  Página {currentPage} de {totalPages}
+                  Página {safeCurrentPage} de {totalPages}
                 </span>
 
                 <button
                   type="button"
-                  onClick={() => setCurrentPage(page => page + 1)}
-                  disabled={currentPage === totalPages}
+                  onClick={() => updateFilter('page', String(safeCurrentPage + 1))}
+                  disabled={safeCurrentPage === totalPages}
                   aria-label="Página siguiente"
                   className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -420,6 +627,7 @@ export default function SecretariaNotas() {
                 <h2 className="font-serif text-xl font-semibold text-foreground">
                   Detalle de Nota {selectedSolicitud.radicado}
                 </h2>
+
                 <button
                   type="button"
                   onClick={handleCloseDetail}
@@ -448,16 +656,34 @@ export default function SecretariaNotas() {
                   </div>
 
                   <div>
-                    <p className="text-sm text-muted-foreground">Identificación</p>
+                    <p className="text-sm text-muted-foreground">
+                      Identificación
+                    </p>
                     <p className="font-medium">
                       {selectedSolicitud.identificacion}
                     </p>
                   </div>
 
                   <div>
+                    <p className="text-sm text-muted-foreground">Categoría</p>
+                    <p className="font-medium">
+                      {CATEGORIES[selectedSolicitud.categoria]?.label ??
+                        selectedSolicitud.categoria}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Prioridad</p>
+                    <p className="font-medium">
+                      {PRIORIDAD_LABELS[selectedSolicitud.prioridad]}
+                    </p>
+                  </div>
+
+                  <div>
                     <p className="text-sm text-muted-foreground">Departamento</p>
                     <p className="font-medium">
-                      {selectedSolicitud.departamento?.nombre ?? 'Sin asignar'}
+                      {selectedSolicitud.departamento?.nombre ??
+                        getDepartamentoNombre(selectedSolicitud.departamentoId)}
                     </p>
                   </div>
 
