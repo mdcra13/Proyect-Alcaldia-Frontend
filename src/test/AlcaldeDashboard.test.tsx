@@ -36,22 +36,47 @@ function renderDashboard() {
   )
 }
 
-const mockSolicitud: Solicitud = {
+const mockSolicitudAlcalde: Solicitud = {
   id: '1001',
   radicado: '#1001',
-  titulo: 'Solicitud de apoyo medico',
-  solicitante: 'Juan Perez Garcia',
+  titulo: 'Solicitud de apoyo médico',
+  descripcion: 'Solicitud de apoyo para tratamiento médico especializado.',
+  solicitante: 'Juan Pérez García',
   identificacion: '12345678',
   categoria: 'salud',
+  departamentoId: 'dep-1',
+  departamento: {
+    id: 'dep-1',
+    nombre: 'Salud',
+    descripcion: 'Departamento encargado de solicitudes relacionadas con salud.',
+    activo: true,
+  },
   fechaSolicitud: '2024-03-15',
-  fechaLimite: '2024-03-30',
-  descripcion: 'Solicitud de apoyo para tratamiento medico especializado.',
-  estado: 'received',
+  fechaLimite: '2024-03-25',
+  estado: 'awaiting_mayor_signature',
   prioridad: 'HIGH',
-  subidoPor: 'Maria Garcia',
+  subidoPor: 'María García',
   subidoPorId: '2',
   documento: 'solicitud_1001.pdf',
-  historial: [],
+  motivoRechazo: null,
+  historial: [
+    {
+      id: 'h-1001-1',
+      fecha: '2024-03-15',
+      accion: 'received',
+      descripcion: 'Solicitud registrada por María García',
+      usuario: 'María García',
+      usuarioId: '2',
+    },
+  ],
+}
+
+const mockSolicitudDepartamento: Solicitud = {
+  ...mockSolicitudAlcalde,
+  id: '1002',
+  radicado: '#1002',
+  titulo: 'Solicitud todavía en departamento',
+  estado: 'in_review',
 }
 
 describe('AlcaldeDashboard', () => {
@@ -60,53 +85,68 @@ describe('AlcaldeDashboard', () => {
       user: {
         id: '1',
         nombre: 'Carlos',
-        apellido: 'Rodriguez',
-        username: 'carlos.rodriguez',
+        apellido: 'Rodríguez',
+        username: 'alcalde',
         role: 'alcalde',
         avatar: null,
         status: 'active',
         createdAt: '2024-01-15',
       },
-      accessToken: null,
       isAuthenticated: true,
       rememberSession: false,
     })
-  })
 
-  it('renders empty state when there are no solicitudes', () => {
     useSolicitudesStore.setState({
       solicitudes: [],
+    })
+  })
+
+  it('renders empty urgent notes state when there are no solicitudes for mayor', () => {
+    renderDashboard()
+
+    expect(
+      screen.getByRole('heading', { name: /panel del alcalde/i }),
+    ).toBeInTheDocument()
+
+    expect(screen.getByText(/no hay notas pendientes de firma/i)).toBeInTheDocument()
+  })
+
+  it('renders dashboard metrics using only mayor visible solicitudes', () => {
+    useSolicitudesStore.setState({
+      solicitudes: [mockSolicitudAlcalde, mockSolicitudDepartamento],
     })
 
     renderDashboard()
 
     expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: /no hay datos/i,
-      }),
+      screen.getByRole('heading', { name: /panel del alcalde/i }),
     ).toBeInTheDocument()
 
-    expect(screen.getByText(/no hay datos/i, { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText(/total notas/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/pendientes de firma/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/firmadas/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/devueltas/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/cerradas/i).length).toBeGreaterThan(0)
+
+    expect(screen.getByText('Solicitud de apoyo médico')).toBeInTheDocument()
+    expect(screen.queryByText('Solicitud todavía en departamento')).not.toBeInTheDocument()
   })
 
-  it('renders dashboard when there are solicitudes', () => {
+  it('renders urgent notes list when there are solicitudes awaiting mayor signature', () => {
     useSolicitudesStore.setState({
-      solicitudes: [mockSolicitud],
+      solicitudes: [mockSolicitudAlcalde],
     })
 
     renderDashboard()
 
-    expect(screen.getByRole('heading', { name: /bienvenido/i })).toBeInTheDocument()
-    expect(screen.getByText('Total Solicitudes')).toBeInTheDocument()
-    expect(screen.getAllByText('Pendientes').length).toBeGreaterThan(0)
-    expect(screen.getByText('Aprobadas')).toBeInTheDocument()
-    expect(screen.getByText('Declinadas')).toBeInTheDocument()
+    expect(screen.getByText('Solicitud de apoyo médico')).toBeInTheDocument()
+    expect(screen.getByText('#1001')).toBeInTheDocument()
+    expect(screen.getAllByText('Salud').length).toBeGreaterThan(0)
   })
 
   it('has no basic accessibility violations', async () => {
     useSolicitudesStore.setState({
-      solicitudes: [mockSolicitud],
+      solicitudes: [mockSolicitudAlcalde],
     })
 
     const { container } = renderDashboard()

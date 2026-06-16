@@ -654,36 +654,36 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     }))
   },
 
-  cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
-    // TODO: Replace with API call PATCH /api/v1/requests/:id/status
-    set(state => ({
-      solicitudes: state.solicitudes.map(s => {
-        if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, s.estado, nuevoEstado)) {
-          return s
-        }
+cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
+  // TODO: Replace with API call PATCH /api/v1/requests/:id/status
+  set(state => ({
+    solicitudes: state.solicitudes.map(s => {
+      if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, s.estado, nuevoEstado)) {
+        return s
+      }
 
-        const historial = [
-          ...s.historial,
-          createHistorialEntry(nuevoEstado, userId, userName, s.departamento?.nombre, observacion),
-        ]
+      const historial = [
+        ...s.historial,
+        createHistorialEntry(
+          nuevoEstado,
+          userId,
+          userName,
+          s.departamento?.nombre,
+          observacion
+        ),
+      ]
 
-        const siguienteEstado = nuevoEstado === 'approved_by_department'
-          ? 'awaiting_mayor_signature'
-          : nuevoEstado
-
-        if (nuevoEstado === 'approved_by_department') {
-          historial.push(createHistorialEntry('awaiting_mayor_signature', userId, userName, s.departamento?.nombre))
-        }
-
-        return {
-          ...s,
-          estado: siguienteEstado,
-          motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado) ? observacion || s.motivoRechazo : s.motivoRechazo,
-          historial,
-        }
-      }),
-    }))
-  },
+      return {
+        ...s,
+        estado: nuevoEstado,
+        motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado)
+          ? observacion || s.motivoRechazo
+          : s.motivoRechazo,
+        historial,
+      }
+    }),
+  }))
+},
 
   cambiarEstadoAlcalde: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
     // TODO: Replace with API call PATCH /api/v1/requests/:id/status

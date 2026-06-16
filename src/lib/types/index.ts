@@ -122,12 +122,10 @@ export type CategoriesMap = Record<SolicitudCategoria, CategoryConfig>
 
 // Form types
 export interface LoginFormData {
-  email: string
+  username: string
   password: string
   remember: boolean
 }
-
-export type AppNotification = Notification
 
 export interface UserFormData {
   nombre: string
@@ -139,13 +137,15 @@ export interface UserFormData {
 }
 
 export interface SolicitudFormData {
-  subject: string
-  categoryId: string
-  departmentId: string
-  applicantName: string
-  applicantContact: string
-  description: string
-  priority: 'Baja' | 'Media' | 'Alta' | 'Urgente'
+  titulo: string
+  categoria: SolicitudCategoria | ''
+  departamentoId?: string
+  fechaSolicitud: string
+  fechaLimite: string
+  solicitante: string
+  identificacion: string
+  descripcion: string
+  documento?: File | null
 }
 
 export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<
@@ -159,12 +159,8 @@ export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<
 export const ESTADO_TRANSITIONS_ALCALDE: Partial<
   Record<SolicitudEstado, SolicitudEstado[]>
 > = {
-  approved_by_department: ['awaiting_mayor_signature'],
-  awaiting_mayor_signature: [
-    'signed',
-    'returned_to_department',
-    'rejected_by_mayor_office',
-  ],
+  approved_by_department: ['awaiting_mayor_signature', 'returned_to_department'],
+  awaiting_mayor_signature: ['signed', 'returned_to_department'],
   signed: ['closed'],
 }
 
