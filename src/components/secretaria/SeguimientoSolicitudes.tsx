@@ -49,6 +49,7 @@ export default function SeguimientoSolicitudes() {
   const [historialSolicitud, setHistorialSolicitud] = useState<Solicitud | null>(null)
 
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
+  const fetchHistorial = useSolicitudesStore(state => state.fetchHistorial)
   const departamentos = useDepartamentosStore(state => state.departamentos)
 
   const getDepartamentoNombre = (departamentoId?: string) => {
@@ -237,7 +238,12 @@ export default function SeguimientoSolicitudes() {
 
                           <button
                             type="button"
-                            onClick={() => setHistorialSolicitud(solicitud)}
+                            onClick={async () => {
+                              await fetchHistorial(solicitud.id)
+                              setHistorialSolicitud(
+                                useSolicitudesStore.getState().getSolicitudById(solicitud.id) ?? solicitud,
+                              )
+                            }}
                             className="icon-button hover:bg-secondary"
                             title="Ver historial"
                             aria-label={`Ver historial de ${solicitud.radicado}`}
@@ -351,7 +357,12 @@ export default function SeguimientoSolicitudes() {
 
                     <button
                       type="button"
-                      onClick={() => setHistorialSolicitud(solicitud)}
+                      onClick={async () => {
+                        await fetchHistorial(solicitud.id)
+                        setHistorialSolicitud(
+                          useSolicitudesStore.getState().getSolicitudById(solicitud.id) ?? solicitud,
+                        )
+                      }}
                       className="mobile-card-btn border border-border bg-card text-foreground"
                       aria-label={`Ver historial de ${solicitud.radicado}`}
                     >

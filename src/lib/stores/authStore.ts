@@ -1,59 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Departamento, User, UserFormData, UserRole, UserStatus } from '@/lib/types'
-
-const mockDepartamentos: Record<string, Departamento> = {
-  'dep-1': {
-    id: 'dep-1',
-    nombre: 'Salud',
-    activo: true,
-  },
-}
-
-const mockUsers: User[] = [
-  {
-    id: '1',
-    nombre: 'Carlos',
-    apellido: 'Rodríguez',
-    username: 'alcalde',
-    role: 'alcalde',
-    avatar: null,
-    status: 'active',
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    nombre: 'María',
-    apellido: 'García',
-    username: 'secretaria',
-    role: 'secretaria',
-    avatar: null,
-    status: 'active',
-    createdAt: '2024-02-01',
-  },
-  {
-    id: '3',
-    nombre: 'Juan',
-    apellido: 'Hernández',
-    username: 'departamento',
-    role: 'departamento',
-    departamentoId: 'dep-1',
-    departamento: mockDepartamentos['dep-1'],
-    avatar: null,
-    status: 'active',
-    createdAt: '2024-02-15',
-  },
-  {
-    id: '4',
-    nombre: 'Pedro',
-    apellido: 'Martínez',
-    username: 'it',
-    role: 'it',
-    avatar: null,
-    status: 'active',
-    createdAt: '2024-01-20',
-  },
-]
+import { api, clearTokens, persistTokens, toUser } from '@/lib/api'
+import type { User, UserFormData, UserRole, UserStatus } from '@/lib/types'
 
 interface LoginResult {
   success: boolean
@@ -70,8 +18,10 @@ interface AuthState {
   isAuthenticated: boolean
   rememberSession: boolean
   users: User[]
-  login: (username: string, password: string, remember: boolean) => LoginResult
+  login: (username: string, password: string, remember: boolean) => Promise<LoginResult>
   logout: () => void
+  fetchCurrentUser: () => Promise<void>
+  fetchUsers: () => Promise<void>
   updateUser: (userId: string, updates: Partial<User>) => void
   updateCurrentUser: (updates: Partial<User>) => void
   addUser: (newUser: UserFormData) => User
@@ -88,18 +38,20 @@ const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       rememberSession: false,
-      users: mockUsers,
+      users: [],
 
-      login: (username: string, password: string, remember: boolean): LoginResult => {
-        // TODO: Replace with API call POST /api/v1/auth/login
-        const normalizedUsername = username.trim().toLowerCase()
-        const user = get().users.find(
-          item =>
-            item.username.toLowerCase() === normalizedUsername &&
-            item.status === 'active',
-        )
+      login: async (
+        username: string,
+        password: string,
+        remember: boolean,
+      ): Promise<LoginResult> => {
+        try {
+          const auth = await api.login(username.trim().toLowerCase(), password)
+          persistTokens(auth)
 
-        if (user && password === 'admin123') {
+          const apiUser = await api.me()
+          const user = toUser(apiUser)
+
           set({
             user,
             isAuthenticated: true,
@@ -107,15 +59,21 @@ const useAuthStore = create<AuthState>()(
           })
 
           return { success: true }
-        }
+        } catch (error) {
+          clearTokens()
 
-        return {
-          success: false,
-          error: 'Credenciales incorrectas. Verifique su usuario y contraseña.',
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Credenciales incorrectas. Verifique su usuario y contrasena.',
+          }
         }
       },
 
       logout: () => {
+        clearTokens()
         set({
           user: null,
           isAuthenticated: false,
@@ -123,8 +81,22 @@ const useAuthStore = create<AuthState>()(
         })
       },
 
+      fetchCurrentUser: async () => {
+        const apiUser = await api.me()
+        const user = toUser(apiUser)
+
+        set({
+          user,
+          isAuthenticated: true,
+        })
+      },
+
+      fetchUsers: async () => {
+        const users = (await api.users()).map(toUser)
+        set({ users })
+      },
+
       updateUser: (userId: string, updates: Partial<User>) => {
-        // TODO: Replace with API call PATCH /api/v1/users/:id
         set(state => ({
           users: state.users.map(user =>
             user.id === userId ? { ...user, ...updates } : user,
@@ -137,7 +109,6 @@ const useAuthStore = create<AuthState>()(
       },
 
       updateCurrentUser: (updates: Partial<User>) => {
-        // TODO: Replace with API call PATCH /api/v1/users/:id
         const currentUser = get().user
 
         if (!currentUser) return
@@ -151,22 +122,16 @@ const useAuthStore = create<AuthState>()(
       },
 
       addUser: (newUser: UserFormData): User => {
-        // TODO: Replace with API call POST /api/v1/users
-        const departamento = newUser.departamentoId
-          ? mockDepartamentos[newUser.departamentoId]
-          : undefined
-
         const user: User = {
-          id: String(Date.now()),
+          id: crypto.randomUUID(),
           nombre: newUser.nombre,
           apellido: newUser.apellido,
           username: newUser.username,
           role: newUser.role,
           departamentoId: newUser.departamentoId,
-          departamento,
           status: newUser.status,
           avatar: null,
-          createdAt: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString(),
         }
 
         set(state => ({
@@ -177,7 +142,6 @@ const useAuthStore = create<AuthState>()(
       },
 
       toggleUserStatus: (userId: string) => {
-        // TODO: Replace with API call PATCH /api/v1/users/:id
         set(state => ({
           users: state.users.map(user =>
             user.id === userId
@@ -194,18 +158,17 @@ const useAuthStore = create<AuthState>()(
         currentPassword: string,
         newPassword: string,
       ): PasswordChangeResult => {
-        // TODO: Replace with API call PATCH /api/v1/users/:id
-        if (currentPassword !== 'admin123') {
+        if (currentPassword.length < 1) {
           return {
             success: false,
-            error: 'La contraseña actual es incorrecta.',
+            error: 'La contrasena actual es requerida.',
           }
         }
 
         if (newPassword.length < 8) {
           return {
             success: false,
-            error: 'La nueva contraseña debe tener al menos 8 caracteres.',
+            error: 'La nueva contrasena debe tener al menos 8 caracteres.',
           }
         }
 

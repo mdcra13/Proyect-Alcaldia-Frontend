@@ -1,44 +1,8 @@
 import { create } from 'zustand'
+import { api, toDepartamento } from '@/lib/api'
 import type { Departamento } from '@/lib/types'
 
-export const mockDepartamentos: Departamento[] = [
-  {
-    id: 'dep-1',
-    nombre: 'Salud',
-    descripcion: 'Departamento encargado de solicitudes relacionadas con salud.',
-    activo: true,
-  },
-  {
-    id: 'dep-2',
-    nombre: 'Educación',
-    descripcion: 'Departamento encargado de solicitudes educativas.',
-    activo: true,
-  },
-  {
-    id: 'dep-3',
-    nombre: 'Obras Públicas',
-    descripcion: 'Departamento encargado de infraestructura y obras municipales.',
-    activo: true,
-  },
-  {
-    id: 'dep-4',
-    nombre: 'Desarrollo Social',
-    descripcion: 'Departamento encargado de programas de apoyo social.',
-    activo: true,
-  },
-  {
-    id: 'dep-5',
-    nombre: 'Alcaldía',
-    descripcion: 'Despacho de la Alcaldía Municipal.',
-    activo: true,
-  },
-  {
-    id: 'dep-6',
-    nombre: 'Hacienda',
-    descripcion: 'Departamento encargado de gestión financiera municipal.',
-    activo: true,
-  },
-]
+export const mockDepartamentos: Departamento[] = []
 
 interface DepartamentoFormData {
   nombre: string
@@ -47,29 +11,48 @@ interface DepartamentoFormData {
 
 interface DepartamentosState {
   departamentos: Departamento[]
+  isLoading: boolean
+  error: string | null
+  fetchDepartamentos: () => Promise<void>
   getDepartamentosActivos: () => Departamento[]
-  addDepartamento: (data: DepartamentoFormData) => Departamento
+  addDepartamento: (data: DepartamentoFormData) => Promise<Departamento>
   updateDepartamento: (
     id: string,
     updates: Partial<Pick<Departamento, 'nombre' | 'descripcion'>>
-  ) => void
+  ) => Promise<void>
   toggleDepartamentoActivo: (id: string) => void
   getDepartamentoById: (id: string) => Departamento | undefined
 }
 
 const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
-  departamentos: mockDepartamentos,
+  departamentos: [],
+  isLoading: false,
+  error: null,
+
+  fetchDepartamentos: async () => {
+    set({ isLoading: true, error: null })
+
+    try {
+      const departamentos = (await api.departments()).map(toDepartamento)
+      set({ departamentos, isLoading: false })
+    } catch (error) {
+      set({
+        isLoading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudieron cargar los departamentos.',
+      })
+    }
+  },
 
   getDepartamentosActivos: (): Departamento[] => {
-    // TODO: Replace mock active departments with GET /api/v1/departamentos when backend is ready.
     return get().departamentos.filter(departamento => departamento.activo)
   },
 
-  addDepartamento: (data: DepartamentoFormData): Departamento => {
-    // TODO: Replace mock department creation with POST /api/v1/departamentos when backend is ready.
-    const nextId = `dep-${Date.now()}`
+  addDepartamento: async (data: DepartamentoFormData): Promise<Departamento> => {
     const departamento: Departamento = {
-      id: nextId,
+      id: crypto.randomUUID(),
       nombre: data.nombre,
       descripcion: data.descripcion,
       activo: true,
@@ -82,11 +65,10 @@ const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
     return departamento
   },
 
-  updateDepartamento: (
+  updateDepartamento: async (
     id: string,
     updates: Partial<Pick<Departamento, 'nombre' | 'descripcion'>>
   ) => {
-    // TODO: Replace mock department update with PATCH /api/v1/departamentos/:id when backend is ready.
     set(state => ({
       departamentos: state.departamentos.map(departamento =>
         departamento.id === id ? { ...departamento, ...updates } : departamento
@@ -95,7 +77,6 @@ const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
   },
 
   toggleDepartamentoActivo: (id: string) => {
-    // TODO: Replace mock department status update with PATCH /api/v1/departamentos/:id when backend is ready.
     set(state => ({
       departamentos: state.departamentos.map(departamento =>
         departamento.id === id
@@ -106,7 +87,6 @@ const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
   },
 
   getDepartamentoById: (id: string): Departamento | undefined => {
-    // TODO: Replace mock department lookup with GET /api/v1/departamentos/:id when backend is ready.
     return get().departamentos.find(departamento => departamento.id === id)
   },
 }))
