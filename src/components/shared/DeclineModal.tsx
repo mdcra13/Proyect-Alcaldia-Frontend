@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 
 interface DeclineModalProps {
@@ -16,6 +17,7 @@ export default function DeclineModal({
   onDeclined,
 }: DeclineModalProps) {
   const declinar = useSolicitudesStore(state => state.declinar)
+  const user = useAuthStore(state => state.user)
   const [motivo, setMotivo] = useState('')
   const [error, setError] = useState('')
 
@@ -27,7 +29,7 @@ export default function DeclineModal({
     onClose()
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const trimmedMotivo = motivo.trim()
 
     if (!trimmedMotivo) {
@@ -40,7 +42,12 @@ export default function DeclineModal({
       return
     }
 
-    declinar(solicitudId, trimmedMotivo)
+    await declinar(
+      solicitudId,
+      trimmedMotivo,
+      user?.id ?? 'system',
+      user ? `${user.nombre} ${user.apellido}` : 'Sistema',
+    )
     setMotivo('')
     setError('')
     onDeclined?.()

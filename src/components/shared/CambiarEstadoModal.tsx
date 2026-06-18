@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { RefreshCw, PenLine, CornerDownLeft, XCircle, X } from 'lucide-react'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
@@ -44,15 +44,9 @@ export function CambiarEstadoModal({
   const { user } = useAuthStore()
   const { cambiarEstado } = useSolicitudesStore()
 
-  const [selectedEstado, setSelectedEstado] = useState<SolicitudEstado | ''>('')
+  const [selectedEstado, setSelectedEstado] = useState<SolicitudEstado | ''>(presetEstado ?? '')
   const [observacion, setObservacion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (open && presetEstado) {
-      setSelectedEstado(presetEstado)
-    }
-  }, [open, presetEstado])
 
   const validTransitions = getValidTransitions(solicitud.estado, user?.role)
 
@@ -70,10 +64,7 @@ export function CambiarEstadoModal({
     if (!user || !selectedEstado || !isValid) return
 
     setIsSubmitting(true)
-    // TODO: Replace with API call PATCH /api/v1/requests/:id/status
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    cambiarEstado(
+    await cambiarEstado(
       solicitud.id,
       selectedEstado,
       user.id,

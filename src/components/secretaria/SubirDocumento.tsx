@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
-import { mockDepartamentos } from '@/lib/stores/departamentosStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData } from '@/lib/types'
@@ -32,6 +32,7 @@ export default function SubirDocumento() {
   
   const user = useAuthStore(state => state.user)
   const addSolicitud = useSolicitudesStore(state => state.addSolicitud)
+  const departamentos = useDepartamentosStore(state => state.departamentos)
   const addNotification = useNotificationStore(state => state.addNotification)
   
   const {
@@ -102,33 +103,43 @@ export default function SubirDocumento() {
 
   setIsSubmitting(true)
 
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
   const fullName = user
     ? `${user.nombre} ${user.apellido}`
     : 'Usuario'
 
-  const solicitud = addSolicitud({
-    titulo: data.titulo,
-    categoria: data.categoria as SolicitudCategoria,
-    departamentoId: data.departamentoId || undefined,
-    fechaLimite: data.fechaLimite,
-    solicitante: data.solicitante,
-    identificacion: data.identificacion,
-    descripcion: data.descripcion,
-    documento: file.name,
-    subidoPor: fullName,
-    subidoPorId: user?.id ?? 'system',
-  })
+  try {
+    const solicitud = await addSolicitud({
+      titulo: data.titulo,
+      categoria: data.categoria as SolicitudCategoria,
+      departamentoId: data.departamentoId || undefined,
+      fechaLimite: data.fechaLimite,
+      solicitante: data.solicitante,
+      identificacion: data.identificacion,
+      descripcion: data.descripcion,
+      documento: file.name,
+      documentoFile: file,
+      subidoPor: fullName,
+      subidoPorId: user?.id ?? 'system',
+    })
 
-  addNotification({
-    message: `Nueva solicitud registrada: ${solicitud.radicado}`,
-    type: 'success',
-  })
+    addNotification({
+      message: `Nueva solicitud registrada: ${solicitud.radicado}`,
+      type: 'success',
+    })
 
-  setNewRadicado(solicitud.radicado)
-  setShowSuccess(true)
-  setIsSubmitting(false)
+    setNewRadicado(solicitud.radicado)
+    setShowSuccess(true)
+  } catch (error) {
+    addNotification({
+      message:
+        error instanceof Error
+          ? error.message
+          : 'No se pudo registrar la solicitud.',
+      type: 'error',
+    })
+  } finally {
+    setIsSubmitting(false)
+  }
 }
   
   const handleNewSolicitud = () => {
@@ -397,7 +408,7 @@ export default function SubirDocumento() {
                 className="form-input custom-select"
               >
                 <option value="">Seleccione un departamento</option>
-                {mockDepartamentos.map(departamento => (
+                {departamentos.map(departamento => (
                   <option key={departamento.id} value={departamento.id}>
                     {departamento.nombre}
                   </option>
