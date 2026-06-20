@@ -8,6 +8,7 @@ import SolicitudesTableHeader from '@/components/shared/SolicitudesTableHeader'
 import SolicitudTableRow from '@/components/shared/SolicitudTableRow'
 import TablePagination from '@/components/shared/TablePagination'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
+import { useFilteredSolicitudes } from '@/lib/hooks/useFilteredSolicitudes'
 import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
@@ -88,44 +89,11 @@ export default function SeguimientoNotas() {
     )
   }, [solicitudes, user?.departamentoId])
 
-  const filteredSolicitudes = useMemo(() => {
-    let results = [...notasDepartamento]
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      results = results.filter(solicitud =>
-        solicitud.radicado.toLowerCase().includes(query) ||
-        solicitud.titulo.toLowerCase().includes(query) ||
-        solicitud.solicitante.toLowerCase().includes(query) ||
-        solicitud.identificacion.toLowerCase().includes(query)
-      )
-    }
-
-    if (estado !== 'todos') {
-      results = results.filter(solicitud => solicitud.estado === estado)
-    }
-
-    if (categoria !== 'todos') {
-      results = results.filter(solicitud => solicitud.categoria === categoria)
-    }
-
-    if (prioridad !== 'todos') {
-      results = results.filter(solicitud => solicitud.prioridad === prioridad)
-    }
-
-    if (fechaDesde) {
-      results = results.filter(solicitud => solicitud.fechaLimite >= fechaDesde)
-    }
-
-    if (fechaHasta) {
-      results = results.filter(solicitud => solicitud.fechaLimite <= fechaHasta)
-    }
-
-    return results.sort(
-      (a, b) =>
-        new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime()
-    )
-  }, [notasDepartamento, searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta])
+  const filteredSolicitudes = useFilteredSolicitudes(
+  notasDepartamento,
+  { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
+  'fechaSolicitud-desc'
+)
 
   const { totalPages, safeCurrentPage, paginatedItems: paginatedSolicitudes } =
     usePaginatedList(filteredSolicitudes, currentPage, ITEMS_PER_PAGE)
