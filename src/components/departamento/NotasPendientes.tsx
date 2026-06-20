@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
-import { EstadoBadge } from '@/components/shared/EstadoBadge'
-import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import SolicitudFiltersPanel from '@/components/shared/SolicitudFiltersPanel'
+import SolicitudesTableHeader from '@/components/shared/SolicitudesTableHeader'
+import SolicitudTableRow from '@/components/shared/SolicitudTableRow'
+import TablePagination from '@/components/shared/TablePagination'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
+import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { Solicitud, SolicitudEstado } from '@/lib/types'
@@ -51,7 +53,6 @@ export default function NotasPendientes() {
 
   const departamentoNombre = user?.departamento?.nombre ?? 'Mi Departamento'
 
-  // Base: notas accionables del departamento del usuario
   const notasDepartamento = useMemo(() => {
     if (!user?.departamentoId) return []
 
@@ -65,7 +66,6 @@ export default function NotasPendientes() {
     )
   }, [getPendientesDepartamento, solicitudes, user?.departamentoId])
 
-  // Aplicar filtros del panel compartido sobre la base ya acotada al departamento
   const filteredSolicitudes = useMemo(() => {
     let results = [...notasDepartamento]
 
@@ -79,8 +79,6 @@ export default function NotasPendientes() {
       )
     }
 
-    // El filtro de estado solo aplica si coincide con uno de los estados accionables;
-    // de lo contrario no tendría sentido en esta pantalla (todas ya son accionables)
     if (estado !== 'todos') {
       results = results.filter(solicitud => solicitud.estado === estado)
     }
@@ -108,12 +106,8 @@ export default function NotasPendientes() {
     )
   }, [notasDepartamento, searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta])
 
-  const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
-  const safeCurrentPage = Math.min(currentPage, totalPages)
-  const paginatedSolicitudes = filteredSolicitudes.slice(
-    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
-    safeCurrentPage * ITEMS_PER_PAGE
-  )
+  const { totalPages, safeCurrentPage, paginatedItems: paginatedSolicitudes } =
+    usePaginatedList(filteredSolicitudes, currentPage, ITEMS_PER_PAGE)
 
   const goToPage = (page: number) => updateFilter('page', String(page))
 
@@ -218,18 +212,7 @@ export default function NotasPendientes() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Radicado</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Título</th>
-                  <th className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">
-                    Solicitante
-                  </th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Fecha límite</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Estado</th>
-                  <th className="p-4 text-right font-medium text-muted-foreground">Acciones</th>
-                </tr>
-              </thead>
+              <SolicitudesTableHeader />
 
               <tbody>
                 {paginatedSolicitudes.length === 0 ? (
@@ -242,43 +225,21 @@ export default function NotasPendientes() {
                   </tr>
                 ) : (
                   paginatedSolicitudes.map(solicitud => (
-                    <tr key={solicitud.id} className="border-b transition-colors hover:bg-muted/30">
-                      <td className="p-4">
-                        <span className="font-mono text-sm">{solicitud.radicado}</span>
-                      </td>
-
-                      <td className="p-4">
-                        <p className="max-w-[220px] truncate font-medium">
-                          {solicitud.titulo}
-                        </p>
-                      </td>
-
-                      <td className="hidden p-4 md:table-cell">
-                        <span className="text-sm">{solicitud.solicitante}</span>
-                      </td>
-
-                      <td className="p-4">
-                        <FechaLimiteBadge fechaLimite={solicitud.fechaLimite} />
-                      </td>
-
-                      <td className="p-4">
-                        <EstadoBadge estado={solicitud.estado} />
-                      </td>
-
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleViewDetail(solicitud)}
-                            className="icon-button hover:bg-secondary"
-                            title="Ver detalle"
-                            aria-label={`Ver detalle de ${solicitud.radicado}`}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <SolicitudTableRow
+                      key={solicitud.id}
+                      solicitud={solicitud}
+                      actions={
+                        <button
+                          type="button"
+                          onClick={() => handleViewDetail(solicitud)}
+                          className="icon-button hover:bg-secondary"
+                          title="Ver detalle"
+                          aria-label={`Ver detalle de ${solicitud.radicado}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      }
+                    />
                   ))
                 )}
               </tbody>
@@ -286,39 +247,13 @@ export default function NotasPendientes() {
           </div>
 
           {filteredSolicitudes.length > ITEMS_PER_PAGE && (
-            <div className="flex items-center justify-between border-t p-4">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-                {Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredSolicitudes.length)} de{' '}
-                {filteredSolicitudes.length} notas
-              </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => goToPage(safeCurrentPage - 1)}
-                  disabled={safeCurrentPage === 1}
-                  className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <span className="text-sm">
-                  Página {safeCurrentPage} de {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => goToPage(safeCurrentPage + 1)}
-                  disabled={safeCurrentPage === totalPages}
-                  className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Página siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={safeCurrentPage}
+              totalPages={totalPages}
+              totalItems={filteredSolicitudes.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={goToPage}
+            />
           )}
         </section>
 

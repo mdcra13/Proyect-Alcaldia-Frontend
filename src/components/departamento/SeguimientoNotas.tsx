@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Download, Eye, History, X } from 'lucide-react'
+import { Download, Eye, History, X } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
-import { EstadoBadge } from '@/components/shared/EstadoBadge'
-import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
 import { HistorialTimeline } from '@/components/shared/HistorialTimeline'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import SolicitudFiltersPanel from '@/components/shared/SolicitudFiltersPanel'
+import SolicitudesTableHeader from '@/components/shared/SolicitudesTableHeader'
+import SolicitudTableRow from '@/components/shared/SolicitudTableRow'
+import TablePagination from '@/components/shared/TablePagination'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
+import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import { ESTADO_CONFIG, type Solicitud } from '@/lib/types'
@@ -119,20 +121,14 @@ export default function SeguimientoNotas() {
       results = results.filter(solicitud => solicitud.fechaLimite <= fechaHasta)
     }
 
-    // Ordenado por fecha de ingreso descendente — lo más reciente primero,
-    // porque aquí el objetivo es ver el historial de gestión, no priorizar urgencia
     return results.sort(
       (a, b) =>
         new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime()
     )
   }, [notasDepartamento, searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta])
 
-  const totalPages = Math.max(1, Math.ceil(filteredSolicitudes.length / ITEMS_PER_PAGE))
-  const safeCurrentPage = Math.min(currentPage, totalPages)
-  const paginatedSolicitudes = filteredSolicitudes.slice(
-    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
-    safeCurrentPage * ITEMS_PER_PAGE
-  )
+  const { totalPages, safeCurrentPage, paginatedItems: paginatedSolicitudes } =
+    usePaginatedList(filteredSolicitudes, currentPage, ITEMS_PER_PAGE)
 
   const goToPage = (page: number) => updateFilter('page', String(page))
 
@@ -185,19 +181,19 @@ export default function SeguimientoNotas() {
         </div>
 
         <SolicitudFiltersPanel
-        idPrefix="seguimiento-notas"
-        departamentos={[]}
-        searchQuery={searchQuery}
-        estado={estado}
-        departamento="todos"
-        categoria={categoria}
-        prioridad={prioridad}
-        fechaDesde={fechaDesde}
-        fechaHasta={fechaHasta}
-        activeFiltersCount={activeFiltersCount}
-        hasActiveFilters={hasActiveFilters}
-        updateFilter={updateFilter}
-        clearFilters={clearFilters}
+          idPrefix="seguimiento-notas"
+          departamentos={[]}
+          searchQuery={searchQuery}
+          estado={estado}
+          departamento="todos"
+          categoria={categoria}
+          prioridad={prioridad}
+          fechaDesde={fechaDesde}
+          fechaHasta={fechaHasta}
+          activeFiltersCount={activeFiltersCount}
+          hasActiveFilters={hasActiveFilters}
+          updateFilter={updateFilter}
+          clearFilters={clearFilters}
         />
 
         <section className="overflow-hidden rounded-xl border border-border bg-card">
@@ -209,19 +205,7 @@ export default function SeguimientoNotas() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Radicado</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Título</th>
-                  <th className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">
-                    Solicitante
-                  </th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Fecha ingreso</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Fecha límite</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Estado</th>
-                  <th className="p-4 text-right font-medium text-muted-foreground">Acciones</th>
-                </tr>
-              </thead>
+              <SolicitudesTableHeader showFechaIngreso />
 
               <tbody>
                 {paginatedSolicitudes.length === 0 ? (
@@ -232,31 +216,12 @@ export default function SeguimientoNotas() {
                   </tr>
                 ) : (
                   paginatedSolicitudes.map(solicitud => (
-                    <tr key={solicitud.id} className="border-b transition-colors hover:bg-muted/30">
-                      <td className="p-4">
-                        <span className="font-mono text-sm">{solicitud.radicado}</span>
-                      </td>
-
-                      <td className="p-4">
-                        <p className="max-w-[220px] truncate font-medium">{solicitud.titulo}</p>
-                      </td>
-
-                      <td className="hidden p-4 md:table-cell">
-                        <span className="text-sm">{solicitud.solicitante}</span>
-                      </td>
-
-                      <td className="p-4 text-sm">{formatDate(solicitud.fechaSolicitud)}</td>
-
-                      <td className="p-4">
-                        <FechaLimiteBadge fechaLimite={solicitud.fechaLimite} />
-                      </td>
-
-                      <td className="p-4">
-                        <EstadoBadge estado={solicitud.estado} />
-                      </td>
-
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-1">
+                    <SolicitudTableRow
+                      key={solicitud.id}
+                      solicitud={solicitud}
+                      fechaIngresoFormatted={formatDate(solicitud.fechaSolicitud)}
+                      actions={
+                        <>
                           <button
                             type="button"
                             onClick={() => handleOpenDetail(solicitud)}
@@ -276,9 +241,9 @@ export default function SeguimientoNotas() {
                           >
                             <History className="h-4 w-4" />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </>
+                      }
+                    />
                   ))
                 )}
               </tbody>
@@ -286,39 +251,13 @@ export default function SeguimientoNotas() {
           </div>
 
           {filteredSolicitudes.length > ITEMS_PER_PAGE && (
-            <div className="flex items-center justify-between border-t p-4">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-                {Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredSolicitudes.length)} de{' '}
-                {filteredSolicitudes.length} notas
-              </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => goToPage(safeCurrentPage - 1)}
-                  disabled={safeCurrentPage === 1}
-                  className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                <span className="text-sm">
-                  Página {safeCurrentPage} de {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => goToPage(safeCurrentPage + 1)}
-                  disabled={safeCurrentPage === totalPages}
-                  className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Página siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={safeCurrentPage}
+              totalPages={totalPages}
+              totalItems={filteredSolicitudes.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={goToPage}
+            />
           )}
         </section>
 
@@ -328,11 +267,9 @@ export default function SeguimientoNotas() {
             solicitud={selectedSolicitud}
             open={showDetailModal}
             onClose={handleCloseModals}
-            // Sin onApprove/onDecline: en Seguimiento solo se consulta, no se gestiona
           />
         )}
 
-        {/* Historial — modal propio, separado del de detalle */}
         {showHistoryModal && selectedSolicitud && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
