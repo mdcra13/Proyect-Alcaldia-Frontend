@@ -707,7 +707,8 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
   },
 
   aprobarDepartamento: (id: string, userId: string, userName: string) => {
-    get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
+  get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
+  get().cambiarEstadoAlcalde(id, 'awaiting_mayor_signature', userId, userName)
   },
 
   aprobar: (id: string, userId: string, userName: string) => {

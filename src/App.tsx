@@ -14,6 +14,8 @@ import SubirDocumento from '@/components/secretaria/SubirDocumento'
 const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
 const SecretariaNotas = lazy(() => import('@/components/secretaria/SecretariaNotas'))
 const DepartamentoDashboard = lazy(() => import('@/components/departamento/DepartamentoDashboard'))
+const NotasPendientes = lazy(() => import('@/components/departamento/NotasPendientes'))
+const SeguimientoNotas = lazy(() => import('@/components/departamento/SeguimientoNotas'))
 const ITDashboard = lazy(() => import('@/components/it/ITDashboard'))
 const ITGestionUsuarios = lazy(() => import('@/components/it/ITGestionUsuarios'))
 const ITGestionDepartamentos = lazy(() => import('@/components/it/ITGestionDepartamentos'))
@@ -140,10 +142,26 @@ export default function App() {
               }
             />
             <Route
-              path="/departamento/solicitudes"
+              path="/departamento/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['departamento']}>
                   <DepartamentoDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departamento/pendientes"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <NotasPendientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departamento/seguimiento"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <SeguimientoNotas />
                 </ProtectedRoute>
               }
             />
