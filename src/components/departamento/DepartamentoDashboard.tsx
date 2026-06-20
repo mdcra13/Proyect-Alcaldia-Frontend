@@ -85,7 +85,7 @@ export default function DepartamentoDashboard() {
       <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto w-full">
         <div>
           <h1 className="dashboard-title">
-            Bienvenido, Departamento {user?.nombre ?? ''}
+            Bienvenido, {user?.nombre ?? ''}
           </h1>
           <p className="dashboard-subtitle capitalize">{fechaHoy}</p>
         </div>

@@ -35,9 +35,9 @@ export default function DocumentPreviewModal({
   const status = ESTADO_CONFIG[solicitud.estado]
 
   const canReview =
-    user?.role === 'alcalde' &&
-    solicitud.estado === 'awaiting_mayor_signature' &&
-    Boolean(onApprove || onDecline)
+  ((user?.role === 'alcalde' && solicitud.estado === 'awaiting_mayor_signature') ||
+   (user?.role === 'departamento' && ['assigned_to_department', 'in_review', 'returned_to_department'].includes(solicitud.estado))) &&
+  Boolean(onApprove || onDecline)
 
   if (!open) return null
 

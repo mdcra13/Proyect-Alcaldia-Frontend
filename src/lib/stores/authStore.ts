@@ -1,14 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { mockDepartamentos } from '@/lib/stores/departamentosStore'
 import type { Departamento, User, UserFormData, UserRole, UserStatus } from '@/lib/types'
 
-const mockDepartamentos: Record<string, Departamento> = {
-  'dep-1': {
-    id: 'dep-1',
-    nombre: 'Salud',
-    activo: true,
+const departamentosById = mockDepartamentos.reduce<Record<string, Departamento>>(
+  (acc, departamento) => {
+    acc[departamento.id] = departamento
+    return acc
   },
-}
+  {}
+)
 
 const mockUsers: User[] = [
   {
@@ -38,13 +39,25 @@ const mockUsers: User[] = [
     username: 'departamento',
     role: 'departamento',
     departamentoId: 'dep-1',
-    departamento: mockDepartamentos['dep-1'],
+    departamento: departamentosById['dep-1'],
     avatar: null,
     status: 'active',
     createdAt: '2024-02-15',
   },
   {
     id: '4',
+    nombre: 'Laura',
+    apellido: 'Mendoza',
+    username: 'departamento2',
+    role: 'departamento',
+    departamentoId: 'dep-2',
+    departamento: departamentosById['dep-2'],
+    avatar: null,
+    status: 'active',
+    createdAt: '2024-02-16',
+  },
+  {
+    id: '5',
     nombre: 'Pedro',
     apellido: 'Martínez',
     username: 'it',
@@ -96,7 +109,7 @@ const useAuthStore = create<AuthState>()(
         const user = get().users.find(
           item =>
             item.username.toLowerCase() === normalizedUsername &&
-            item.status === 'active',
+            item.status === 'active'
         )
 
         if (user && password === 'admin123') {
@@ -127,7 +140,7 @@ const useAuthStore = create<AuthState>()(
         // TODO: Replace with API call PATCH /api/v1/users/:id
         set(state => ({
           users: state.users.map(user =>
-            user.id === userId ? { ...user, ...updates } : user,
+            user.id === userId ? { ...user, ...updates } : user
           ),
           user:
             state.user?.id === userId
@@ -145,7 +158,7 @@ const useAuthStore = create<AuthState>()(
         set(state => ({
           user: { ...currentUser, ...updates },
           users: state.users.map(user =>
-            user.id === currentUser.id ? { ...user, ...updates } : user,
+            user.id === currentUser.id ? { ...user, ...updates } : user
           ),
         }))
       },
@@ -153,7 +166,7 @@ const useAuthStore = create<AuthState>()(
       addUser: (newUser: UserFormData): User => {
         // TODO: Replace with API call POST /api/v1/users
         const departamento = newUser.departamentoId
-          ? mockDepartamentos[newUser.departamentoId]
+          ? departamentosById[newUser.departamentoId]
           : undefined
 
         const user: User = {
@@ -185,14 +198,14 @@ const useAuthStore = create<AuthState>()(
                   ...user,
                   status: (user.status === 'active' ? 'inactive' : 'active') as UserStatus,
                 }
-              : user,
+              : user
           ),
         }))
       },
 
       changePassword: (
         currentPassword: string,
-        newPassword: string,
+        newPassword: string
       ): PasswordChangeResult => {
         // TODO: Replace with API call PATCH /api/v1/users/:id
         if (currentPassword !== 'admin123') {
@@ -218,7 +231,7 @@ const useAuthStore = create<AuthState>()(
         return !get().users.some(
           user =>
             user.username.toLowerCase() === normalizedUsername &&
-            user.id !== excludeId,
+            user.id !== excludeId
         )
       },
 
@@ -240,8 +253,8 @@ const useAuthStore = create<AuthState>()(
               rememberSession: state.rememberSession,
             }
           : {},
-    },
-  ),
+    }
+  )
 )
 
 export { useAuthStore }
