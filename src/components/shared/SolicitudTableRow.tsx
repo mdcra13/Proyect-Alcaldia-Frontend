@@ -16,9 +16,9 @@ export default function SolicitudTableRow({
 }: SolicitudTableRowProps) {
   return (
     <tr className="border-b transition-colors hover:bg-muted/30">
-      <td className="p-4">
+      <th scope="row" className="p-4 text-left font-normal">
         <span className="font-mono text-sm">{solicitud.radicado}</span>
-      </td>
+      </th>
 
       <td className="p-4">
         <p className="max-w-[220px] truncate font-medium">{solicitud.titulo}</p>

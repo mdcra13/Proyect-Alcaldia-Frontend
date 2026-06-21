@@ -189,7 +189,7 @@ export function HistorialTimeline({ historial, className }: HistorialTimelinePro
                 config.color
               )}
             >
-              <Icon className="h-3 w-3" />
+              <Icon className="h-3 w-3" aria-hidden="true" focusable="false" />
             </div>
 
             <div className="rounded-lg border bg-card p-3">

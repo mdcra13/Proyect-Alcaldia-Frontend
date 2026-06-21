@@ -12,6 +12,7 @@ import type { Solicitud } from '@/lib/types'
 import { ESTADO_CONFIG, PRIORIDAD_LABELS } from '@/lib/types'
 import useAuthStore from '@/lib/stores/authStore'
 import { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 
@@ -33,6 +34,8 @@ export default function DocumentPreviewModal({
   const user = useAuthStore(state => state.user)
   const category = CATEGORIES[solicitud.categoria]
   const status = ESTADO_CONFIG[solicitud.estado]
+  const titleId = `document-preview-title-${solicitud.id}`
+  const descriptionId = `document-preview-description-${solicitud.id}`
 
   const canReview =
   ((user?.role === 'alcalde' && solicitud.estado === 'awaiting_mayor_signature') ||
@@ -42,22 +45,21 @@ export default function DocumentPreviewModal({
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="document-preview-title"
+    <AccessibleDialog
+      titleId={titleId}
+      descriptionId={descriptionId}
+      onClose={onClose}
+      className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl"
     >
-      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
         <div className="flex items-start justify-between border-b border-border p-6">
           <div>
             <h2
-              id="document-preview-title"
+              id={titleId}
               className="font-serif text-2xl font-semibold text-foreground"
             >
               Vista previa del documento
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p id={descriptionId} className="text-sm text-muted-foreground">
               {solicitud.radicado} · {status.label}
             </p>
           </div>
@@ -68,7 +70,7 @@ export default function DocumentPreviewModal({
             className="icon-button text-muted-foreground hover:bg-secondary hover:text-foreground"
             aria-label="Cerrar vista previa"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" focusable="false" />
           </button>
         </div>
 
@@ -94,7 +96,7 @@ export default function DocumentPreviewModal({
                 Fecha de solicitud
               </p>
               <div className="flex items-center gap-2 font-semibold text-foreground">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" focusable="false" />
                 {solicitud.fechaSolicitud}
               </div>
             </div>
@@ -102,7 +104,7 @@ export default function DocumentPreviewModal({
             <div>
             <p className="text-sm font-medium text-muted-foreground">Subido por</p>
             <div className="flex items-center gap-2 font-semibold text-foreground">
-              <User className="h-4 w-4 text-muted-foreground" />
+              <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" focusable="false" />
               {solicitud.subidoPor}
             </div>
           </div>
@@ -110,7 +112,7 @@ export default function DocumentPreviewModal({
             <div>
               <p className="text-sm font-medium text-muted-foreground">Solicitante</p>
               <div className="flex items-center gap-2 font-semibold text-foreground">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" focusable="false" />
                 {solicitud.solicitante}
               </div>
             </div>
@@ -131,7 +133,7 @@ export default function DocumentPreviewModal({
                   category?.color ?? 'border-border bg-muted text-muted-foreground'
                 }`}
               >
-                <Tag className="h-3.5 w-3.5" />
+                <Tag className="h-3.5 w-3.5" aria-hidden="true" focusable="false" />
                 {category?.icon} {category?.label ?? solicitud.categoria}
               </span>
             </div>
@@ -146,7 +148,7 @@ export default function DocumentPreviewModal({
             <div>
               <p className="text-sm font-medium text-muted-foreground">Departamento</p>
               <div className="flex items-center gap-2 font-semibold text-foreground">
-                <Landmark className="h-4 w-4 text-muted-foreground" />
+                <Landmark className="h-4 w-4 text-muted-foreground" aria-hidden="true" focusable="false" />
                 {solicitud.departamento?.nombre ?? 'Sin asignar'}
               </div>
             </div>
@@ -179,7 +181,7 @@ export default function DocumentPreviewModal({
 
           <section>
             <div className="mb-3 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
+              <FileText className="h-5 w-5 text-primary" aria-hidden="true" focusable="false" />
               <h3 className="font-serif text-lg font-semibold text-foreground">
                 Documento adjunto
               </h3>
@@ -194,7 +196,7 @@ export default function DocumentPreviewModal({
 
               <div className="flex min-h-80 items-center justify-center bg-secondary/40 p-6">
                 <div className="text-center">
-                  <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
+                  <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground" aria-hidden="true" focusable="false" />
                   <p className="font-medium text-foreground">Visor PDF</p>
                   <p className="text-sm text-muted-foreground">
                     Aquí se mostrará la vista previa del documento adjunto.
@@ -213,7 +215,7 @@ export default function DocumentPreviewModal({
                 onClick={() => onDecline?.(solicitud.id)}
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive px-4 py-2 font-medium text-destructive transition hover:bg-destructive hover:text-destructive-foreground"
               >
-                <XCircle className="h-4 w-4" />
+                <XCircle className="h-4 w-4" aria-hidden="true" focusable="false" />
                 Declinar
               </button>
 
@@ -222,7 +224,7 @@ export default function DocumentPreviewModal({
                 onClick={() => onApprove?.(solicitud.id)}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-success px-4 py-2 font-medium text-success-foreground transition hover:opacity-90"
               >
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4" aria-hidden="true" focusable="false" />
                 Aprobar
               </button>
             </>
@@ -236,7 +238,6 @@ export default function DocumentPreviewModal({
             Cerrar
           </button>
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
   )
 }

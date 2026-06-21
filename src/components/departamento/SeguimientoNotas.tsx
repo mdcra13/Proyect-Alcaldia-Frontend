@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Download, Eye, History, X } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
+import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import { HistorialTimeline } from '@/components/shared/HistorialTimeline'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import SolicitudFiltersPanel from '@/components/shared/SolicitudFiltersPanel'
@@ -110,11 +111,11 @@ export default function SeguimientoNotas() {
     setShowHistoryModal(true)
   }
 
-  const handleCloseModals = () => {
+  const handleCloseModals = useCallback(() => {
     setSelectedSolicitud(null)
     setShowDetailModal(false)
     setShowHistoryModal(false)
-  }
+  }, [])
 
   const handleExportCSV = () => {
     exportSolicitudesCSV(filteredSolicitudes)
@@ -143,7 +144,7 @@ export default function SeguimientoNotas() {
             onClick={handleExportCSV}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4" aria-hidden="true" focusable="false" />
             Exportar CSV
           </button>
         </div>
@@ -197,7 +198,7 @@ export default function SeguimientoNotas() {
                             title="Ver detalle"
                             aria-label={`Ver detalle de ${solicitud.radicado}`}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4" aria-hidden="true" focusable="false" />
                           </button>
 
                           <button
@@ -207,7 +208,7 @@ export default function SeguimientoNotas() {
                             title="Ver historial"
                             aria-label={`Ver historial de ${solicitud.radicado}`}
                           >
-                            <History className="h-4 w-4" />
+                            <History className="h-4 w-4" aria-hidden="true" focusable="false" />
                           </button>
                         </>
                       }
@@ -239,14 +240,18 @@ export default function SeguimientoNotas() {
         )}
 
         {showHistoryModal && selectedSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
+          <AccessibleDialog
+            titleId="history-solicitud-title"
+            descriptionId="history-solicitud-description"
+            onClose={handleCloseModals}
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl"
+          >
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <div>
-                  <h2 className="font-serif text-xl font-semibold text-foreground">
+                  <h2 id="history-solicitud-title" className="font-serif text-xl font-semibold text-foreground">
                     Historial de {selectedSolicitud.radicado}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p id="history-solicitud-description" className="text-sm text-muted-foreground">
                     {selectedSolicitud.titulo}
                   </p>
                 </div>
@@ -257,15 +262,14 @@ export default function SeguimientoNotas() {
                   className="icon-button hover:bg-secondary"
                   aria-label="Cerrar historial"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" focusable="false" />
                 </button>
               </div>
 
               <div className="p-6">
                 <HistorialTimeline historial={selectedSolicitud.historial} />
               </div>
-            </div>
-          </div>
+          </AccessibleDialog>
         )}
 
       </div>
