@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Building2,
   ChevronLeft,
@@ -18,6 +18,7 @@ import useAuthStore from '@/lib/stores/authStore'
 import { filterSolicitudes } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 import {
   ESTADO_CONFIG,
   PRIORIDAD_LABELS,
@@ -63,6 +64,7 @@ export default function SecretariaNotas() {
   const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showChangeDeptModal, setShowChangeDeptModal] = useState(false)
+  const detailDialogRef = useRef<HTMLDivElement>(null)
 
   const departamentos = getDepartamentosActivos()
 
@@ -154,6 +156,8 @@ export default function SecretariaNotas() {
     setSelectedSolicitud(null)
   }
 
+  useModalAccessibility(showDetailModal && Boolean(selectedSolicitud), detailDialogRef, handleCloseDetail)
+
   const handleChangeDepartment = (solicitud: Solicitud) => {
     setSelectedSolicitud(solicitud)
     setShowChangeDeptModal(true)
@@ -184,6 +188,7 @@ export default function SecretariaNotas() {
 
         <SolicitudFiltersPanel
           idPrefix="secretaria-notas"
+          headingLevel={2}
           departamentos={departamentos}
           searchQuery={filters.searchQuery}
           estado={filters.estado}
@@ -367,10 +372,19 @@ export default function SecretariaNotas() {
         </div>
 
         {showDetailModal && selectedSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            ref={detailDialogRef}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="secretaria-nota-detalle-title"
+          >
             <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                <h2 className="font-serif text-xl font-semibold text-foreground">
+                <h2
+                  id="secretaria-nota-detalle-title"
+                  className="font-serif text-xl font-semibold text-foreground"
+                >
                   Detalle de Nota {selectedSolicitud.radicado}
                 </h2>
 
