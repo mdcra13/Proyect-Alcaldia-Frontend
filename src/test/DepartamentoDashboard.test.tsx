@@ -1,3 +1,4 @@
+import 'vitest-axe/extend-expect'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
