@@ -169,6 +169,7 @@ export default function NotasPendientes() {
         </div>
 
         <SolicitudFiltersPanel
+          headingLevel={2}
           idPrefix="notas-pendientes"
           departamentos={[]}
           searchQuery={searchQuery}

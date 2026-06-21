@@ -150,6 +150,7 @@ export default function SeguimientoNotas() {
         </div>
 
         <SolicitudFiltersPanel
+          headingLevel={2}
           idPrefix="seguimiento-notas"
           departamentos={[]}
           searchQuery={searchQuery}
