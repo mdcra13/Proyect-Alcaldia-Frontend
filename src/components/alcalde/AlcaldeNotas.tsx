@@ -394,6 +394,7 @@ export default function AlcaldeNotas() {
                               onClick={() => handleViewDetail(solicitud)}
                               className="icon-button hover:bg-secondary"
                               title="Ver detalle"
+                              aria-label={`Ver detalle de ${solicitud.radicado}`}
                             >
                               <Eye className="h-4 w-4" />
                             </button>
@@ -406,6 +407,7 @@ export default function AlcaldeNotas() {
                               disabled={!canApprove}
                               className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
                               title="Aprobar solicitud"
+                              aria-label={`Aprobar ${solicitud.radicado}`}
                             >
                               <CheckCircle className="h-4 w-4" />
                               <span className="hidden xl:inline">Aprobar</span>
@@ -419,6 +421,7 @@ export default function AlcaldeNotas() {
                               disabled={!canReturn}
                               className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
                               title="Rechazar y devolver al departamento"
+                              aria-label={`Rechazar y devolver ${solicitud.radicado}`}
                             >
                               <Undo2 className="h-4 w-4" />
                               <span className="hidden xl:inline">Rechazar</span>
@@ -436,6 +439,7 @@ export default function AlcaldeNotas() {
                                     : 'cursor-not-allowed bg-gray-100 text-gray-500'
                               }`}
                               title={isSigned ? 'Ya fue firmada' : 'Firmar solicitud'}
+                              aria-label={isSigned ? `${solicitud.radicado} ya fue firmada` : `Firmar ${solicitud.radicado}`}
                             >
                               <PenLine className="h-4 w-4" />
                               <span className="hidden xl:inline">
@@ -466,6 +470,7 @@ export default function AlcaldeNotas() {
                   onClick={() => updateFilter('page', String(safeCurrentPage - 1))}
                   disabled={safeCurrentPage === 1}
                   className="icon-button border border-border disabled:opacity-50"
+                  aria-label="PÃ¡gina anterior"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -479,6 +484,7 @@ export default function AlcaldeNotas() {
                   onClick={() => updateFilter('page', String(safeCurrentPage + 1))}
                   disabled={safeCurrentPage === totalPages}
                   className="icon-button border border-border disabled:opacity-50"
+                  aria-label="PÃ¡gina siguiente"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
