@@ -1,8 +1,28 @@
 import '@testing-library/jest-dom/vitest'
-import 'vitest-axe/extend-expect'
 import { vi } from 'vitest'
 
-// matchMedia — no implementado en jsdom
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = String(value)
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+  }
+})()
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -17,18 +37,7 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
-// Canvas — no implementado en jsdom
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
-  writable: true,
-  value: vi.fn(),
-})
-
-// URL.createObjectURL / revokeObjectURL — usados en exportCSV de SeguimientoNotas
-Object.defineProperty(window.URL, 'createObjectURL', {
-  writable: true,
-  value: vi.fn(() => 'blob:mock-url'),
-})
-Object.defineProperty(window.URL, 'revokeObjectURL', {
   writable: true,
   value: vi.fn(),
 })

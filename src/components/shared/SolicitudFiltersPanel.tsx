@@ -9,6 +9,7 @@ import type { SolicitudFilterKey } from '@/lib/hooks/useSolicitudFilters'
 
 interface SolicitudFiltersPanelProps {
   idPrefix: string
+  headingLevel?: 2 | 3
   departamentos: Departamento[]
   searchQuery: string
   estado: string
@@ -25,6 +26,7 @@ interface SolicitudFiltersPanelProps {
 
 export default function SolicitudFiltersPanel({
   idPrefix,
+  headingLevel = 3,
   departamentos,
   searchQuery,
   estado,
@@ -38,11 +40,13 @@ export default function SolicitudFiltersPanel({
   updateFilter,
   clearFilters,
 }: SolicitudFiltersPanelProps) {
+  const Heading = `h${headingLevel}` as const
+
   return (
     <section className="rounded-xl border border-border bg-card p-4">
       <div className="mb-4 flex items-center gap-2">
-        <Filter className="h-5 w-5 text-primary" aria-hidden="true" focusable="false" />
-        <h2 className="font-semibold text-foreground">Filtros</h2>
+        <Filter className="h-5 w-5 text-primary" />
+        <Heading className="font-semibold text-foreground">Filtros</Heading>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">

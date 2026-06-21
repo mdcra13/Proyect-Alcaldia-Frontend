@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ArrowRightLeft,
   ChevronLeft,
@@ -19,6 +19,7 @@ import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
 import { filterSolicitudes } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 import {
   ESTADO_CONFIG,
   PRIORIDAD_LABELS,
@@ -47,9 +48,14 @@ export default function SeguimientoSolicitudes() {
   const [viewSolicitud, setViewSolicitud] = useState<Solicitud | null>(null)
   const [changeDeptSolicitud, setChangeDeptSolicitud] = useState<Solicitud | null>(null)
   const [historialSolicitud, setHistorialSolicitud] = useState<Solicitud | null>(null)
+  const historialDialogRef = useRef<HTMLDivElement>(null)
 
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
   const departamentos = useDepartamentosStore(state => state.departamentos)
+
+  const closeHistorial = () => setHistorialSolicitud(null)
+
+  useModalAccessibility(Boolean(historialSolicitud), historialDialogRef, closeHistorial)
 
   const getDepartamentoNombre = (departamentoId?: string) => {
     if (!departamentoId) return 'Sin asignar'
@@ -425,11 +431,20 @@ export default function SeguimientoSolicitudes() {
         )}
 
         {historialSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            ref={historialDialogRef}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seguimiento-historial-title"
+          >
             <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
               <div className="flex items-start justify-between border-b border-border px-6 py-4">
                 <div>
-                  <h3 className="font-serif text-xl font-semibold text-foreground">
+                  <h3
+                    id="seguimiento-historial-title"
+                    className="font-serif text-xl font-semibold text-foreground"
+                  >
                     Historial de Cambios
                   </h3>
                   <p className="text-sm text-muted-foreground">
@@ -439,7 +454,7 @@ export default function SeguimientoSolicitudes() {
 
                 <button
                   type="button"
-                  onClick={() => setHistorialSolicitud(null)}
+                  onClick={closeHistorial}
                   className="icon-button hover:bg-secondary"
                   aria-label="Cerrar historial"
                 >
@@ -454,7 +469,7 @@ export default function SeguimientoSolicitudes() {
               <div className="flex justify-end border-t border-border px-6 py-4">
                 <button
                   type="button"
-                  onClick={() => setHistorialSolicitud(null)}
+                  onClick={closeHistorial}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
                 >
                   Cerrar

@@ -8,6 +8,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
+import { useRef } from 'react'
 import type { Solicitud } from '@/lib/types'
 import { ESTADO_CONFIG, PRIORIDAD_LABELS } from '@/lib/types'
 import useAuthStore from '@/lib/stores/authStore'
@@ -15,6 +16,7 @@ import { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
 interface DocumentPreviewModalProps {
   solicitud: Solicitud
@@ -31,6 +33,7 @@ export default function DocumentPreviewModal({
   onApprove,
   onDecline,
 }: DocumentPreviewModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
   const user = useAuthStore(state => state.user)
   const category = CATEGORIES[solicitud.categoria]
   const status = ESTADO_CONFIG[solicitud.estado]
@@ -42,14 +45,17 @@ export default function DocumentPreviewModal({
    (user?.role === 'departamento' && ['assigned_to_department', 'in_review', 'returned_to_department'].includes(solicitud.estado))) &&
   Boolean(onApprove || onDecline)
 
+  useModalAccessibility(open, dialogRef, onClose)
+
   if (!open) return null
 
   return (
-    <AccessibleDialog
-      titleId={titleId}
-      descriptionId={descriptionId}
-      onClose={onClose}
-      className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl"
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="document-preview-title"
     >
         <div className="flex items-start justify-between border-b border-border p-6">
           <div>
