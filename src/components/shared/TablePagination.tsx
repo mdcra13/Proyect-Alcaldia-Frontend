@@ -33,7 +33,7 @@ export default function TablePagination({
           className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Página anterior"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" focusable="false" />
         </button>
 
         <span className="text-sm">
@@ -47,7 +47,7 @@ export default function TablePagination({
           className="icon-button border border-border hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Página siguiente"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" focusable="false" />
         </button>
       </div>
     </div>

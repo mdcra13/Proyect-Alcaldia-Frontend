@@ -54,19 +54,26 @@ export default function SolicitudFiltersPanel({
           <label htmlFor={`${idPrefix}-search`} className="sr-only">
             Buscar
           </label>
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+            focusable="false"
+          />
           <input
             id={`${idPrefix}-search`}
             type="text"
             placeholder="Buscar por radicado, título, solicitante o identificación..."
             value={searchQuery}
             onChange={event => updateFilter('q', event.target.value)}
-            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           />
         </div>
 
+        <label htmlFor={`${idPrefix}-estado`} className="sr-only">
+          Estado
+        </label>
         <select
-          aria-label="Estado"
+          id={`${idPrefix}-estado`}
           value={estado}
           onChange={event => updateFilter('estado', event.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -83,8 +90,11 @@ export default function SolicitudFiltersPanel({
           ))}
         </select>
 
+        <label htmlFor={`${idPrefix}-departamento`} className="sr-only">
+          Departamento
+        </label>
         <select
-          aria-label="Departamento"
+          id={`${idPrefix}-departamento`}
           value={departamento}
           onChange={event => updateFilter('departamento', event.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -97,8 +107,11 @@ export default function SolicitudFiltersPanel({
           ))}
         </select>
 
+        <label htmlFor={`${idPrefix}-categoria`} className="sr-only">
+          Categoría
+        </label>
         <select
-          aria-label="Categoría"
+          id={`${idPrefix}-categoria`}
           value={categoria}
           onChange={event => updateFilter('categoria', event.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -111,8 +124,11 @@ export default function SolicitudFiltersPanel({
           ))}
         </select>
 
+        <label htmlFor={`${idPrefix}-prioridad`} className="sr-only">
+          Prioridad
+        </label>
         <select
-          aria-label="Prioridad"
+          id={`${idPrefix}-prioridad`}
           value={prioridad}
           onChange={event => updateFilter('prioridad', event.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -125,16 +141,22 @@ export default function SolicitudFiltersPanel({
           ))}
         </select>
 
+        <label htmlFor={`${idPrefix}-fecha-desde`} className="sr-only">
+          Fecha desde
+        </label>
         <input
-          aria-label="Fecha desde"
+          id={`${idPrefix}-fecha-desde`}
           type="date"
           value={fechaDesde}
           onChange={event => updateFilter('desde', event.target.value)}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
 
+        <label htmlFor={`${idPrefix}-fecha-hasta`} className="sr-only">
+          Fecha hasta
+        </label>
         <input
-          aria-label="Fecha hasta"
+          id={`${idPrefix}-fecha-hasta`}
           type="date"
           value={fechaHasta}
           onChange={event => updateFilter('hasta', event.target.value)}

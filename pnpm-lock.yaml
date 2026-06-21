@@ -75,6 +75,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.8
         version: 4.1.8(vitest@4.1.8)
+      axe-core:
+        specifier: ^4.12.1
+        version: 4.12.1
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -109,11 +112,11 @@ importers:
         specifier: ^8.0.10
         version: 8.0.10(@types/node@24.12.2)(jiti@2.7.0)
       vitest:
-        specifier: ^4.1.7
+        specifier: ^4.1.8
         version: 4.1.8(@types/node@24.12.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.10(@types/node@24.12.2)(jiti@2.7.0))
       vitest-axe:
-        specifier: ^0.1.0
-        version: 0.1.0(vitest@4.1.8)
+        specifier: 1.0.0-pre.5
+        version: 1.0.0-pre.5(vitest@4.1.8)
 
 packages:
 
@@ -741,6 +744,9 @@ packages:
       vite:
         optional: true
 
+  '@vitest/pretty-format@3.2.6':
+    resolution: {integrity: sha512-lb7XXXzmm2h2ASzFnRvQpDo6onT1NmMJA3tkGTWiBFtRJ9lxGY3d3mm/Apt36gej2bkkOVLL/yTOtufDaFa/jA==}
+
   '@vitest/pretty-format@4.1.8':
     resolution: {integrity: sha512-9GasEBxpZ1VYIpqHf/0+YGg121uSNwCKOJqIrTwWP/TB7DmFCiaBpNl3aPZzoLWfWkuqhbH8vJIVobZkvdo2cA==}
 
@@ -789,6 +795,10 @@ packages:
 
   axe-core@4.11.4:
     resolution: {integrity: sha512-KunSNx+TVpkAw/6ULfhnx+HWRecjqZGTOyquAoWHYLRSdK1tB5Ihce1ZW+UY3fj33bYAFWPu7W/GRSmmrCGuxA==}
+    engines: {node: '>=4'}
+
+  axe-core@4.12.1:
+    resolution: {integrity: sha512-s7iGf5GaVMxEG0ENN9x+xTr7GFZCb1ZP/1uATUpCEK2X78nDB3RwbtFCo9pGAf9ru+VwoQ464DkaLEeRM08wJA==}
     engines: {node: '>=4'}
 
   babel-plugin-react-compiler@1.0.0:
@@ -1422,6 +1432,10 @@ packages:
     resolution: {integrity: sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg==}
     engines: {node: '>=12.0.0'}
 
+  tinyrainbow@2.0.0:
+    resolution: {integrity: sha512-op4nsTR47R6p0vMUUoYl/a+ljLFVtlfaXkLQmqfLR1qHma1h/ysYk4hEXZ880bf2CYgTskvTa/e196Vd5dDQXw==}
+    engines: {node: '>=14.0.0'}
+
   tinyrainbow@3.1.0:
     resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
     engines: {node: '>=14.0.0'}
@@ -1528,10 +1542,10 @@ packages:
       yaml:
         optional: true
 
-  vitest-axe@0.1.0:
-    resolution: {integrity: sha512-jvtXxeQPg8R/2ANTY8QicA5pvvdRP4F0FsVUAHANJ46YCDASie/cuhlSzu0DGcLmZvGBSBNsNuK3HqfaeknyvA==}
+  vitest-axe@1.0.0-pre.5:
+    resolution: {integrity: sha512-eUGxjpXnceha9lkqIVyMgOUeDmWU9LVjNiLTjAjDtMew0WbaBDtixoUvdftOhZfqRI03G2Ay4ZxaU1KG6jNCiQ==}
     peerDependencies:
-      vitest: '>=0.16.0'
+      vitest: '>=1'
 
   vitest@4.1.8:
     resolution: {integrity: sha512-flY6ScbCIt9HThs+C5HS7jvGOB560DJtk/Z15IQROTA6zEy49Nh8T/dofWTQL+n3vswqn87sbJNiuqw1SDp5Ig==}
@@ -2251,6 +2265,10 @@ snapshots:
     optionalDependencies:
       vite: 8.0.10(@types/node@24.12.2)(jiti@2.7.0)
 
+  '@vitest/pretty-format@3.2.6':
+    dependencies:
+      tinyrainbow: 2.0.0
+
   '@vitest/pretty-format@4.1.8':
     dependencies:
       tinyrainbow: 3.1.0
@@ -2305,6 +2323,8 @@ snapshots:
       js-tokens: 10.0.0
 
   axe-core@4.11.4: {}
+
+  axe-core@4.12.1: {}
 
   babel-plugin-react-compiler@1.0.0:
     dependencies:
@@ -2870,6 +2890,8 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
 
+  tinyrainbow@2.0.0: {}
+
   tinyrainbow@3.1.0: {}
 
   tldts-core@7.4.0: {}
@@ -2938,14 +2960,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
 
-  vitest-axe@0.1.0(vitest@4.1.8):
+  vitest-axe@1.0.0-pre.5(vitest@4.1.8):
     dependencies:
-      aria-query: 5.3.0
+      '@vitest/pretty-format': 3.2.6
       axe-core: 4.11.4
       chalk: 5.6.2
-      dom-accessibility-api: 0.5.16
       lodash-es: 4.18.1
-      redent: 3.0.0
       vitest: 4.1.8(@types/node@24.12.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.10(@types/node@24.12.2)(jiti@2.7.0))
 
   vitest@4.1.8(@types/node@24.12.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.10(@types/node@24.12.2)(jiti@2.7.0)):

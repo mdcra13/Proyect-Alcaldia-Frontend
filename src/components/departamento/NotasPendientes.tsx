@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Eye } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
+import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import SolicitudFiltersPanel from '@/components/shared/SolicitudFiltersPanel'
 import SolicitudesTableHeader from '@/components/shared/SolicitudesTableHeader'
@@ -45,104 +46,119 @@ export default function NotasPendientes() {
   } = useSolicitudFilters()
 
   const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showDetailModal, setShowDetailModal]   = useState(false)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showDeclineModal, setShowDeclineModal] = useState(false)
-  const [motivoRechazo, setMotivoRechazo] = useState('')
-  const [formError, setFormError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [motivoRechazo, setMotivoRechazo]       = useState('')
+  const [formError, setFormError]               = useState('')
+  const [isSubmitting, setIsSubmitting]         = useState(false)
+
+  // Refs para restaurar foco al botón que abrió cada modal
+  const approveButtonRef = useRef<HTMLButtonElement | null>(null)
+  const declineButtonRef = useRef<HTMLButtonElement | null>(null)
+  const detailButtonRef  = useRef<HTMLButtonElement | null>(null)
 
   const departamentoNombre = user?.departamento?.nombre ?? 'Mi Departamento'
 
   const notasDepartamento = useMemo(() => {
     if (!user?.departamentoId) return []
-
-    if (getPendientesDepartamento) {
-      return getPendientesDepartamento(user.departamentoId)
-    }
-
-    return solicitudes.filter(solicitud =>
-      solicitud.departamentoId === user.departamentoId &&
-      ESTADOS_ACCIONABLES_DEPTO.includes(solicitud.estado)
+    if (getPendientesDepartamento) return getPendientesDepartamento(user.departamentoId)
+    return solicitudes.filter(s =>
+      s.departamentoId === user.departamentoId &&
+      ESTADOS_ACCIONABLES_DEPTO.includes(s.estado)
     )
   }, [getPendientesDepartamento, solicitudes, user?.departamentoId])
 
-  // PONER:
-const filteredSolicitudes = useFilteredSolicitudes(
-  notasDepartamento,
-  { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
-  'fechaLimite-asc'
-)
+  const filteredSolicitudes = useFilteredSolicitudes(
+    notasDepartamento,
+    { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
+    'fechaLimite-asc',
+  )
 
   const { totalPages, safeCurrentPage, paginatedItems: paginatedSolicitudes } =
     usePaginatedList(filteredSolicitudes, currentPage, ITEMS_PER_PAGE)
 
   const goToPage = (page: number) => updateFilter('page', String(page))
 
-  const handleViewDetail = (solicitud: Solicitud) => {
+  /* ── Handlers ────────────────────────────────────────────── */
+
+  const handleViewDetail = (solicitud: Solicitud, trigger: HTMLButtonElement) => {
+    detailButtonRef.current = trigger
     setSelectedSolicitud(solicitud)
     setShowDetailModal(true)
   }
 
-  const handleOpenApprove = (solicitud: Solicitud) => {
+  const handleOpenApprove = (solicitud: Solicitud, trigger?: HTMLButtonElement | null) => {
+    if (trigger) approveButtonRef.current = trigger
     setSelectedSolicitud(solicitud)
     setShowApproveModal(true)
+    setShowDetailModal(false)
   }
 
-  const handleOpenDecline = (solicitud: Solicitud) => {
+  const handleOpenDecline = (solicitud: Solicitud, trigger?: HTMLButtonElement | null) => {
+    if (trigger) declineButtonRef.current = trigger
     setSelectedSolicitud(solicitud)
     setMotivoRechazo('')
     setFormError('')
     setShowDeclineModal(true)
+    setShowDetailModal(false)
+  }
+
+  const handleCloseApprove = () => {
+    setShowApproveModal(false)
+    setSelectedSolicitud(null)
+    // AccessibleDialog ya restaura el foco al elemento anterior al montarse,
+    // pero si el modal fue abierto desde otro modal (detail → approve) el ref
+    // garantiza el destino correcto.
+    approveButtonRef.current?.focus()
+  }
+
+  const handleCloseDecline = () => {
+    setShowDeclineModal(false)
+    setSelectedSolicitud(null)
+    setMotivoRechazo('')
+    setFormError('')
+    declineButtonRef.current?.focus()
+  }
+
+  const handleCloseDetail = () => {
+    setShowDetailModal(false)
+    setSelectedSolicitud(null)
+    detailButtonRef.current?.focus()
   }
 
   const handleApprove = async () => {
     if (!selectedSolicitud || !user) return
-
     setIsSubmitting(true)
     await new Promise(resolve => setTimeout(resolve, 400))
-
-    aprobarDepartamento(
-      selectedSolicitud.id,
-      user.id,
-      `${user.nombre} ${user.apellido}`
-    )
-
+    aprobarDepartamento(selectedSolicitud.id, user.id, `${user.nombre} ${user.apellido}`)
     setIsSubmitting(false)
     setShowApproveModal(false)
-    setShowDetailModal(false)
     setSelectedSolicitud(null)
   }
 
   const handleDecline = async () => {
     if (!selectedSolicitud || !user) return
-
     if (motivoRechazo.trim().length < 10) {
       setFormError('El motivo debe tener al menos 10 caracteres.')
       return
     }
-
     setIsSubmitting(true)
     await new Promise(resolve => setTimeout(resolve, 400))
-
-    declinar(
-      selectedSolicitud.id,
-      motivoRechazo.trim(),
-      user.id,
-      `${user.nombre} ${user.apellido}`
-    )
-
+    declinar(selectedSolicitud.id, motivoRechazo.trim(), user.id, `${user.nombre} ${user.apellido}`)
     setIsSubmitting(false)
     setShowDeclineModal(false)
-    setShowDetailModal(false)
     setMotivoRechazo('')
     setFormError('')
     setSelectedSolicitud(null)
   }
 
+  /* ── Render ──────────────────────────────────────────────── */
+
   return (
     <AppLayout title="Notas pendientes">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4">
+
         <div className="flex flex-col gap-2">
           <h1 className="font-serif text-2xl font-bold text-primary">
             Notas pendientes
@@ -153,6 +169,7 @@ const filteredSolicitudes = useFilteredSolicitudes(
         </div>
 
         <SolicitudFiltersPanel
+          headingLevel={2}
           idPrefix="notas-pendientes"
           departamentos={[]}
           searchQuery={searchQuery}
@@ -181,7 +198,6 @@ const filteredSolicitudes = useFilteredSolicitudes(
           <div className="overflow-x-auto">
             <table className="w-full">
               <SolicitudesTableHeader />
-
               <tbody>
                 {paginatedSolicitudes.length === 0 ? (
                   <tr>
@@ -199,12 +215,11 @@ const filteredSolicitudes = useFilteredSolicitudes(
                       actions={
                         <button
                           type="button"
-                          onClick={() => handleViewDetail(solicitud)}
+                          onClick={e => handleViewDetail(solicitud, e.currentTarget)}
                           className="icon-button hover:bg-secondary"
-                          title="Ver detalle"
                           aria-label={`Ver detalle de ${solicitud.radicado}`}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4" aria-hidden="true" focusable="false" />
                         </button>
                       }
                     />
@@ -225,128 +240,151 @@ const filteredSolicitudes = useFilteredSolicitudes(
           )}
         </section>
 
+        {/* ── Modal: Detalle ─────────────────────────────────── */}
         {showDetailModal && selectedSolicitud && (
           <DocumentPreviewModal
             solicitud={selectedSolicitud}
             open={showDetailModal}
-            onClose={() => {
-              setShowDetailModal(false)
-              setSelectedSolicitud(null)
-            }}
-            onApprove={() => handleOpenApprove(selectedSolicitud)}
-            onDecline={() => handleOpenDecline(selectedSolicitud)}
+            onClose={handleCloseDetail}
+            onApprove={trigger => handleOpenApprove(selectedSolicitud, trigger)}
+            onDecline={trigger => handleOpenDecline(selectedSolicitud, trigger)}
           />
         )}
 
+        {/* ── Modal: Aprobar ─────────────────────────────────── */}
         {showApproveModal && selectedSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
-              <div className="border-b border-border px-6 py-4">
-                <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-green-600">
-                  Aprobar solicitud
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Al aprobar esta solicitud, será enviada al alcalde para revisión final.
-                </p>
-              </div>
-
-              <div className="space-y-1 px-6 py-4 text-sm">
-                <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-                <p><strong>Título:</strong> {selectedSolicitud.titulo}</p>
-                <p><strong>Solicitante:</strong> {selectedSolicitud.solicitante}</p>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
-                <button
-                  type="button"
-                  onClick={() => setShowApproveModal(false)}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleApprove}
-                  disabled={isSubmitting}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Aprobando...' : 'Confirmar aprobación'}
-                </button>
-              </div>
+          <AccessibleDialog
+            titleId="approve-modal-title"
+            descriptionId="approve-modal-desc"
+            onClose={handleCloseApprove}
+            className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl"
+          >
+            <div className="border-b border-border px-6 py-4">
+              <h2
+                id="approve-modal-title"
+                className="font-serif text-xl font-semibold text-success"
+              >
+                Aprobar solicitud
+              </h2>
+              <p id="approve-modal-desc" className="mt-2 text-sm text-muted-foreground">
+                Al aprobar esta solicitud, será enviada al alcalde para revisión final.
+              </p>
             </div>
-          </div>
+
+            <div className="space-y-1 px-6 py-4 text-sm">
+              <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
+              <p><strong>Título:</strong> {selectedSolicitud.titulo}</p>
+              <p><strong>Solicitante:</strong> {selectedSolicitud.solicitante}</p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+              <button
+                type="button"
+                onClick={handleCloseApprove}
+                disabled={isSubmitting}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={isSubmitting}
+                className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-success-foreground transition-colors hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? 'Aprobando...' : 'Confirmar aprobación'}
+              </button>
+            </div>
+          </AccessibleDialog>
         )}
 
+        {/* ── Modal: Rechazar ────────────────────────────────── */}
         {showDeclineModal && selectedSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
-              <div className="border-b border-border px-6 py-4">
-                <h2 className="flex items-center gap-2 font-serif text-xl font-semibold text-red-600">
-                  Rechazar solicitud
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Indica el motivo del rechazo. Esta información será visible para la secretaria.
-                </p>
+          <AccessibleDialog
+            titleId="decline-modal-title"
+            descriptionId="decline-modal-desc"
+            onClose={handleCloseDecline}
+            className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl"
+          >
+            <div className="border-b border-border px-6 py-4">
+              <h2
+                id="decline-modal-title"
+                className="font-serif text-xl font-semibold text-destructive"
+              >
+                Rechazar solicitud
+              </h2>
+              <p id="decline-modal-desc" className="mt-2 text-sm text-muted-foreground">
+                Indica el motivo del rechazo. Esta información será visible para la secretaria.
+              </p>
+            </div>
+
+            <div className="space-y-4 px-6 py-4">
+              <div className="text-sm">
+                <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
+                <p className="mt-1"><strong>Título:</strong> {selectedSolicitud.titulo}</p>
               </div>
 
-              <div className="space-y-4 px-6 py-4">
-                <div className="text-sm">
-                  <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-                  <p className="mt-1"><strong>Título:</strong> {selectedSolicitud.titulo}</p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="motivo-rechazo"
-                    className="mb-1 block text-sm font-medium text-foreground"
-                  >
-                    Motivo del rechazo *
-                  </label>
-                  <textarea
-                    id="motivo-rechazo"
-                    placeholder="Explique el motivo del rechazo..."
-                    value={motivoRechazo}
-                    onChange={event => {
-                      setMotivoRechazo(event.target.value)
-                      setFormError('')
-                    }}
-                    rows={4}
-                    maxLength={500}
-                    className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
-                  />
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <p className="text-xs text-red-600">{formError}</p>
-                    <p className="ml-auto text-xs text-muted-foreground">
-                      {motivoRechazo.length}/500
+              <div>
+                <label
+                  htmlFor="motivo-rechazo"
+                  className="mb-1 block text-sm font-medium text-foreground"
+                >
+                  Motivo del rechazo *
+                </label>
+                <textarea
+                  id="motivo-rechazo"
+                  placeholder="Explique el motivo del rechazo..."
+                  value={motivoRechazo}
+                  onChange={e => {
+                    setMotivoRechazo(e.target.value)
+                    setFormError('')
+                  }}
+                  rows={4}
+                  maxLength={500}
+                  aria-invalid={formError ? true : undefined}
+                  aria-describedby={formError ? 'motivo-error' : undefined}
+                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                />
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  {formError ? (
+                    <p
+                      id="motivo-error"
+                      role="alert"
+                      className="text-xs text-destructive"
+                    >
+                      {formError}
                     </p>
-                  </div>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
+                  <p className="ml-auto text-xs text-muted-foreground">
+                    {motivoRechazo.length}/500
+                  </p>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
-                <button
-                  type="button"
-                  onClick={() => setShowDeclineModal(false)}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDecline}
-                  disabled={isSubmitting || motivoRechazo.trim().length < 10}
-                  className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Rechazando...' : 'Confirmar rechazo'}
-                </button>
               </div>
             </div>
-          </div>
+
+            <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+              <button
+                type="button"
+                onClick={handleCloseDecline}
+                disabled={isSubmitting}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDecline}
+                disabled={isSubmitting || motivoRechazo.trim().length < 10}
+                className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? 'Rechazando...' : 'Confirmar rechazo'}
+              </button>
+            </div>
+          </AccessibleDialog>
         )}
+
       </div>
     </AppLayout>
   )
