@@ -184,6 +184,7 @@ export default function SecretariaNotas() {
 
         <SolicitudFiltersPanel
           idPrefix="secretaria-notas"
+          headingLevel={2}
           departamentos={departamentos}
           searchQuery={filters.searchQuery}
           estado={filters.estado}
