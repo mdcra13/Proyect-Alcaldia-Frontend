@@ -228,6 +228,7 @@ export default function AlcaldeNotas() {
             </div>
 
             <select
+              aria-label="Estado"
               value={filterEstado}
               onChange={(event) => updateFilter('estado', event.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -241,6 +242,7 @@ export default function AlcaldeNotas() {
             </select>
 
             <select
+              aria-label="Departamento"
               value={filterDepartamento}
               onChange={(event) => updateFilter('departamento', event.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -254,6 +256,7 @@ export default function AlcaldeNotas() {
             </select>
 
             <select
+              aria-label="CategorÃ­a"
               value={filterCategoria}
               onChange={(event) => updateFilter('categoria', event.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -267,6 +270,7 @@ export default function AlcaldeNotas() {
             </select>
 
             <select
+              aria-label="Prioridad"
               value={filterPrioridad}
               onChange={(event) => updateFilter('prioridad', event.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
