@@ -74,7 +74,7 @@ export default function SubirDocumento() {
     setFile(selectedFile)
   }
   
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     const droppedFile = e.dataTransfer.files?.[0]
     if (droppedFile) {
@@ -223,6 +223,27 @@ export default function SubirDocumento() {
                 <p className="form-error">{errors.categoria.message}</p>
               )}
             </div>
+            {/*Departamento*/}
+            <div>
+              <label htmlFor="departamentoId" className="form-label">
+                Departamento <span className="text-destructive">*</span>
+              </label>
+              <select
+                id="departamentoId"
+                {...register('departamentoId', { required: 'El departamento es requerido' })}
+                className="form-input custom-select"
+              >
+                <option value="">Seleccione un departamento</option>
+                {mockDepartamentos.map(departamento => (
+                  <option key={departamento.id} value={departamento.id}>
+                    {departamento.nombre}
+                  </option>
+                ))}
+              </select>
+              {errors.departamentoId && (
+                <p className="form-error">{errors.departamentoId.message}</p>
+              )}
+            </div>
             {/* Nombre del solicitante */}
             <div>
               <label htmlFor="solicitante" className="form-label">
@@ -277,6 +298,26 @@ export default function SubirDocumento() {
                 <p className="form-error">{errors.fechaSolicitud.message}</p>
               )}
             </div>
+
+            {/* Fecha limite */}
+            <div>
+              <label htmlFor="fechaLimite" className="form-label">
+                Fecha límite<span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <Calendar className="form-icon" />
+                <input
+                  id="fechaLimite"
+                  type="date"
+                  {...register('fechaLimite', { required: 'La fecha límite es requerida, introducir N/A si no tiene.' })}
+                  className="form-input pl-10"
+                />
+              </div>
+              {errors.fechaSolicitud && (
+                <p className="form-error">{errors.fechaSolicitud.message}</p>
+              )}
+            </div>
+            
             {/* Descripción */}
             <div>
               <label htmlFor="descripcion" className="form-label">
@@ -297,6 +338,7 @@ export default function SubirDocumento() {
                 {descripcion.length}/300 caracteres
               </p>
             </div>
+            
             {/* File upload */}
             <div>
               <label htmlFor="documento" className="form-label">
@@ -312,23 +354,19 @@ export default function SubirDocumento() {
               />
               
               {!file ? (
-                <div
-                    role="button"
-                    tabIndex={0}
-                    onDrop={handleDrop}
-                    onDragOver={e => e.preventDefault()}
-                    onClick={() => fileInputRef.current?.click()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        fileInputRef.current?.click();
-                      }
-                    }}
-                    className={`
-                      border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary
-                      ${fileError ? 'border-destructive bg-destructive/5' : 'border-input hover:border-primary hover:bg-primary/5'}
-                    `}
-                  >
+                <button
+                  type="button"
+                  onDrop={handleDrop}
+                  onDragOver={e => e.preventDefault()}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`
+                    w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                    ${fileError
+                      ? 'border-destructive bg-destructive/5'
+                      : 'border-input hover:border-primary hover:bg-primary/5'}
+                  `}
+                >
                   <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                   <p className="font-medium text-foreground mb-1">
                     Arrastra y suelta tu archivo aquí
@@ -339,7 +377,7 @@ export default function SubirDocumento() {
                   <p className="text-xs text-muted-foreground mt-2">
                     PDF, JPG o PNG (máx. 10MB)
                   </p>
-                </div>
+                </button>
               ) : (
                 <div className="border border-border rounded-lg p-4 flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -366,24 +404,7 @@ export default function SubirDocumento() {
                 <p className="mt-1 text-sm text-destructive">{fileError}</p>
               )}
             </div>
-            {/* Fecha límite */}
-            <div>
-              <label htmlFor="fechaLimite" className="form-label">
-                Fecha límite<span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
-                <Calendar className="form-icon" />
-                <input
-                  id="fechaLimite"
-                  type="date"
-                  {...register('fechaLimite', { required: 'La fecha límite es requerida, introducir N/A si no tiene.' })}
-                  className="form-input pl-10"
-                />
-              </div>
-              {errors.fechaSolicitud && (
-                <p className="form-error">{errors.fechaSolicitud.message}</p>
-              )}
-            </div>
+
             {/* Subido por */}
             <div>
               <label htmlFor="subidoPor" className="form-label">
@@ -397,27 +418,7 @@ export default function SubirDocumento() {
                 className="form-input bg-muted text-muted-foreground cursor-not-allowed"
               />
             </div>
-            {/*Departamento*/}
-            <div>
-              <label htmlFor="departamentoId" className="form-label">
-                Departamento <span className="text-destructive">*</span>
-              </label>
-              <select
-                id="departamentoId"
-                {...register('departamentoId', { required: 'El departamento es requerido' })}
-                className="form-input custom-select"
-              >
-                <option value="">Seleccione un departamento</option>
-                {mockDepartamentos.map(departamento => (
-                  <option key={departamento.id} value={departamento.id}>
-                    {departamento.nombre}
-                  </option>
-                ))}
-              </select>
-              {errors.departamentoId && (
-                <p className="form-error">{errors.departamentoId.message}</p>
-              )}
-            </div>
+
             {/* Buttons */}
             <div className="flex gap-3 pt-4">
               <button
