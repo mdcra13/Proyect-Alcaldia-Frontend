@@ -5,11 +5,18 @@ import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 import useAuthStore from '@/lib/stores/authStore'
 import type { UserRole } from '@/lib/types'
-import LoginPage from '@/components/auth/LoginPage'
-import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
-import { SecretariaDashboard } from './components/secretaria/SecretariaDashboard';
-import SeguimientoSolicitudes from '@/components/secretaria/SeguimientoSolicitudes'
-import SubirDocumento from '@/components/secretaria/SubirDocumento'
+
+const LoginPage = lazy(() => import('@/components/auth/LoginPage'))
+const AlcaldeDashboard = lazy(() => import('@/components/alcalde/AlcaldeDashboard'))
+const SecretariaDashboard = lazy(() =>
+  import('@/components/secretaria/SecretariaDashboard').then(module => ({
+    default: module.SecretariaDashboard,
+  }))
+)
+const SeguimientoSolicitudes = lazy(() =>
+  import('@/components/secretaria/SeguimientoSolicitudes')
+)
+const SubirDocumento = lazy(() => import('@/components/secretaria/SubirDocumento'))
 
 const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
 const SecretariaNotas = lazy(() => import('@/components/secretaria/SecretariaNotas'))
@@ -34,6 +41,19 @@ const queryClient = new QueryClient({
 interface ProtectedRouteProps {
   children: ReactNode
   allowedRoles?: UserRole[]
+}
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground">
+          Cargando Sistema de Ayuda Social...
+        </p>
+      </div>
+    </div>
+  )
 }
 
 function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -75,11 +95,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={null}>
+        <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<AuthRedirect />} />
 
-            {/* Alcalde */}
             <Route
               path="/alcalde"
               element={
@@ -88,7 +107,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            
+
             <Route
               path="/alcalde/notas"
               element={
@@ -98,7 +117,6 @@ export default function App() {
               }
             />
 
-            {/* Secretaria */}
             <Route
               path="/secretaria"
               element={
@@ -107,6 +125,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/secretaria/notas"
               element={
@@ -115,6 +134,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/secretaria/subir"
               element={
@@ -123,6 +143,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/secretaria/seguimiento"
               element={
@@ -132,7 +153,6 @@ export default function App() {
               }
             />
 
-            {/* Departamento */}
             <Route
               path="/departamento"
               element={
@@ -141,6 +161,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/departamento/dashboard"
               element={
@@ -149,6 +170,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/departamento/pendientes"
               element={
@@ -157,6 +179,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/departamento/seguimiento"
               element={
@@ -166,7 +189,6 @@ export default function App() {
               }
             />
 
-            {/* IT */}
             <Route
               path="/it"
               element={
@@ -175,6 +197,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/it/usuarios"
               element={
@@ -183,6 +206,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/it/departamentos"
               element={
@@ -192,7 +216,6 @@ export default function App() {
               }
             />
 
-            {/* Perfil — accesible para todos los roles */}
             <Route
               path="/perfil"
               element={
@@ -205,6 +228,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+
         <Toaster richColors position="top-right" />
       </BrowserRouter>
     </QueryClientProvider>

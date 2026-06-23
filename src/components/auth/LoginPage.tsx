@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Eye, EyeOff, User, Lock, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, User, Lock, AlertCircle, HeartHandshake } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
 import type { LoginFormData } from '@/lib/types'
 
@@ -47,13 +47,14 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <div className="login-wrapper bg-institutional-texture">
       <div className="w-full max-w-md">
         <div className="login-card">
-          <div className="flex justify-center mb-6">
-            <img
-              src="/img-001.jpg"
-              alt=""
-              className="h-[110px] w-auto object-contain"
+          <div className="flex justify-center mb-8">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 shadow-sm ring-1 ring-slate-200/60 transition-all duration-300 hover:scale-105">
+            <HeartHandshake 
+              className="h-12 w-12 text-primary" 
+              strokeWidth={1.75} 
             />
           </div>
+        </div>
 
           <h1 className="text-2xl font-serif font-bold text-center text-primary mb-1">
             Sistema de Ayuda Social
