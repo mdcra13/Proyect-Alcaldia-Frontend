@@ -19,7 +19,11 @@ import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData } from '@/lib/types'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png'
+]
 
 export default function SubirDocumento() {
   const navigate = useNavigate()
@@ -353,52 +357,59 @@ export default function SubirDocumento() {
                 className="hidden"
               />
               
-              {!file ? (
+              {file ? (
+              <div className="border border-border rounded-lg p-4 flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{file.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onDrop={handleDrop}
-                  onDragOver={e => e.preventDefault()}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`
-                    w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                    ${fileError
-                      ? 'border-destructive bg-destructive/5'
-                      : 'border-input hover:border-primary hover:bg-primary/5'}
-                  `}
+                  onClick={removeFile}
+                  className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                  aria-label="Quitar documento"
                 >
-                  <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="font-medium text-foreground mb-1">
-                    Arrastra y suelta tu archivo aquí
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    o haz clic para seleccionar
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    PDF, JPG o PNG (máx. 10MB)
-                  </p>
+                  <X className="h-5 w-5" />
                 </button>
-              ) : (
-                <div className="border border-border rounded-lg p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={removeFile}
-                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                    aria-label="Quitar documento"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                className={`
+                  w-full border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                  focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                  ${
+                    fileError
+                      ? 'border-destructive bg-destructive/5'
+                      : 'border-input hover:border-primary hover:bg-primary/5'
+                  }
+                `}
+              >
+                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+
+                <p className="font-medium text-foreground mb-1">
+                  Arrastra y suelta tu archivo aquí
+                </p>
+
+                <p className="text-sm text-muted-foreground">
+                  o haz clic para seleccionar
+                </p>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  PDF, JPG o PNG (máx. 10MB)
+                </p>
+              </button>
+            )}
               
               {fileError && (
                 <p className="mt-1 text-sm text-destructive">{fileError}</p>
