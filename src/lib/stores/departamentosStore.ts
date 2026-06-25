@@ -1,4 +1,5 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
+import { backendApi, mapBackendDepartment } from '@/lib/api/backend'
 import type { Departamento } from '@/lib/types'
 
 export const mockDepartamentos: Departamento[] = [
@@ -47,6 +48,7 @@ interface DepartamentoFormData {
 
 interface DepartamentosState {
   departamentos: Departamento[]
+  fetchDepartamentos: () => Promise<void>
   getDepartamentosActivos: () => Departamento[]
   addDepartamento: (data: DepartamentoFormData) => Departamento
   updateDepartamento: (
@@ -58,7 +60,16 @@ interface DepartamentosState {
 }
 
 const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
-  departamentos: mockDepartamentos,
+  departamentos: [],
+
+  fetchDepartamentos: async () => {
+    try {
+      const departments = await backendApi.departments()
+      set({ departamentos: departments.map(mapBackendDepartment) })
+    } catch {
+      set({ departamentos: [] })
+    }
+  },
 
   getDepartamentosActivos: (): Departamento[] => {
     // TODO: Replace mock active departments with GET /api/v1/departamentos when backend is ready.
@@ -112,3 +123,4 @@ const useDepartamentosStore = create<DepartamentosState>((set, get) => ({
 }))
 
 export default useDepartamentosStore
+

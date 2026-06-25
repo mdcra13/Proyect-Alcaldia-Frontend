@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 import useAuthStore from '@/lib/stores/authStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { UserRole } from '@/lib/types'
 import LoginPage from '@/components/auth/LoginPage'
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
@@ -14,6 +16,8 @@ import SubirDocumento from '@/components/secretaria/SubirDocumento'
 const AlcaldeNotas = lazy(() => import('@/components/alcalde/AlcaldeNotas'))
 const SecretariaNotas = lazy(() => import('@/components/secretaria/SecretariaNotas'))
 const DepartamentoDashboard = lazy(() => import('@/components/departamento/DepartamentoDashboard'))
+const NotasPendientes = lazy(() => import('@/components/departamento/NotasPendientes'))
+const SeguimientoNotas = lazy(() => import('@/components/departamento/SeguimientoNotas'))
 const ITDashboard = lazy(() => import('@/components/it/ITDashboard'))
 const ITGestionUsuarios = lazy(() => import('@/components/it/ITGestionUsuarios'))
 const ITGestionDepartamentos = lazy(() => import('@/components/it/ITGestionDepartamentos'))
@@ -69,10 +73,26 @@ function AuthRedirect() {
   return <LoginPage />
 }
 
+function BackendBootstrap() {
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const fetchDepartamentos = useDepartamentosStore(state => state.fetchDepartamentos)
+  const fetchSolicitudes = useSolicitudesStore(state => state.fetchSolicitudes)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    void fetchDepartamentos()
+    void fetchSolicitudes()
+  }, [fetchDepartamentos, fetchSolicitudes, isAuthenticated])
+
+  return null
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <BackendBootstrap />
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<AuthRedirect />} />
@@ -140,10 +160,26 @@ export default function App() {
               }
             />
             <Route
-              path="/departamento/solicitudes"
+              path="/departamento/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['departamento']}>
                   <DepartamentoDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departamento/pendientes"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <NotasPendientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departamento/seguimiento"
+              element={
+                <ProtectedRoute allowedRoles={['departamento']}>
+                  <SeguimientoNotas />
                 </ProtectedRoute>
               }
             />

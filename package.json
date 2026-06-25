@@ -38,6 +38,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.8",
+    "axe-core": "^4.12.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -49,7 +50,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
-    "vitest": "^4.1.7",
-    "vitest-axe": "^0.1.0"
+    "vitest": "^4.1.8",
+    "vitest-axe": "1.0.0-pre.5"
   }
 }

@@ -1,4 +1,9 @@
 import { create } from 'zustand'
+import {
+  backendApi,
+  mapBackendDepartment,
+  mapBackendRequest,
+} from '@/lib/api/backend'
 import type {
   Solicitud,
   SolicitudCategoria,
@@ -121,7 +126,7 @@ const createHistorial = (
   usuarioId,
 })
 
-const mockSolicitudes: Solicitud[] = [
+export const mockSolicitudes: Solicitud[] = [
   {
     id: '1001',
     radicado: '#1001',
@@ -507,6 +512,7 @@ function isValidTransition(
 
 interface SolicitudesState {
   solicitudes: Solicitud[]
+  fetchSolicitudes: () => Promise<void>
   getStats: (departamentoId?: string) => SolicitudStats
   getStatsForUser: (userId: string) => SolicitudStats
   getPendientes: (departamentoId?: string) => Solicitud[]
@@ -531,7 +537,24 @@ interface SolicitudesState {
 }
 
 const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
-  solicitudes: mockSolicitudes,
+  solicitudes: [],
+
+  fetchSolicitudes: async () => {
+    try {
+      const [backendDepartments, backendRequests] = await Promise.all([
+        backendApi.departments(),
+        backendApi.requests(),
+      ])
+      const departments = backendDepartments.map(mapBackendDepartment)
+      const solicitudes = backendRequests.map(request =>
+        mapBackendRequest(request, departments)
+      )
+
+      set({ solicitudes })
+    } catch {
+      set({ solicitudes: [] })
+    }
+  },
 
   getStats: (departamentoId?: string): SolicitudStats => {
     let solicitudes = get().solicitudes
@@ -683,6 +706,7 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
       }
     }),
   }))
+  void backendApi.changeStatus(id, nuevoEstado).catch(() => undefined)
 },
 
   cambiarEstadoAlcalde: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
@@ -704,10 +728,12 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
         }
       }),
     }))
+    void backendApi.changeStatus(id, nuevoEstado).catch(() => undefined)
   },
 
   aprobarDepartamento: (id: string, userId: string, userName: string) => {
-    get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
+  get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
+  get().cambiarEstadoAlcalde(id, 'awaiting_mayor_signature', userId, userName)
   },
 
   aprobar: (id: string, userId: string, userName: string) => {
@@ -769,6 +795,10 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
         }
       }),
     }))
+    void backendApi.changeStatus(
+      id,
+      nuevoDepartamentoId ? 'assigned_to_department' : get().getSolicitudById(id)?.estado ?? 'received'
+    ).catch(() => undefined)
   },
 
   addSolicitud: (solicitud: NewSolicitudData): Solicitud => {
@@ -826,6 +856,24 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
     set(state => ({
       solicitudes: [newSolicitud, ...state.solicitudes],
     }))
+
+    void backendApi.createRequest({
+      titulo: solicitud.titulo,
+      descripcion: solicitud.descripcion,
+      solicitante: solicitud.solicitante,
+      identificacion: solicitud.identificacion,
+      categoria: solicitud.categoria,
+      departamentoId: solicitud.departamentoId,
+      prioridad: 'MEDIUM',
+    }).then(async created => {
+      const departments = (await backendApi.departments()).map(mapBackendDepartment)
+      const synced = mapBackendRequest(created, departments)
+      set(state => ({
+        solicitudes: state.solicitudes.map(item =>
+          item.id === newSolicitud.id ? { ...synced, historial: newSolicitud.historial } : item
+        ),
+      }))
+    }).catch(() => undefined)
 
     return newSolicitud
   },

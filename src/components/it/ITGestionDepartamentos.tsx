@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   Building2,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
+import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import type { Departamento } from '@/lib/types'
@@ -41,43 +42,41 @@ export default function ITGestionDepartamentos() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingDepartamento, setEditingDepartamento] = useState<Departamento | null>(null)
   const [formData, setFormData] = useState<DepartamentoFormState>(initialFormState)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   const filteredDepartamentos = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
-
     if (!query) return departamentos
-
     return departamentos.filter(departamento =>
       departamento.nombre.toLowerCase().includes(query)
     )
   }, [departamentos, searchTerm])
 
-  const getAssignedUsersCount = (departamentoId: string) => {
-    return users.filter(user =>
-      user.departamentoId === departamentoId &&
-      user.role === 'departamento'
+  const getAssignedUsersCount = (departamentoId: string) =>
+    users.filter(user =>
+      user.departamentoId === departamentoId && user.role === 'departamento'
     ).length
-  }
 
-  const getActiveAssignedUsersCount = (departamentoId: string) => {
-    return users.filter(user =>
+  const getActiveAssignedUsersCount = (departamentoId: string) =>
+    users.filter(user =>
       user.departamentoId === departamentoId &&
       user.role === 'departamento' &&
       user.status === 'active'
     ).length
-  }
 
   const resetForm = () => {
     setFormData(initialFormState)
     setEditingDepartamento(null)
   }
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (trigger: HTMLButtonElement) => {
+    triggerRef.current = trigger
     resetForm()
     setIsModalOpen(true)
   }
 
-  const handleOpenEditModal = (departamento: Departamento) => {
+  const handleOpenEditModal = (departamento: Departamento, trigger: HTMLButtonElement) => {
+    triggerRef.current = trigger
     setEditingDepartamento(departamento)
     setFormData({
       nombre: departamento.nombre,
@@ -90,6 +89,7 @@ export default function ITGestionDepartamentos() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     resetForm()
+    triggerRef.current?.focus()
   }
 
   const handleToggleDepartamento = (departamento: Departamento) => {
@@ -107,7 +107,6 @@ export default function ITGestionDepartamentos() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     const nombre = formData.nombre.trim()
     const descripcion = formData.descripcion.trim()
 
@@ -145,7 +144,7 @@ export default function ITGestionDepartamentos() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-serif text-2xl font-bold text-foreground">
-              Gestión de Departamentos
+              Gestion de Departamentos
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Administra los departamentos disponibles en el sistema.
@@ -154,18 +153,18 @@ export default function ITGestionDepartamentos() {
 
           <button
             type="button"
-            onClick={handleOpenCreateModal}
+            onClick={event => handleOpenCreateModal(event.currentTarget)}
             className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" focusable="false" />
             Nuevo departamento
           </button>
         </div>
 
-        <section className="rounded-lg border border-border bg-card">
+        <section className="rounded-lg border border-border bg-card" aria-labelledby="dept-table-title">
           <div className="flex flex-col gap-4 border-b border-border p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-serif text-lg font-semibold text-foreground">
+              <h2 id="dept-table-title" className="font-serif text-lg font-semibold text-foreground">
                 Departamentos
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -174,8 +173,16 @@ export default function ITGestionDepartamentos() {
             </div>
 
             <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <label htmlFor="dept-search" className="sr-only">
+                Buscar departamento
+              </label>
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+                focusable="false"
+              />
               <input
+                id="dept-search"
                 type="search"
                 value={searchTerm}
                 onChange={event => setSearchTerm(event.target.value)}
@@ -186,24 +193,14 @@ export default function ITGestionDepartamentos() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" aria-label="Listado de departamentos">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">
-                    Nombre
-                  </th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">
-                    Descripción
-                  </th>
-                  <th className="p-4 text-center font-medium text-muted-foreground">
-                    Usuarios asignados
-                  </th>
-                  <th className="p-4 text-center font-medium text-muted-foreground">
-                    Estado
-                  </th>
-                  <th className="p-4 text-right font-medium text-muted-foreground">
-                    Acciones
-                  </th>
+                  <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Nombre</th>
+                  <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Descripcion</th>
+                  <th scope="col" className="p-4 text-center font-medium text-muted-foreground">Usuarios asignados</th>
+                  <th scope="col" className="p-4 text-center font-medium text-muted-foreground">Estado</th>
+                  <th scope="col" className="p-4 text-right font-medium text-muted-foreground">Acciones</th>
                 </tr>
               </thead>
 
@@ -225,7 +222,11 @@ export default function ITGestionDepartamentos() {
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <Building2
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                              focusable="false"
+                            />
                             <span className="font-medium text-foreground">
                               {departamento.nombre}
                             </span>
@@ -234,13 +235,13 @@ export default function ITGestionDepartamentos() {
 
                         <td className="p-4">
                           <p className="max-w-md text-sm text-muted-foreground">
-                            {departamento.descripcion || 'Sin descripción'}
+                            {departamento.descripcion || 'Sin descripcion'}
                           </p>
                         </td>
 
                         <td className="p-4 text-center">
                           <span className="inline-flex items-center justify-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
-                            <Users className="h-3.5 w-3.5" />
+                            <Users className="h-3.5 w-3.5" aria-hidden="true" focusable="false" />
                             {assignedUsersCount}
                           </span>
                         </td>
@@ -249,17 +250,17 @@ export default function ITGestionDepartamentos() {
                           <button
                             type="button"
                             onClick={() => handleToggleDepartamento(departamento)}
+                            aria-label={`${departamento.activo ? 'Desactivar' : 'Activar'} ${departamento.nombre}`}
                             className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
                               departamento.activo
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-success/10 text-success hover:bg-success/20'
+                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
                             }`}
-                            title={departamento.activo ? 'Desactivar' : 'Activar'}
                           >
                             {departamento.activo ? (
-                              <ToggleRight className="h-4 w-4" />
+                              <ToggleRight className="h-4 w-4" aria-hidden="true" focusable="false" />
                             ) : (
-                              <ToggleLeft className="h-4 w-4" />
+                              <ToggleLeft className="h-4 w-4" aria-hidden="true" focusable="false" />
                             )}
                             {departamento.activo ? 'Activo' : 'Inactivo'}
                           </button>
@@ -269,11 +270,11 @@ export default function ITGestionDepartamentos() {
                           <div className="flex justify-end">
                             <button
                               type="button"
-                              onClick={() => handleOpenEditModal(departamento)}
+                              onClick={event => handleOpenEditModal(departamento, event.currentTarget)}
                               className="icon-button hover:bg-secondary"
-                              title="Editar departamento"
+                              aria-label={`Editar ${departamento.nombre}`}
                             >
-                              <Edit2 className="h-4 w-4" />
+                              <Edit2 className="h-4 w-4" aria-hidden="true" focusable="false" />
                             </button>
                           </div>
                         </td>
@@ -287,143 +288,139 @@ export default function ITGestionDepartamentos() {
         </section>
 
         {isModalOpen && (
-          <div
-            className="modal-backdrop"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="departamento-modal-title"
+          <AccessibleDialog
+            titleId="departamento-modal-title"
+            descriptionId="departamento-modal-desc"
+            onClose={handleCloseModal}
+            className="modal-card max-w-[520px]"
           >
-            <div className="modal-card max-w-[520px]">
-              <div className="modal-header">
-                <div>
-                  <h2
-                    id="departamento-modal-title"
-                    className="font-serif text-lg font-semibold text-foreground"
-                  >
-                    {editingDepartamento ? 'Editar departamento' : 'Nuevo departamento'}
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {editingDepartamento
-                      ? 'Actualiza la información del departamento.'
-                      : 'Registra un nuevo departamento en el sistema.'}
-                  </p>
+            <div className="modal-header">
+              <div>
+                <h2
+                  id="departamento-modal-title"
+                  className="font-serif text-lg font-semibold text-foreground"
+                >
+                  {editingDepartamento ? 'Editar departamento' : 'Nuevo departamento'}
+                </h2>
+                <p id="departamento-modal-desc" className="mt-1 text-sm text-muted-foreground">
+                  {editingDepartamento
+                    ? 'Actualiza la informacion del departamento.'
+                    : 'Registra un nuevo departamento en el sistema.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                aria-label="Cerrar"
+              >
+                <X className="h-5 w-5" aria-hidden="true" focusable="false" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 p-6">
+                <div className="space-y-2">
+                  <label htmlFor="dept-nombre" className="text-sm font-medium text-foreground">
+                    Nombre *
+                  </label>
+                  <input
+                    id="dept-nombre"
+                    value={formData.nombre}
+                    onChange={event =>
+                      setFormData(current => ({
+                        ...current,
+                        nombre: event.target.value,
+                      }))
+                    }
+                    placeholder="Introduzca texto"
+                    required
+                    className="modal-form-field"
+                  />
                 </div>
 
+                <div className="space-y-2">
+                  <label htmlFor="dept-descripcion" className="text-sm font-medium text-foreground">
+                    Descripcion
+                  </label>
+                  <textarea
+                    id="dept-descripcion"
+                    value={formData.descripcion}
+                    onChange={event =>
+                      setFormData(current => ({
+                        ...current,
+                        descripcion: event.target.value,
+                      }))
+                    }
+                    placeholder="Area de texto opcional"
+                    rows={4}
+                    className="modal-form-field resize-none"
+                  />
+                </div>
+
+                {editingDepartamento && (
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Estado</p>
+                      <p className="text-xs text-muted-foreground">
+                        Alternar activo/inactivo
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formData.activo) {
+                          const activeUsersCount = getActiveAssignedUsersCount(
+                            editingDepartamento.id
+                          )
+
+                          if (activeUsersCount > 0) {
+                            toast.error(
+                              `No se puede desactivar ${editingDepartamento.nombre} porque tiene ${activeUsersCount} usuario(s) activo(s) asignado(s).`
+                            )
+                            return
+                          }
+                        }
+
+                        setFormData(current => ({
+                          ...current,
+                          activo: !current.activo,
+                        }))
+                      }}
+                      aria-label={`${formData.activo ? 'Desactivar' : 'Activar'} departamento`}
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
+                        formData.activo
+                          ? 'bg-success/10 text-success'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {formData.activo ? (
+                        <ToggleRight className="h-4 w-4" aria-hidden="true" focusable="false" />
+                      ) : (
+                        <ToggleLeft className="h-4 w-4" aria-hidden="true" focusable="false" />
+                      )}
+                      {formData.activo ? 'Activo' : 'Inactivo'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-                  aria-label="Cerrar"
+                  className="modal-btn-cancel"
                 >
-                  <X className="h-5 w-5" />
+                  Cancelar
+                </button>
+                <button type="submit" className="modal-btn-primary">
+                  {editingDepartamento ? 'Guardar cambios' : 'Crear departamento'}
                 </button>
               </div>
-
-              <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 p-6">
-                  <div className="space-y-2">
-                    <label htmlFor="nombre" className="text-sm font-medium text-foreground">
-                      Nombre *
-                    </label>
-                    <input
-                      id="nombre"
-                      value={formData.nombre}
-                      onChange={event =>
-                        setFormData(current => ({
-                          ...current,
-                          nombre: event.target.value,
-                        }))
-                      }
-                      placeholder="Introduzca texto"
-                      required
-                      className="modal-form-field"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="descripcion"
-                      className="text-sm font-medium text-foreground"
-                    >
-                      Descripción
-                    </label>
-                    <textarea
-                      id="descripcion"
-                      value={formData.descripcion}
-                      onChange={event =>
-                        setFormData(current => ({
-                          ...current,
-                          descripcion: event.target.value,
-                        }))
-                      }
-                      placeholder="Área de texto opcional"
-                      rows={4}
-                      className="modal-form-field resize-none"
-                    />
-                  </div>
-
-                  {editingDepartamento && (
-                    <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Estado</p>
-                        <p className="text-xs text-muted-foreground">
-                          Alternar activo/inactivo
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (formData.activo) {
-                            const activeUsersCount = getActiveAssignedUsersCount(
-                              editingDepartamento.id
-                            )
-
-                            if (activeUsersCount > 0) {
-                              toast.error(
-                                `No se puede desactivar ${editingDepartamento.nombre} porque tiene ${activeUsersCount} usuario(s) activo(s) asignado(s).`
-                              )
-                              return
-                            }
-                          }
-
-                          setFormData(current => ({
-                            ...current,
-                            activo: !current.activo,
-                          }))
-                        }}
-                        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
-                          formData.activo
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {formData.activo ? (
-                          <ToggleRight className="h-4 w-4" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4" />
-                        )}
-                        {formData.activo ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="modal-btn-cancel"
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" className="modal-btn-primary">
-                    {editingDepartamento ? 'Guardar cambios' : 'Crear departamento'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+            </form>
+          </AccessibleDialog>
         )}
       </div>
     </AppLayout>

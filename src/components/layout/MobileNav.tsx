@@ -37,6 +37,8 @@ const navLinksByRole: Record<UserRole, MobileNavLink[]> = {
   ],
   departamento: [
     createDashboardLink('/departamento'),
+    { path: '/departamento/pendientes', label: 'Pendientes', icon: ClipboardList },
+    { path: '/departamento/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
   it: [
     createDashboardLink('/it'),
@@ -48,6 +50,7 @@ const navLinksByRole: Record<UserRole, MobileNavLink[]> = {
 const exactActivePaths = new Set([
   '/alcalde',
   '/secretaria',
+  '/departamento',
   '/it',
   '/perfil',
 ])

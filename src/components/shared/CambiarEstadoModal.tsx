@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, PenLine, CornerDownLeft, XCircle, X } from 'lucide-react'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
 import type { Solicitud, SolicitudEstado } from '@/lib/types'
 import { ESTADO_TRANSITIONS_DEPARTAMENTO, ESTADO_TRANSITIONS_ALCALDE, ESTADO_CONFIG } from '@/lib/types'
 import { EstadoBadge } from '@/components/shared/EstadoBadge'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
 interface CambiarEstadoModalProps {
   solicitud: Solicitud
@@ -47,6 +48,7 @@ export function CambiarEstadoModal({
   const [selectedEstado, setSelectedEstado] = useState<SolicitudEstado | ''>('')
   const [observacion, setObservacion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open && presetEstado) {
@@ -92,6 +94,8 @@ export function CambiarEstadoModal({
     onOpenChange(false)
   }
 
+  useModalAccessibility(open, dialogRef, handleClose)
+
   const headerConfig = getHeaderConfig(selectedEstado)
   const HeaderIcon = headerConfig.icon
 
@@ -103,6 +107,7 @@ export function CambiarEstadoModal({
 
   return (
     <div
+      ref={dialogRef}
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"

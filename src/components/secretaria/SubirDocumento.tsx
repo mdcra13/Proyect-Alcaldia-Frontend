@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
+﻿import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -188,14 +188,15 @@ export default function SubirDocumento() {
         <div className="bg-card rounded-xl border border-border p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Categoría */}
-            {/* Título de la petición */}
+            {/* Titulo de la peticion */}
             <div>
-              <label className="form-label">
+              <label htmlFor="titulo" className="form-label">
                 Título<span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <User className="form-icon" />
                 <input
+                  id="titulo"
                   type="text"
                   {...register('titulo', { required: 'El título es requerido' })}
                   placeholder="Título de solicitud..."
@@ -205,10 +206,11 @@ export default function SubirDocumento() {
             </div>
             {/*Categoría*/}
             <div>
-              <label className="form-label">
+              <label htmlFor="categoria" className="form-label">
                 Categoría <span className="text-destructive">*</span>
               </label>
               <select
+                id="categoria"
                 {...register('categoria', { required: 'La categoría es requerida' })}
                 className="form-input custom-select"
               >
@@ -223,12 +225,13 @@ export default function SubirDocumento() {
             </div>
             {/* Nombre del solicitante */}
             <div>
-              <label className="form-label">
+              <label htmlFor="solicitante" className="form-label">
                 Nombre del solicitante <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <User className="form-icon" />
                 <input
+                  id="solicitante"
                   type="text"
                   {...register('solicitante', { required: 'El nombre es requerido' })}
                   placeholder="Juan Pérez García"
@@ -242,12 +245,13 @@ export default function SubirDocumento() {
             
             {/* Identificación */}
             <div>
-              <label className="form-label">
+              <label htmlFor="identificacion" className="form-label">
                 Número de identificación
               </label>
               <div className="relative">
                 <CreditCard className="form-icon" />
                 <input
+                  id="identificacion"
                   type="text"
                   {...register('identificacion')}
                   placeholder="12345678"
@@ -257,12 +261,13 @@ export default function SubirDocumento() {
             </div>
             {/* Fecha de solicitud */}
             <div>
-              <label className="form-label">
+              <label htmlFor="fechaSolicitud" className="form-label">
                 Fecha de la solicitud <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <Calendar className="form-icon" />
                 <input
+                  id="fechaSolicitud"
                   type="date"
                   {...register('fechaSolicitud', { required: 'La fecha de solicitud es requerida' })}
                   className="form-input pl-10"
@@ -274,12 +279,13 @@ export default function SubirDocumento() {
             </div>
             {/* Descripción */}
             <div>
-              <label className="form-label">
+              <label htmlFor="descripcion" className="form-label">
                 Descripción breve
               </label>
               <div className="relative">
                 <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <textarea
+                  id="descripcion"
                   {...register('descripcion', { maxLength: 300 })}
                   placeholder="Describa brevemente el motivo de la solicitud..."
                   rows={3}
@@ -293,9 +299,17 @@ export default function SubirDocumento() {
             </div>
             {/* File upload */}
             <div>
-              <label className="form-label">
+              <label htmlFor="documento" className="form-label">
                 Subir documento <span className="text-destructive">*</span>
               </label>
+              <input
+                id="documento"
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
               
               {!file ? (
                 <div
@@ -315,13 +329,6 @@ export default function SubirDocumento() {
                       ${fileError ? 'border-destructive bg-destructive/5' : 'border-input hover:border-primary hover:bg-primary/5'}
                     `}
                   >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
                   <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                   <p className="font-medium text-foreground mb-1">
                     Arrastra y suelta tu archivo aquí
@@ -348,6 +355,7 @@ export default function SubirDocumento() {
                     type="button"
                     onClick={removeFile}
                     className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                    aria-label="Quitar documento"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -360,12 +368,13 @@ export default function SubirDocumento() {
             </div>
             {/* Fecha límite */}
             <div>
-              <label className="form-label">
+              <label htmlFor="fechaLimite" className="form-label">
                 Fecha límite<span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <Calendar className="form-icon" />
                 <input
+                  id="fechaLimite"
                   type="date"
                   {...register('fechaLimite', { required: 'La fecha límite es requerida, introducir N/A si no tiene.' })}
                   className="form-input pl-10"
@@ -377,10 +386,11 @@ export default function SubirDocumento() {
             </div>
             {/* Subido por */}
             <div>
-              <label className="form-label">
+              <label htmlFor="subidoPor" className="form-label">
                 Subido por
               </label>
               <input
+                id="subidoPor"
                 type="text"
                 value={user?.nombre || ''}
                 readOnly
@@ -389,10 +399,11 @@ export default function SubirDocumento() {
             </div>
             {/*Departamento*/}
             <div>
-              <label className="form-label">
+              <label htmlFor="departamentoId" className="form-label">
                 Departamento <span className="text-destructive">*</span>
               </label>
               <select
+                id="departamentoId"
                 {...register('departamentoId', { required: 'El departamento es requerido' })}
                 className="form-input custom-select"
               >

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+﻿import { useRef, useState } from 'react'
 import { Building2, X } from 'lucide-react'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
 import type { Solicitud } from '@/lib/types'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
 interface CambiarDepartamentoModalProps {
   solicitud: Solicitud
@@ -27,6 +28,7 @@ export function CambiarDepartamentoModal({
   const [selectedDepartamentoId, setSelectedDepartamentoId] = useState(solicitud.departamentoId ?? '')
   const [motivo, setMotivo] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const departamentosActivos = getDepartamentosActivos()
 
@@ -57,10 +59,13 @@ export function CambiarDepartamentoModal({
     onOpenChange(false)
   }
 
+  useModalAccessibility(open, dialogRef, handleClose)
+
   if (!open) return null
 
   return (
     <div
+      ref={dialogRef}
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"

@@ -1,4 +1,4 @@
-import type { HistorialEntry } from '@/lib/types'
+﻿import type { HistorialEntry } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import {
   Building2,
@@ -126,6 +126,11 @@ const accionConfig: Record<string, { icon: LucideIcon; color: string; label: str
     color: 'text-purple-600 bg-purple-100',
     label: 'Cambio de estado',
   },
+  'Observación interna': {
+    icon: FileText,
+    color: 'text-slate-600 bg-slate-100',
+    label: 'Observación interna',
+  },
   'Aprobación': {
     icon: CheckCircle,
     color: 'text-green-600 bg-green-100',
@@ -189,7 +194,7 @@ export function HistorialTimeline({ historial, className }: HistorialTimelinePro
                 config.color
               )}
             >
-              <Icon className="h-3 w-3" />
+              <Icon className="h-3 w-3" aria-hidden="true" focusable="false" />
             </div>
 
             <div className="rounded-lg border bg-card p-3">
@@ -214,3 +219,4 @@ export function HistorialTimeline({ historial, className }: HistorialTimelinePro
 }
 
 export default HistorialTimeline
+
