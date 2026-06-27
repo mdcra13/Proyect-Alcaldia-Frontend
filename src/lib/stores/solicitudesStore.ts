@@ -14,6 +14,7 @@ import type {
   HistorialEntry,
   UrgenciaLevel,
   Departamento,
+  SolicitudPrioridad,
 } from '@/lib/types'
 import {
   ESTADO_TRANSITIONS_ALCALDE,
@@ -421,6 +422,7 @@ interface NewSolicitudData {
   solicitante: string
   identificacion: string
   descripcion: string
+  prioridad: SolicitudPrioridad
   documento: string
   subidoPor: string
   subidoPorId: string

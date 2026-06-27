@@ -1,6 +1,7 @@
 ﻿import {
   Calendar,
   CheckCircle,
+  Download,
   FileText,
   Landmark,
   Tag,
@@ -21,8 +22,8 @@ interface DocumentPreviewModalProps {
   solicitud: Solicitud
   open: boolean
   onClose: () => void
-  onApprove?: (id: string) => void
-  onDecline?: (id: string) => void
+  onApprove?: () => void
+  onDecline?: () => void
 }
 
 export default function DocumentPreviewModal({
@@ -169,10 +170,22 @@ export default function DocumentPreviewModal({
                 <h3 className="font-serif text-lg font-semibold text-foreground">Documento adjunto</h3>
               </div>
               <div className="rounded-lg border border-border">
-                <div className="border-b border-border p-4">
+                <div className="flex items-center justify-between border-b border-border p-4">
                   <p className="font-medium text-foreground">
                     {solicitud.documento ?? 'Sin documento adjunto'}
                   </p>
+                  {solicitud.documento && (
+                    <a  
+                      href={solicitud.documentoUrl ?? '#'}
+                      download={solicitud.documento}
+                      onClick={e => { if (!solicitud.documentoUrl) e.preventDefault() }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
+                      aria-label={`Descargar ${solicitud.documento}`}
+                    >
+                      <Download className="h-4 w-4" aria-hidden="true" />
+                      Descargar
+                    </a>
+                  )}
                 </div>
                 <div className="flex min-h-80 items-center justify-center bg-secondary/40 p-6">
                   <div className="text-center">
@@ -194,7 +207,7 @@ export default function DocumentPreviewModal({
             <>
               <button
                 type="button"
-                onClick={() => onDecline?.(solicitud.id)}
+                onClick={() => onDecline?.()}
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive px-4 py-2 font-medium text-destructive transition hover:bg-destructive hover:text-destructive-foreground"
               >
                 <XCircle className="h-4 w-4" aria-hidden="true" focusable="false" />
@@ -202,7 +215,7 @@ export default function DocumentPreviewModal({
               </button>
               <button
                 type="button"
-                onClick={() => onApprove?.(solicitud.id)}
+                onClick={() => onApprove?.()}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-success px-4 py-2 font-medium text-success-foreground transition hover:opacity-90"
               >
                 <CheckCircle className="h-4 w-4" aria-hidden="true" focusable="false" />
