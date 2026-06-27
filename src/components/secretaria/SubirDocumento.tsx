@@ -144,9 +144,9 @@ export default function SubirDocumento() {
   if (showSuccess) {
     return (
       <AppLayout title="Registrar Nueva Solicitud">
-        <div className="mx-auto mt-12 max-w-md">
+        <div className="page-container-sm">
           <div className="rounded-xl border border-border bg-card p-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+            <div className="success-icon-wrapper">
               <CheckCircle className="h-8 w-8 text-success" />
             </div>
             <h2 className="mb-2 font-serif text-xl font-semibold">
@@ -179,7 +179,7 @@ export default function SubirDocumento() {
   // ── Main form ──────────────────────────────────────────────────────────────
   return (
     <AppLayout title="Registrar Nueva Solicitud">
-      <div className="mx-auto max-w-2xl">
+      <div className="page-container-md">
         <div className="mb-6">
           <h2 className="font-serif text-2xl font-bold text-foreground">
             Registrar Nueva Solicitud
@@ -384,7 +384,7 @@ export default function SubirDocumento() {
               />
 
               {file ? (
-                <div className="flex items-center gap-3 rounded-lg border border-border p-4">
+                <div className="file-preview">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                     <FileText className="h-5 w-5 text-primary" />
                   </div>
@@ -410,7 +410,7 @@ export default function SubirDocumento() {
                   onDragOver={e => e.preventDefault()}
                   onClick={() => fileInputRef.current?.click()}
                   className={`
-                    w-full cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors
+                    upload-zone w-full
                     focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                     ${fileError
                       ? 'border-destructive bg-destructive/5'

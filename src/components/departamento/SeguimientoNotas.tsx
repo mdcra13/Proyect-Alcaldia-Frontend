@@ -264,9 +264,9 @@ export default function SeguimientoNotas() {
             titleId="history-solicitud-title"
             descriptionId="history-solicitud-description"
             onClose={handleCloseModals}
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl"
+            className="modal-card max-h-[90vh] max-w-2xl overflow-y-auto"
           >
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div className="modal-header">
                 <div>
                   <h2 id="history-solicitud-title" className="font-serif text-xl font-semibold text-foreground">
                     Historial de {selectedSolicitud.radicado}
