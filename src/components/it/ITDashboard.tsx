@@ -45,10 +45,10 @@ export default function ITDashboard() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4">
 
         <div>
-          <h1 className="font-serif text-2xl font-bold text-foreground">
+          <h1 className="dashboard-title">
             Panel de Administración IT
           </h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="dashboard-subtitle mt-1">
             Gestión de usuarios, departamentos y configuración del sistema
           </p>
         </div>
@@ -56,53 +56,53 @@ export default function ITDashboard() {
         {/* Stat cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Total */}
-          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="stat-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-4">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Users className="h-6 w-6 text-primary" aria-hidden="true" focusable="false" />
+              <div className="stat-icon">
+                <Users className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{users.length}</p>
-                <p className="text-sm text-muted-foreground">Total Usuarios</p>
+                <p className="stat-value text-2xl">{users.length}</p>
+                <p className="stat-label mb-0">Total Usuarios</p>
               </div>
             </div>
           </div>
 
           {/* Activos */}
-          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="stat-card stat-card-green transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-4">
-              <div className="rounded-lg bg-success/10 p-3">
-                <UserCheck className="h-6 w-6 text-success" aria-hidden="true" focusable="false" />
+              <div className="stat-icon stat-icon-green">
+                <UserCheck className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{activeUsers}</p>
-                <p className="text-sm text-muted-foreground">Usuarios Activos</p>
+                <p className="stat-value text-2xl">{activeUsers}</p>
+                <p className="stat-label mb-0">Usuarios Activos</p>
               </div>
             </div>
           </div>
 
           {/* Inactivos */}
-          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="stat-card stat-card-red transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-4">
-              <div className="rounded-lg bg-destructive/10 p-3">
-                <UserX className="h-6 w-6 text-destructive" aria-hidden="true" focusable="false" />
+              <div className="stat-icon stat-icon-red">
+                <UserX className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{inactiveUsers}</p>
-                <p className="text-sm text-muted-foreground">Usuarios Inactivos</p>
+                <p className="stat-value text-2xl">{inactiveUsers}</p>
+                <p className="stat-label mb-0">Usuarios Inactivos</p>
               </div>
             </div>
           </div>
 
           {/* Departamentos */}
-          <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="stat-card stat-card-amber transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-center gap-4">
-              <div className="rounded-lg bg-warning/10 p-3">
-                <Building2 className="h-6 w-6 text-warning" aria-hidden="true" focusable="false" />
+              <div className="stat-icon stat-icon-amber">
+                <Building2 className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{activeDepartamentos}</p>
-                <p className="text-sm text-muted-foreground">Departamentos</p>
+                <p className="stat-value text-2xl">{activeDepartamentos}</p>
+                <p className="stat-label mb-0">Departamentos</p>
               </div>
             </div>
           </div>
@@ -113,11 +113,11 @@ export default function ITDashboard() {
           <button
             type="button"
             onClick={() => navigate('/it/usuarios')}
-            className="rounded-xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+            className="dashboard-nav-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
           >
             <div className="mb-4 flex items-center justify-between">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Users className="h-6 w-6 text-primary" aria-hidden="true" focusable="false" />
+              <div className="dashboard-nav-icon dashboard-nav-icon-primary">
+                <Users className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" aria-hidden="true" focusable="false" />
             </div>
@@ -128,21 +128,21 @@ export default function ITDashboard() {
               Crear, editar y administrar usuarios del sistema
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">Alcaldes: {usersByRole.alcalde}</span>
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">Secretarias: {usersByRole.secretaria}</span>
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">Departamentos: {usersByRole.departamento}</span>
-              <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium">IT: {usersByRole.it}</span>
+              <span className="category-badge border-border">Alcaldes: {usersByRole.alcalde}</span>
+              <span className="category-badge border-border">Secretarias: {usersByRole.secretaria}</span>
+              <span className="category-badge border-border">Departamentos: {usersByRole.departamento}</span>
+              <span className="category-badge border-border">IT: {usersByRole.it}</span>
             </div>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/it/departamentos')}
-            className="rounded-xl border border-border bg-card p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+            className="dashboard-nav-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
           >
             <div className="mb-4 flex items-center justify-between">
-              <div className="rounded-lg bg-warning/10 p-3">
-                <Building2 className="h-6 w-6 text-warning" aria-hidden="true" focusable="false" />
+              <div className="dashboard-nav-icon dashboard-nav-icon-amber">
+                <Building2 className="h-6 w-6" aria-hidden="true" focusable="false" />
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" aria-hidden="true" focusable="false" />
             </div>
@@ -179,7 +179,7 @@ export default function ITDashboard() {
                   {recentUsers.map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3"
+                      className="info-row"
                     >
                       <div className="min-w-0">
                         <p className="truncate font-medium text-foreground">
@@ -188,7 +188,7 @@ export default function ITDashboard() {
                         <p className="truncate text-sm text-muted-foreground">@{user.username}</p>
                       </div>
                       <div className="text-right">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        <span className={`status-badge border-transparent ${
                           user.status === 'active'
                             ? 'bg-success/10 text-success'
                             : 'bg-secondary text-muted-foreground'
@@ -221,26 +221,26 @@ export default function ITDashboard() {
             </div>
             <div className="p-5">
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                <div className="info-row">
                   <div className="flex items-center gap-3">
                     <div className="h-3 w-3 rounded-full bg-success" aria-hidden="true" />
                     <span className="text-foreground">Estado del Sistema</span>
                   </div>
-                  <span className="rounded-full bg-success px-2.5 py-1 text-xs font-medium text-success-foreground">
+                  <span className="status-badge border-transparent bg-success text-success-foreground">
                     Operativo
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                <div className="info-row">
                   <span className="text-foreground">Versión</span>
                   <span className="font-mono text-sm">v1.0.0</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                <div className="info-row">
                   <span className="text-foreground">Último backup</span>
                   <span className="text-sm text-muted-foreground">Hace 2 horas</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 rounded-lg bg-muted/50 p-3">
+                <div className="info-row">
                   <span className="text-foreground">Sesiones activas</span>
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+                  <span className="status-badge border-transparent bg-secondary text-secondary-foreground">
                     {activeUsers}
                   </span>
                 </div>

@@ -257,9 +257,9 @@ export default function NotasPendientes() {
             titleId="approve-modal-title"
             descriptionId="approve-modal-desc"
             onClose={handleCloseApprove}
-            className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl"
+            className="modal-card max-w-md"
           >
-            <div className="border-b border-border px-6 py-4">
+            <div className="modal-header">
               <h2
                 id="approve-modal-title"
                 className="font-serif text-xl font-semibold text-success"
@@ -277,12 +277,12 @@ export default function NotasPendientes() {
               <p><strong>Solicitante:</strong> {selectedSolicitud.solicitante}</p>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+            <div className="modal-footer">
               <button
                 type="button"
                 onClick={handleCloseApprove}
                 disabled={isSubmitting}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                className="modal-btn-cancel"
               >
                 Cancelar
               </button>
@@ -290,7 +290,7 @@ export default function NotasPendientes() {
                 type="button"
                 onClick={handleApprove}
                 disabled={isSubmitting}
-                className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-success-foreground transition-colors hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="modal-btn-success"
               >
                 {isSubmitting ? 'Aprobando...' : 'Confirmar aprobación'}
               </button>
@@ -304,9 +304,9 @@ export default function NotasPendientes() {
             titleId="decline-modal-title"
             descriptionId="decline-modal-desc"
             onClose={handleCloseDecline}
-            className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl"
+            className="modal-card max-w-md"
           >
-            <div className="border-b border-border px-6 py-4">
+            <div className="modal-header">
               <h2
                 id="decline-modal-title"
                 className="font-serif text-xl font-semibold text-destructive"
@@ -343,7 +343,7 @@ export default function NotasPendientes() {
                   maxLength={500}
                   aria-invalid={formError ? true : undefined}
                   aria-describedby={formError ? 'motivo-error' : undefined}
-                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                  className="modal-form-field resize-none"
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
                   {formError ? (
@@ -364,12 +364,12 @@ export default function NotasPendientes() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+            <div className="modal-footer">
               <button
                 type="button"
                 onClick={handleCloseDecline}
                 disabled={isSubmitting}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                className="modal-btn-cancel"
               >
                 Cancelar
               </button>
@@ -377,7 +377,7 @@ export default function NotasPendientes() {
                 type="button"
                 onClick={handleDecline}
                 disabled={isSubmitting || motivoRechazo.trim().length < 10}
-                className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="modal-btn-danger"
               >
                 {isSubmitting ? 'Rechazando...' : 'Confirmar rechazo'}
               </button>

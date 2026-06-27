@@ -65,7 +65,7 @@ export default function SolicitudFiltersPanel({
             placeholder="Buscar por radicado, título, solicitante o identificación..."
             value={searchQuery}
             onChange={event => updateFilter('q', event.target.value)}
-            className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="search-input text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           />
         </div>
 

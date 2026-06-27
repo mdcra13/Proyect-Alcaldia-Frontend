@@ -1,3 +1,12 @@
+/*
+ * NOTA SonarQube (css:S8776 "Missing scoping root"):
+ * Los selectores anidados con & dentro de los bloques @utility son la
+ * sintaxis oficial de Tailwind CSS v4 (docs: adding-custom-styles).
+ * SonarQube aun no reconoce @utility como scoping root valido y marca
+ * estos selectores como falsos positivos. Se marcan con NOSONAR linea por
+ * linea en vez de reescribir la sintaxis, para no romper la generacion de Tailwind.
+ */
+
 /* ── Badges ────────────────────────────────────────────────── */
 @utility status-badge {
   display: inline-flex;
@@ -8,6 +17,7 @@
   border-width: 1px;
 }
 
+/* Variantes genericas (reutilizables por cualquier badge de estado simple) */
 @utility status-pendiente {
   background-color: color-mix(in srgb, var(--warning) 10%, transparent);
   color: var(--warning);
@@ -30,6 +40,69 @@
   background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
   color: var(--destructive);
   border-color: color-mix(in srgb, var(--destructive) 20%, transparent);
+}
+
+/* Variantes especificas para cada SolicitudEstado (src/lib/types).
+   Usadas por EstadoBadge en vez de colores Tailwind hardcoded, para que
+   los badges respeten el theme (--warning/--success/--destructive/--primary). */
+@utility status-received {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+
+@utility status-assigned-to-department {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+@utility status-in-review {
+  background-color: color-mix(in srgb, var(--warning) 10%, transparent);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 20%, transparent);
+}
+
+@utility status-approved-by-department {
+  background-color: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 20%, transparent);
+}
+
+@utility status-rejected-by-department {
+  background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 20%, transparent);
+}
+
+@utility status-awaiting-mayor-signature {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+@utility status-returned-to-department {
+  background-color: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: color-mix(in srgb, var(--warning) 80%, black);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+@utility status-rejected-by-mayor-office {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+  border-color: var(--destructive);
+}
+
+@utility status-signed {
+  background-color: var(--success);
+  color: var(--success-foreground);
+  border-color: var(--success);
+}
+
+@utility status-closed {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
 }
 
 @utility category-badge {
@@ -75,7 +148,7 @@
   color: var(--foreground);
   border-color: var(--border);
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: var(--secondary);
   }
 }
@@ -90,7 +163,7 @@
   border-radius: 0.5rem;
   outline: none;
 
-  &:focus {
+  &:focus { /* NOSONAR */
     box-shadow: 0 0 0 2px var(--primary);
   }
 }
@@ -106,7 +179,7 @@
   border-radius: 0.5rem;
   transition: background-color 150ms;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: var(--secondary);
   }
 }
@@ -150,7 +223,7 @@
   border-radius: 0.5rem;
   transition: background-color 150ms;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: var(--secondary);
   }
 }
@@ -190,20 +263,10 @@
   overflow: hidden;
 }
 
-@utility modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-@utility modal-footer {
-  padding: 1rem;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-}
+/* modal-header y modal-footer: definidos en utilities-shared.css (version usada
+   por los componentes reales: ITGestionDepartamentos, CambiarDepartamentoModal,
+   CambiarEstadoModal). Se quitan de aqui para evitar la duplicacion/colision
+   de nombres detectada en la auditoria de utilities. */
 
 @utility modal-icon-wrap {
   width: 3rem;
@@ -236,14 +299,17 @@
 
 /* ── Buttons ───────────────────────────────────────────────── */
 
-@utility btn-secondary {
+/* Renombrada (era btn-secondary, duplicaba la utility de utilities-subirDoc.css).
+   Variante con :hover propio, pensada para botones secundarios de tablas/paneles
+   donde no se necesita el width:100% que usa el btn-secondary de SubirDocumento. */
+@utility btn-secondary-soft {
   padding: 0.625rem 1rem;
   background-color: var(--secondary);
   color: var(--secondary-foreground);
   border-radius: 0.5rem;
   transition: background-color 150ms;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: color-mix(in srgb, var(--secondary) 80%, transparent);
   }
 }
@@ -255,7 +321,7 @@
   border-radius: 0.5rem;
   transition: background-color 150ms;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: color-mix(in srgb, var(--success) 90%, transparent);
   }
 }
@@ -267,11 +333,11 @@
   border-radius: 0.5rem;
   transition: background-color 150ms;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: color-mix(in srgb, var(--destructive) 90%, transparent);
   }
 
-  &:disabled {
+  &:disabled { /* NOSONAR */
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -294,7 +360,7 @@
   height: 6rem;
   outline: none;
 
-  &:focus {
+  &:focus { /* NOSONAR */
     box-shadow: 0 0 0 2px var(--primary);
   }
 }

@@ -433,13 +433,13 @@ export default function SeguimientoSolicitudes() {
         {historialSolicitud && (
           <div
             ref={historialDialogRef}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            className="modal-backdrop"
             role="dialog"
             aria-modal="true"
             aria-labelledby="seguimiento-historial-title"
           >
-            <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
-              <div className="flex items-start justify-between border-b border-border px-6 py-4">
+            <div className="modal-card max-h-[80vh] max-w-lg overflow-y-auto">
+              <div className="modal-header">
                 <div>
                   <h3
                     id="seguimiento-historial-title"
@@ -466,11 +466,11 @@ export default function SeguimientoSolicitudes() {
                 <HistorialTimeline historial={historialSolicitud.historial} />
               </div>
 
-              <div className="flex justify-end border-t border-border px-6 py-4">
+              <div className="modal-footer">
                 <button
                   type="button"
                   onClick={closeHistorial}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                  className="modal-btn-cancel"
                 >
                   Cerrar
                 </button>

@@ -1,3 +1,12 @@
+/*
+ * NOTA SonarQube (css:S8776 "Missing scoping root"):
+ * Los selectores anidados con & dentro de los bloques @utility son la
+ * sintaxis oficial de Tailwind CSS v4 (docs: adding-custom-styles).
+ * SonarQube aun no reconoce @utility como scoping root valido y marca
+ * estos selectores como falsos positivos. Se marcan con NOSONAR linea por
+ * linea en vez de reescribir la sintaxis, para no romper la generacion de Tailwind.
+ */
+
 @utility page-container-sm {
   max-width: 28rem;
   margin-inline: auto;
@@ -31,7 +40,7 @@
   padding: 0.625rem 0.75rem;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 
-  &:focus {
+  &:focus { /* NOSONAR */
     outline: none;
     box-shadow: 0 0 0 2px var(--primary);
   }
