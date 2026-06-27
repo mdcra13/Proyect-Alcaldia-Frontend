@@ -243,12 +243,12 @@ export default function NotasPendientes() {
         {/* ── Modal: Detalle ─────────────────────────────────── */}
         {showDetailModal && selectedSolicitud && (
           <DocumentPreviewModal
-            solicitud={selectedSolicitud}
-            open={showDetailModal}
-            onClose={handleCloseDetail}
-            onApprove={trigger => handleOpenApprove(selectedSolicitud, trigger)}
-            onDecline={trigger => handleOpenDecline(selectedSolicitud, trigger)}
-          />
+          solicitud={selectedSolicitud}
+          open={showDetailModal}
+          onClose={handleCloseDetail}
+          onApprove={() => handleOpenApprove(selectedSolicitud)}
+          onDecline={() => handleOpenDecline(selectedSolicitud)}
+        />
         )}
 
         {/* ── Modal: Aprobar ─────────────────────────────────── */}
