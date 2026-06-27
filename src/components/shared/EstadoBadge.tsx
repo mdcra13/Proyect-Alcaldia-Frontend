@@ -23,7 +23,7 @@ export function EstadoBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border font-medium',
+        'status-badge items-center border',
         config.color,
         variantClasses[variant],
         className

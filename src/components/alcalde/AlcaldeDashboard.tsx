@@ -31,8 +31,8 @@ interface StatCard {
   title: string
   value: number
   icon: LucideIcon
-  color: string
-  bgColor: string
+  cardVariant?: string
+  iconVariant?: string
 }
 
 export default function AlcaldeDashboard() {
@@ -102,36 +102,32 @@ export default function AlcaldeDashboard() {
       title: 'Total Notas',
       value: conteoEstados.total,
       icon: FileText,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
     },
     {
       title: 'Pendientes de Firma',
       value: conteoEstados.pendientesFirma,
       icon: Clock,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
+      cardVariant: 'stat-card-amber',
+      iconVariant: 'stat-icon-amber',
     },
     {
       title: 'Firmadas',
       value: conteoEstados.firmadas,
       icon: CheckCircle,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      cardVariant: 'stat-card-green',
+      iconVariant: 'stat-icon-green',
     },
     {
       title: 'Devueltas',
       value: conteoEstados.devueltas,
       icon: CornerDownLeft,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
+      cardVariant: 'stat-card-red',
+      iconVariant: 'stat-icon-red',
     },
     {
       title: 'Cerradas',
       value: conteoEstados.cerradas,
       icon: Archive,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
     },
   ]
 
@@ -145,10 +141,10 @@ export default function AlcaldeDashboard() {
             </div>
 
             <div>
-              <h1 className="font-serif text-2xl font-bold text-primary">
+              <h1 className="dashboard-title">
                 Panel del Alcalde
               </h1>
-              <p className="text-muted-foreground">
+              <p className="dashboard-subtitle">
                 Bienvenido/a, {user?.nombre ?? 'Alcalde'}. Vista general de las
                 notas enviadas por los departamentos.
               </p>
@@ -172,18 +168,18 @@ export default function AlcaldeDashboard() {
             return (
               <div
                 key={stat.title}
-                className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                className={`stat-card ${stat.cardVariant ?? ''} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`rounded-lg p-2 ${stat.bgColor}`}>
-                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                  <div className={`stat-icon ${stat.iconVariant ?? ''}`}>
+                    <Icon className="h-5 w-5" aria-hidden="true" focusable="false" />
                   </div>
 
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="stat-value text-2xl">
                       {stat.value}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="stat-label">
                       {stat.title}
                     </p>
                   </div>
@@ -256,22 +252,22 @@ export default function AlcaldeDashboard() {
                   {
                     label: 'Pendientes de firma',
                     value: conteoEstados.pendientesFirma,
-                    color: 'bg-purple-500',
+                    color: 'bg-warning',
                   },
                   {
                     label: 'Firmadas',
                     value: conteoEstados.firmadas,
-                    color: 'bg-green-500',
+                    color: 'bg-success',
                   },
                   {
                     label: 'Devueltas',
                     value: conteoEstados.devueltas,
-                    color: 'bg-orange-500',
+                    color: 'bg-destructive',
                   },
                   {
                     label: 'Cerradas',
                     value: conteoEstados.cerradas,
-                    color: 'bg-gray-500',
+                    color: 'bg-muted-foreground',
                   },
                 ].map(item => (
                   <div key={item.label} className="flex flex-col items-center gap-2">
@@ -293,7 +289,7 @@ export default function AlcaldeDashboard() {
         <section className="rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between gap-4 border-b border-border p-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Clock className="h-5 w-5 text-yellow-500" />
+              <Clock className="h-5 w-5 text-warning" />
               Notas Próximas a Vencer
             </h2>
 

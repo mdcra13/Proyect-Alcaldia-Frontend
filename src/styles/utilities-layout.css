@@ -40,17 +40,6 @@
   padding: 1rem;
 }
 
-@utility layout-sidebar-logo {
-  margin-bottom: 0.5rem;
-  display: flex;
-  height: 3rem;
-  width: 8rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed color-mix(in srgb, var(--sidebar-foreground) 40%, transparent);
-  border-radius: 0.25rem;
-}
-
 @utility layout-sidebar-avatar {
   display: flex;
   height: 2.5rem;
