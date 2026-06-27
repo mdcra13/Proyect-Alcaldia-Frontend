@@ -66,6 +66,7 @@ export interface Solicitud {
   subidoPor: string
   subidoPorId: string
   documento?: string
+  documentoUrl?: string 
   motivoRechazo?: string | null
   historial: HistorialEntry[]
 }
@@ -145,6 +146,7 @@ export interface SolicitudFormData {
   solicitante: string
   identificacion: string
   descripcion: string
+  prioridad: SolicitudPrioridad 
   documento?: File | null
 }
 

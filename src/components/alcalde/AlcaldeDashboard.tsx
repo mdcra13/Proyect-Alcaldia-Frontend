@@ -20,12 +20,12 @@ import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { SolicitudEstado } from '@/lib/types'
 
-const ALCALDE_VISIBLE_ESTADOS: SolicitudEstado[] = [
+const ALCALDE_VISIBLE_ESTADOS = new Set<SolicitudEstado>([
   'awaiting_mayor_signature',
   'signed',
   'returned_to_department',
   'closed',
-]
+])
 
 interface StatCard {
   title: string
@@ -42,10 +42,10 @@ export default function AlcaldeDashboard() {
   const departamentos = useDepartamentosStore(state => state.departamentos)
 
   const solicitudesAlcalde = useMemo(() => {
-    return solicitudes.filter(solicitud =>
-      ALCALDE_VISIBLE_ESTADOS.includes(solicitud.estado)
-    )
-  }, [solicitudes])
+  return solicitudes.filter(solicitud =>
+    ALCALDE_VISIBLE_ESTADOS.has(solicitud.estado)
+  )
+}, [solicitudes])
 
   const notasUrgentes = useMemo(() => {
     return solicitudesAlcalde
