@@ -10,6 +10,15 @@ const ROLE_LABELS: Record<UserRole, string> = {
     it:           'Operador IT',
 }
 
+const RESERVED_DEPARTMENTS = new Set([
+    'despacho del alcalde',
+    'secretaria general',
+    'direccion de tecnologia de la informacion',
+])
+
+const normalizeDepartmentName = (name: string) =>
+    name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
+
 export interface UserFormData {
     nombre: string
     apellido: string
@@ -48,6 +57,9 @@ export default function UserFormModal({
     onFormDataChange,
 }: UserFormModalProps) {
     const departamentos = useDepartamentosStore(state => state.departamentos)
+    const selectableDepartments = departamentos.filter(
+        department => !RESERVED_DEPARTMENTS.has(normalizeDepartmentName(department.nombre)),
+    )
     const dialogRef     = useRef<HTMLDivElement>(null)
     const onCloseRef    = useRef(onClose)
     const previouslyFocused = useRef<HTMLElement | null>(null)
@@ -223,7 +235,7 @@ useEffect(() => {
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                 >
                     <option value="">Seleccionar departamento</option>
-                    {departamentos.map(d => (
+                    {selectableDepartments.map(d => (
                     <option key={d.id} value={d.id}>{d.nombre}</option>
                     ))}
                 </select>
