@@ -5,8 +5,7 @@ import type { UserRole } from '@/lib/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
     secretaria:   'Secretaria',
-    funcionario:  'Funcionario de Departamento',
-    departamento: 'Jefe de Departamento',
+    departamento: 'Departamento',
     alcalde:      'Alcalde',
     it:           'Operador IT',
 }
@@ -212,7 +211,7 @@ useEffect(() => {
                 </select>
             </div>
 
-            {(formData.role === 'funcionario' || formData.role === 'departamento') && (
+            {formData.role === 'departamento' && (
                 <div>
                 <label htmlFor="user-departamentoId" className="mb-1 block text-sm font-medium text-foreground">
                     Departamento *

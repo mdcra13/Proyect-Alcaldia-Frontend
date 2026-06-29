@@ -7,7 +7,7 @@ export interface Departamento {
 }
 
 // User types
-export type UserRole = 'secretaria' | 'funcionario' | 'departamento' | 'alcalde' | 'it'
+export type UserRole = 'secretaria' | 'departamento' | 'alcalde' | 'it'
 export type UserStatus = 'active' | 'inactive'
 
 export interface User {
@@ -169,8 +169,7 @@ export const ESTADO_TRANSITIONS_ALCALDE: Partial<
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   secretaria: 'Secretaria',
-  funcionario: 'Funcionario de Departamento',
-  departamento: 'Jefe de Departamento',
+  departamento: 'Departamento',
   alcalde: 'Alcalde',
   it: 'Operador IT',
 } as const

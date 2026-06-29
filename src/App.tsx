@@ -82,7 +82,6 @@ function AuthRedirect() {
       case 'secretaria':
         return <Navigate to="/secretaria" replace />
       case 'departamento':
-      case 'funcionario':
         return <Navigate to="/departamento" replace />
       case 'it':
         return <Navigate to="/it" replace />
@@ -180,7 +179,7 @@ export default function App() {
             <Route
               path="/departamento"
               element={
-                <ProtectedRoute allowedRoles={['departamento', 'funcionario']}>
+                <ProtectedRoute allowedRoles={['departamento']}>
                   <DepartamentoDashboard />
                 </ProtectedRoute>
               }
@@ -189,7 +188,7 @@ export default function App() {
             <Route
               path="/departamento/dashboard"
               element={
-                <ProtectedRoute allowedRoles={['departamento', 'funcionario']}>
+                <ProtectedRoute allowedRoles={['departamento']}>
                   <DepartamentoDashboard />
                 </ProtectedRoute>
               }
@@ -198,7 +197,7 @@ export default function App() {
             <Route
               path="/departamento/pendientes"
               element={
-                <ProtectedRoute allowedRoles={['departamento', 'funcionario']}>
+                <ProtectedRoute allowedRoles={['departamento']}>
                   <NotasPendientes />
                 </ProtectedRoute>
               }
@@ -207,7 +206,7 @@ export default function App() {
             <Route
               path="/departamento/seguimiento"
               element={
-                <ProtectedRoute allowedRoles={['departamento', 'funcionario']}>
+                <ProtectedRoute allowedRoles={['departamento']}>
                   <SeguimientoNotas />
                 </ProtectedRoute>
               }

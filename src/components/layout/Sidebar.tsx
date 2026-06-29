@@ -42,11 +42,6 @@ const navLinksByRole: Record<UserRole, NavLink[]> = {
     { path: '/departamento/pendientes', label: 'Notas Pendientes', icon: ClipboardList },
     { path: '/departamento/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
-  funcionario: [
-    { path: '/departamento', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/departamento/pendientes', label: 'Notas Pendientes', icon: ClipboardList },
-    { path: '/departamento/seguimiento', label: 'Seguimiento', icon: FileSearch },
-  ],
   it: [
     { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/it/usuarios', label: 'Usuarios', icon: Users },

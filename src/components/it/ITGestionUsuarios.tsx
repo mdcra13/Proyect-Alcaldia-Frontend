@@ -14,15 +14,13 @@ const ITEMS_PER_PAGE = 10
 
 const ROLE_LABELS: Record<UserRole, string> = {
   secretaria:   'Secretaria',
-  funcionario:  'Funcionario de Departamento',
-  departamento: 'Jefe de Departamento',
+  departamento: 'Departamento',
   alcalde:      'Alcalde',
   it:           'Operador IT',
 }
 
 const ROLE_COLORS: Record<UserRole, string> = {
   secretaria:   'border-primary/20 bg-primary/10 text-primary',
-  funcionario:  'border-secondary bg-secondary text-secondary-foreground',
   departamento: 'border-secondary bg-secondary text-secondary-foreground',
   alcalde:      'border-warning/20 bg-warning/10 text-warning',
   it:           'border-success/20 bg-success/10 text-success',
@@ -112,7 +110,7 @@ export default function ITGestionUsuarios() {
       setFormError('Completa todos los campos obligatorios.')
       return
     }
-    const requiereDepartamento = formData.role === 'funcionario' || formData.role === 'departamento'
+    const requiereDepartamento = formData.role === 'departamento'
     if (requiereDepartamento && !formData.departamentoId) {
       setFormError('Selecciona el departamento del usuario.')
       return
