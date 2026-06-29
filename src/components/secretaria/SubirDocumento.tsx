@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
-import { mockDepartamentos } from '@/lib/stores/departamentosStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData, SolicitudPrioridad } from '@/lib/types'
@@ -35,10 +35,12 @@ export default function SubirDocumento() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [newRadicado, setNewRadicado] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const user            = useAuthStore(state => state.user)
   const addSolicitud    = useSolicitudesStore(state => state.addSolicitud)
   const addNotification = useNotificationStore(state => state.addNotification)
+  const departamentos   = useDepartamentosStore(state => state.departamentos)
 
   const {
     register,
@@ -104,33 +106,41 @@ export default function SubirDocumento() {
     if (!data.categoria) return
 
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    setSubmitError(null)
 
     const fullName = user ? `${user.nombre} ${user.apellido}` : 'Usuario'
 
-    const solicitud = addSolicitud({
-      titulo:         data.titulo,
-      categoria:      data.categoria as SolicitudCategoria,
-      departamentoId: data.departamentoId || undefined,
-      fechaSolicitud: data.fechaSolicitud,
-      fechaLimite:    data.fechaLimite || '',
-      solicitante:    data.solicitante,
-      identificacion: data.identificacion,
-      descripcion:    data.descripcion,
-      prioridad:      data.prioridad as SolicitudPrioridad,
-      documento:      file.name,
-      subidoPor:      fullName,
-      subidoPorId:    user?.id ?? 'system',
-    })
+    try {
+      const solicitud = await addSolicitud({
+        titulo:         data.titulo,
+        categoria:      data.categoria as SolicitudCategoria,
+        departamentoId: data.departamentoId || undefined,
+        fechaSolicitud: data.fechaSolicitud,
+        fechaLimite:    data.fechaLimite || '',
+        solicitante:    data.solicitante,
+        identificacion: data.identificacion,
+        descripcion:    data.descripcion,
+        prioridad:      data.prioridad as SolicitudPrioridad,
+        documento:      file,
+        subidoPor:      fullName,
+        subidoPorId:    user?.id ?? 'system',
+      })
 
-    addNotification({
-      message: `Nueva solicitud registrada: ${solicitud.radicado}`,
-      type:    'success',
-    })
-
-    setNewRadicado(solicitud.radicado)
-    setShowSuccess(true)
-    setIsSubmitting(false)
+      addNotification({
+        message: `Nueva solicitud registrada: ${solicitud.radicado}`,
+        type: 'success',
+      })
+      setNewRadicado(solicitud.radicado)
+      setShowSuccess(true)
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'No se pudo registrar la solicitud.'
+      setSubmitError(message)
+      addNotification({ message, type: 'error' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleNewSolicitud = () => {
@@ -244,7 +254,7 @@ export default function SubirDocumento() {
                 className="form-input custom-select"
               >
                 <option value="">Seleccione un departamento</option>
-                {mockDepartamentos.map(dep => (
+                {departamentos.filter(dep => dep.activo).map(dep => (
                   <option key={dep.id} value={dep.id}>{dep.nombre}</option>
                 ))}
               </select>
@@ -452,6 +462,13 @@ export default function SubirDocumento() {
             </div>
 
             {/* Botones */}
+            {submitError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-destructive">
+                <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
+                <p className="text-sm">{submitError}</p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <button
                 type="button"

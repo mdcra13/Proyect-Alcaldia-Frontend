@@ -33,10 +33,11 @@ interface RequestOptions extends RequestInit {
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { auth = true, headers, ...init } = options
+  const hasFormData = init.body instanceof FormData
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(!hasFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(auth && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
@@ -118,6 +119,10 @@ interface BackendRequestListItem {
   userAssignedName: string | null
   trackingCode: string
   createdAt: string
+  requestDate: string
+  deadline: string | null
+  documentName: string | null
+  documentUrl: string | null
 }
 
 interface BackendRequestDetails extends BackendRequestListItem {
@@ -139,6 +144,13 @@ export interface BackendCatalogs {
   departments: BackendDepartment[]
   categories: BackendCategory[]
   statuses: BackendStatus[]
+}
+
+function resolveBackendAssetUrl(path?: string | null) {
+  if (!path) return undefined
+  if (/^https?:\/\//i.test(path)) return path
+
+  return `${new URL(API_BASE_URL).origin}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 const LOGIN_ALIASES: Record<string, string> = {
@@ -306,9 +318,9 @@ export function mapBackendRequest(
   const departamento = departments.find(
     item => item.nombre.toLowerCase() === request.departmentName?.toLowerCase()
   )
-  const fechaSolicitud = request.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10)
-  const fechaLimite = new Date(request.createdAt || Date.now())
-  fechaLimite.setDate(fechaLimite.getDate() + 7)
+  const fechaSolicitud = request.requestDate || request.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10)
+  const fallbackDeadline = new Date(request.createdAt || Date.now())
+  fallbackDeadline.setDate(fallbackDeadline.getDate() + 7)
 
   return {
     id: request.id,
@@ -321,12 +333,13 @@ export function mapBackendRequest(
     departamentoId: departamento?.id,
     departamento,
     fechaSolicitud,
-    fechaLimite: fechaLimite.toISOString().slice(0, 10),
+    fechaLimite: request.deadline || fallbackDeadline.toISOString().slice(0, 10),
     estado,
     prioridad: mapPriority(request.priority),
     subidoPor: 'receivedByName' in request ? request.receivedByName : 'Backend',
     subidoPorId: 'backend',
-    documento: undefined,
+    documento: request.documentName ?? undefined,
+    documentoUrl: resolveBackendAssetUrl(request.documentUrl),
     historial: [
       {
         id: `${request.id}-created`,
@@ -407,6 +420,8 @@ export const backendApi = {
     categoria: SolicitudCategoria
     departamentoId?: string
     prioridad?: SolicitudPrioridad
+    fechaSolicitud?: string
+    fechaLimite?: string
   }) {
     const [categories, departments] = await Promise.all([
       this.categories(),
@@ -423,7 +438,7 @@ export const backendApi = {
       throw new ApiError('No hay categorias o departamentos disponibles en backend.', 400)
     }
 
-    return apiRequest<BackendRequestDetails | BackendRequestListItem>('/requests', {
+    const created = await apiRequest<{ id: string }>('/requests', {
       method: 'POST',
       body: JSON.stringify({
         subject: input.titulo,
@@ -433,7 +448,27 @@ export const backendApi = {
         categoryId: category.id,
         departmentId: department.id,
         priority: PRIORITY_TO_BACKEND[input.prioridad ?? 'MEDIUM'],
+        requestDate: input.fechaSolicitud,
+        deadline: input.fechaLimite || undefined,
       }),
+    })
+
+    return this.requestDetails(created.id)
+  },
+
+  uploadRequestDocument(requestId: string, file: File) {
+    const body = new FormData()
+    body.append('file', file)
+
+    return apiRequest<{
+      id: string
+      fileName: string
+      fileType: string
+      size: number
+      url: string
+    }>(`/requests/${requestId}/documents/upload`, {
+      method: 'POST',
+      body,
     })
   },
 

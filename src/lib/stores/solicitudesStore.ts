@@ -423,7 +423,7 @@ interface NewSolicitudData {
   identificacion: string
   descripcion: string
   prioridad: SolicitudPrioridad
-  documento: string
+  documento: File
   subidoPor: string
   subidoPorId: string
 }
@@ -532,7 +532,7 @@ interface SolicitudesState {
   declinar: (id: string, motivo: string, userId: string, userName: string) => void
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => void
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => void
-  addSolicitud: (solicitud: NewSolicitudData) => Solicitud
+  addSolicitud: (solicitud: NewSolicitudData) => Promise<Solicitud>
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
   CATEGORIES: CategoriesMap
@@ -803,81 +803,43 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
     ).catch(() => undefined)
   },
 
-  addSolicitud: (solicitud: NewSolicitudData): Solicitud => {
-    // TODO: Replace with API call POST /api/v1/requests
-    const ids = get().solicitudes.map(s => Number.parseInt(s.id, 10)).filter(Number.isFinite)
-    const nextId = Math.max(...ids) + 1
-    const departamento = solicitud.departamentoId ? mockDepartamentos[solicitud.departamentoId] : undefined
-    const now = new Date().toISOString()
-    const fechaSolicitud = solicitud.fechaSolicitud || now.split('T')[0]
-    const tieneDepartamento = Boolean(solicitud.departamentoId && departamento)
-    const estadoInicial: SolicitudEstado = tieneDepartamento ? 'assigned_to_department' : 'received'
-
-    const historial: HistorialEntry[] = [
-      {
-        id: `h-${Date.now()}`,
-        fecha: now,
-        accion: 'received',
-        descripcion: buildHistorialDescripcion('received', solicitud.subidoPor),
-        usuario: solicitud.subidoPor,
-        usuarioId: solicitud.subidoPorId,
-      },
-    ]
-
-    if (tieneDepartamento) {
-      historial.push({
-        id: `h-${Date.now() + 1}`,
-        fecha: now,
-        accion: 'assigned_to_department',
-        descripcion: buildHistorialDescripcion('assigned_to_department', solicitud.subidoPor, departamento?.nombre),
-        usuario: solicitud.subidoPor,
-        usuarioId: solicitud.subidoPorId,
-      })
-    }
-
-    const newSolicitud: Solicitud = {
-      id: String(nextId),
-      radicado: `#${nextId}`,
+  addSolicitud: async (solicitud: NewSolicitudData): Promise<Solicitud> => {
+    const created = await backendApi.createRequest({
       titulo: solicitud.titulo,
+      descripcion: solicitud.descripcion,
+      solicitante: solicitud.solicitante,
+      identificacion: solicitud.identificacion,
       categoria: solicitud.categoria,
       departamentoId: solicitud.departamentoId,
-      departamento,
-      fechaSolicitud: fechaSolicitud,
+      prioridad: solicitud.prioridad,
+      fechaSolicitud: solicitud.fechaSolicitud,
       fechaLimite: solicitud.fechaLimite,
-      solicitante: solicitud.solicitante,
-      identificacion: solicitud.identificacion,
-      descripcion: solicitud.descripcion,
-      estado: estadoInicial,
-      prioridad: 'MEDIUM',
-      subidoPor: solicitud.subidoPor,
-      subidoPorId: solicitud.subidoPorId,
-      documento: solicitud.documento,
-      historial,
-    }
+    })
 
-    set(state => ({
-      solicitudes: [newSolicitud, ...state.solicitudes],
-    }))
+    await backendApi.uploadRequestDocument(created.id, solicitud.documento)
 
-    void backendApi.createRequest({
-      titulo: solicitud.titulo,
-      descripcion: solicitud.descripcion,
-      solicitante: solicitud.solicitante,
-      identificacion: solicitud.identificacion,
-      categoria: solicitud.categoria,
-      departamentoId: solicitud.departamentoId,
-      prioridad: 'MEDIUM',
-    }).then(async created => {
-      const departments = (await backendApi.departments()).map(mapBackendDepartment)
-      const synced = mapBackendRequest(created, departments)
-      set(state => ({
-        solicitudes: state.solicitudes.map(item =>
-          item.id === newSolicitud.id ? { ...synced, historial: newSolicitud.historial } : item
-        ),
-      }))
-    }).catch(() => undefined)
+    const [details, departments, history] = await Promise.all([
+      backendApi.requestDetails(created.id),
+      backendApi.departments(),
+      backendApi.requestHistory(created.id),
+    ])
+    const persisted = mapBackendRequest(
+      details,
+      departments.map(mapBackendDepartment)
+    )
+    persisted.historial = history.length
+      ? history.map(entry => ({
+          id: entry.id,
+          fecha: entry.createdAt,
+          accion: entry.eventType,
+          descripcion: entry.observation || 'Solicitud registrada',
+          usuario: solicitud.subidoPor,
+          usuarioId: entry.userId,
+        }))
+      : persisted.historial
 
-    return newSolicitud
+    set(state => ({ solicitudes: [persisted, ...state.solicitudes] }))
+    return persisted
   },
 
   search: (query: string, filters: SolicitudFilters = {}, departamentoId?: string): Solicitud[] => {
