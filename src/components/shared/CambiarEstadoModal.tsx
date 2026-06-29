@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, PenLine, CornerDownLeft, XCircle, X } from 'lucide-react'
+import { toast } from 'sonner'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
 import type { Solicitud, SolicitudEstado } from '@/lib/types'
@@ -52,6 +53,8 @@ export function CambiarEstadoModal({
 
   useEffect(() => {
     if (open && presetEstado) {
+      // Sincroniza el valor al abrir el modal con una accion preseleccionada.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedEstado(presetEstado)
     }
   }, [open, presetEstado])
@@ -72,21 +75,23 @@ export function CambiarEstadoModal({
     if (!user || !selectedEstado || !isValid) return
 
     setIsSubmitting(true)
-    // TODO: Replace with API call PATCH /api/v1/requests/:id/status
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    cambiarEstado(
-      solicitud.id,
-      selectedEstado,
-      user.id,
-      `${user.nombre} ${user.apellido}`,
-      observacion || undefined
-    )
-
-    setIsSubmitting(false)
-    resetState()
-    onOpenChange(false)
-    onSuccess?.()
+    try {
+      await cambiarEstado(
+        solicitud.id,
+        selectedEstado,
+        user.id,
+        `${user.nombre} ${user.apellido}`,
+        observacion || undefined
+      )
+      resetState()
+      onOpenChange(false)
+      onSuccess?.()
+      toast.success('Estado actualizado correctamente')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el estado')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = () => {

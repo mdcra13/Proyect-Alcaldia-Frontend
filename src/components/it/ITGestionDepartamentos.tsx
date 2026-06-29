@@ -92,7 +92,7 @@ export default function ITGestionDepartamentos() {
     triggerRef.current?.focus()
   }
 
-  const handleToggleDepartamento = (departamento: Departamento) => {
+  const handleToggleDepartamento = async (departamento: Departamento) => {
     const activeUsersCount = getActiveAssignedUsersCount(departamento.id)
 
     if (departamento.activo && activeUsersCount > 0) {
@@ -102,10 +102,15 @@ export default function ITGestionDepartamentos() {
       return
     }
 
-    toggleDepartamentoActivo(departamento.id)
+    try {
+      await toggleDepartamentoActivo(departamento.id)
+      toast.success('Estado del departamento actualizado.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el departamento.')
+    }
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const nombre = formData.nombre.trim()
     const descripcion = formData.descripcion.trim()
@@ -115,27 +120,25 @@ export default function ITGestionDepartamentos() {
       return
     }
 
-    if (editingDepartamento) {
-      updateDepartamento(editingDepartamento.id, {
-        nombre,
-        descripcion: descripcion || undefined,
-      })
-
-      if (editingDepartamento.activo !== formData.activo) {
-        handleToggleDepartamento(editingDepartamento)
+    try {
+      if (editingDepartamento) {
+        await updateDepartamento(editingDepartamento.id, {
+          nombre,
+          descripcion: descripcion || undefined,
+          activo: formData.activo,
+        })
+        toast.success('Departamento actualizado correctamente.')
+      } else {
+        await addDepartamento({
+          nombre,
+          descripcion: descripcion || undefined,
+        })
+        toast.success('Departamento creado correctamente.')
       }
-
-      toast.success('Departamento actualizado correctamente.')
-    } else {
-      addDepartamento({
-        nombre,
-        descripcion: descripcion || undefined,
-      })
-
-      toast.success('Departamento creado correctamente.')
+      handleCloseModal()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el departamento.')
     }
-
-    handleCloseModal()
   }
 
   return (

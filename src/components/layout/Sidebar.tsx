@@ -121,7 +121,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{fullName || 'Usuario'}</p>
               <p className="text-sm text-white/70">
-                {(user as any)?.departamento?.nombre ?? roleLabel}
+                {user?.departamento?.nombre ?? roleLabel}
               </p>
             </div>
           </div>

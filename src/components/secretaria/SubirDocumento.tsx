@@ -1,5 +1,5 @@
 ﻿import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { 
   Upload, 
@@ -45,7 +45,7 @@ export default function SubirDocumento() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
     reset,
   } = useForm<SolicitudFormData>({
@@ -64,7 +64,7 @@ export default function SubirDocumento() {
     },
   })
 
-  const descripcion = watch('descripcion', '')
+  const descripcion = useWatch({ control, name: 'descripcion' }) ?? ''
 
   // ── File handlers ──────────────────────────────────────────────────────────
   const handleFileSelect = (

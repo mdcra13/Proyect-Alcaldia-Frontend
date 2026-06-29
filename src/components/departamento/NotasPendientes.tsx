@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Eye } from 'lucide-react'
+import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import AccessibleDialog from '@/components/shared/AccessibleDialog'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
@@ -12,20 +13,13 @@ import { useFilteredSolicitudes } from '@/lib/hooks/useFilteredSolicitudes'
 import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
-import type { Solicitud, SolicitudEstado } from '@/lib/types'
+import type { Solicitud } from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
-
-const ESTADOS_ACCIONABLES_DEPTO: SolicitudEstado[] = [
-  'assigned_to_department',
-  'in_review',
-  'returned_to_department',
-]
 
 export default function NotasPendientes() {
   const user = useAuthStore(state => state.user)
   const {
-    solicitudes,
     getPendientesDepartamento,
     aprobarDepartamento,
     declinar,
@@ -60,14 +54,9 @@ export default function NotasPendientes() {
 
   const departamentoNombre = user?.departamento?.nombre ?? 'Mi Departamento'
 
-  const notasDepartamento = useMemo(() => {
-    if (!user?.departamentoId) return []
-    if (getPendientesDepartamento) return getPendientesDepartamento(user.departamentoId)
-    return solicitudes.filter(s =>
-      s.departamentoId === user.departamentoId &&
-      ESTADOS_ACCIONABLES_DEPTO.includes(s.estado)
-    )
-  }, [getPendientesDepartamento, solicitudes, user?.departamentoId])
+  const notasDepartamento = user?.departamentoId
+    ? getPendientesDepartamento(user.departamentoId)
+    : []
 
   const filteredSolicitudes = useFilteredSolicitudes(
     notasDepartamento,
@@ -130,11 +119,16 @@ export default function NotasPendientes() {
   const handleApprove = async () => {
     if (!selectedSolicitud || !user) return
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 400))
-    aprobarDepartamento(selectedSolicitud.id, user.id, `${user.nombre} ${user.apellido}`)
-    setIsSubmitting(false)
-    setShowApproveModal(false)
-    setSelectedSolicitud(null)
+    try {
+      await aprobarDepartamento(selectedSolicitud.id, user.id, `${user.nombre} ${user.apellido}`)
+      setShowApproveModal(false)
+      setSelectedSolicitud(null)
+      toast.success('Solicitud enviada a Alcaldía')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo aprobar la solicitud')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleDecline = async () => {
@@ -144,13 +138,18 @@ export default function NotasPendientes() {
       return
     }
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 400))
-    declinar(selectedSolicitud.id, motivoRechazo.trim(), user.id, `${user.nombre} ${user.apellido}`)
-    setIsSubmitting(false)
-    setShowDeclineModal(false)
-    setMotivoRechazo('')
-    setFormError('')
-    setSelectedSolicitud(null)
+    try {
+      await declinar(selectedSolicitud.id, motivoRechazo.trim(), user.id, `${user.nombre} ${user.apellido}`)
+      setShowDeclineModal(false)
+      setMotivoRechazo('')
+      setFormError('')
+      setSelectedSolicitud(null)
+      toast.success('Solicitud rechazada')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo rechazar la solicitud')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   /* ── Render ──────────────────────────────────────────────── */

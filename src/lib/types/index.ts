@@ -135,6 +135,7 @@ export interface UserFormData {
   role: UserRole
   departamentoId?: string
   status: UserStatus
+  password: string
 }
 
 export interface SolicitudFormData {

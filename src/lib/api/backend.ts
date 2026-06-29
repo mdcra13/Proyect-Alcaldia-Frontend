@@ -119,6 +119,7 @@ interface BackendRequestListItem {
   userAssignedName: string | null
   trackingCode: string
   createdAt: string
+  receivedById: string
   requestDate: string
   deadline: string | null
   documentName: string | null
@@ -137,6 +138,7 @@ interface BackendHistoryEntry {
   eventType: string
   observation?: string | null
   userId: string
+  userName: string
   createdAt: string
 }
 
@@ -160,7 +162,7 @@ const LOGIN_ALIASES: Record<string, string> = {
   funcionario: 'funcionario@demo.local',
   alcalde: 'supervisor@demo.local',
   supervisor: 'supervisor@demo.local',
-  it: 'supervisor@demo.local',
+  it: 'admin@demo.local',
 }
 
 const ROLE_MAP: Record<string, UserRole> = {
@@ -337,7 +339,7 @@ export function mapBackendRequest(
     estado,
     prioridad: mapPriority(request.priority),
     subidoPor: 'receivedByName' in request ? request.receivedByName : 'Backend',
-    subidoPorId: 'backend',
+    subidoPorId: request.receivedById,
     documento: request.documentName ?? undefined,
     documentoUrl: resolveBackendAssetUrl(request.documentUrl),
     historial: [
@@ -359,7 +361,7 @@ export function mapBackendHistory(entries: BackendHistoryEntry[]): HistorialEntr
     fecha: entry.createdAt,
     accion: mapHistoryAction(entry.eventType),
     descripcion: mapHistoryDescription(entry),
-    usuario: 'Usuario backend',
+    usuario: entry.userName,
     usuarioId: entry.userId,
   }))
 }
@@ -388,8 +390,82 @@ export const backendApi = {
     return apiRequest<BackendUser[]>('/users')
   },
 
+  roles() {
+    return apiRequest<BackendRole[]>('/roles')
+  },
+
+  async createUser(input: {
+    nombre: string
+    apellido: string
+    email: string
+    password: string
+    role: UserRole
+    departamentoId?: string
+  }) {
+    const roles = await this.roles()
+    const role = roles.find(item => mapRole(item.name) === input.role)
+    if (!role) throw new ApiError(`No existe el rol ${input.role} en backend.`, 400)
+
+    return apiRequest<BackendUser>('/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        firstName: input.nombre,
+        lastName: input.apellido,
+        email: input.email,
+        password: input.password,
+        roleId: role.id,
+        departmentId: input.departamentoId || undefined,
+      }),
+    })
+  },
+
+  async updateUser(id: string, input: {
+    nombre?: string
+    apellido?: string
+    email?: string
+    role?: UserRole
+    departamentoId?: string
+    isActive?: boolean
+    password?: string
+  }) {
+    const roleId = input.role
+      ? (await this.roles()).find(item => mapRole(item.name) === input.role)?.id
+      : undefined
+
+    return apiRequest<BackendUser>(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        firstName: input.nombre,
+        lastName: input.apellido,
+        email: input.email,
+        roleId,
+        departmentId: input.departamentoId || undefined,
+        isActive: input.isActive,
+        password: input.password,
+      }),
+    })
+  },
+
   departments() {
     return apiRequest<BackendDepartment[]>('/departments')
+  },
+
+  createDepartment(input: { nombre: string; descripcion?: string }) {
+    return apiRequest<BackendDepartment>('/departments', {
+      method: 'POST',
+      body: JSON.stringify({ name: input.nombre, description: input.descripcion }),
+    })
+  },
+
+  updateDepartment(id: string, input: { nombre?: string; descripcion?: string; activo?: boolean }) {
+    return apiRequest<BackendDepartment>(`/departments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: input.nombre,
+        description: input.descripcion,
+        isActive: input.activo,
+      }),
+    })
   },
 
   categories() {
@@ -472,7 +548,7 @@ export const backendApi = {
     })
   },
 
-  async changeStatus(id: string, estado: SolicitudEstado) {
+  async changeStatus(id: string, estado: SolicitudEstado, observation?: string) {
     const statuses = await this.statuses()
     const status = statuses.find(item => mapStatus(item.name) === estado)
     if (!status) {
@@ -481,7 +557,14 @@ export const backendApi = {
 
     return apiRequest<BackendRequestDetails>(`/requests/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ statusId: status.id }),
+      body: JSON.stringify({ statusId: status.id, observation }),
+    })
+  },
+
+  changeDepartment(id: string, departmentId: string, observation?: string) {
+    return apiRequest<BackendRequestDetails>(`/requests/${id}/department`, {
+      method: 'PATCH',
+      body: JSON.stringify({ departmentId, observation }),
     })
   },
 }

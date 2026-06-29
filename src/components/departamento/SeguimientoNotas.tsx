@@ -91,7 +91,7 @@ export default function SeguimientoNotas() {
     return solicitudes.filter(
       solicitud => solicitud.departamentoId === user.departamentoId
     )
-  }, [solicitudes, user?.departamentoId])
+  }, [solicitudes, user])
 
   const filteredSolicitudes = useFilteredSolicitudes(
   notasDepartamento,

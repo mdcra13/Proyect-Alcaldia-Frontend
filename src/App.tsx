@@ -95,15 +95,18 @@ function AuthRedirect() {
 
 function BackendBootstrap() {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const role = useAuthStore(state => state.user?.role)
+  const fetchUsers = useAuthStore(state => state.fetchUsers)
   const fetchDepartamentos = useDepartamentosStore(state => state.fetchDepartamentos)
   const fetchSolicitudes = useSolicitudesStore(state => state.fetchSolicitudes)
 
   useEffect(() => {
     if (!isAuthenticated) return
 
-    void fetchDepartamentos()
+    void fetchDepartamentos().catch(() => undefined)
     void fetchSolicitudes()
-  }, [fetchDepartamentos, fetchSolicitudes, isAuthenticated])
+    if (role === 'it') void fetchUsers().catch(() => undefined)
+  }, [fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
 
   return null
 }
@@ -111,7 +114,9 @@ function BackendBootstrap() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
         <BackendBootstrap />
         <Suspense fallback={<PageLoader />}>
           <Routes>

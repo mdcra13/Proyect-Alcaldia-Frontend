@@ -8,6 +8,7 @@ import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import type { User, UserRole } from '@/lib/types'
 import UserFormModal, { type UserFormData } from './UserFormModal'
+import { toast } from 'sonner'
 
 const ITEMS_PER_PAGE = 10
 
@@ -26,7 +27,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 const initialFormData: UserFormData = {
-  nombre: '', apellido: '', username: '', role: '', departamentoId: '',
+  nombre: '', apellido: '', username: '', role: '', departamentoId: '', password: '',
 }
 
 export default function ITGestionUsuarios() {
@@ -87,6 +88,7 @@ export default function ITGestionUsuarios() {
       nombre: user.nombre, apellido: user.apellido,
       username: user.username, role: user.role,
       departamentoId: user.departamentoId || '',
+      password: '',
     })
     setFormError('')
     setIsEditing(true)
@@ -94,9 +96,16 @@ export default function ITGestionUsuarios() {
     setShowUserModal(true)
   }
 
-  const handleToggleStatus = (user: User) => toggleUserStatus(user.id)
+  const handleToggleStatus = async (user: User) => {
+    try {
+      await toggleUserStatus(user.id)
+      toast.success('Estado del usuario actualizado')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el usuario')
+    }
+  }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.nombre.trim() || !formData.apellido.trim() || !formData.username.trim() || !formData.role) {
       setFormError('Completa todos los campos obligatorios.')
       return
@@ -105,22 +114,34 @@ export default function ITGestionUsuarios() {
       setFormError('Selecciona el departamento del usuario.')
       return
     }
+    if (!isEditing && formData.password.length < 8) {
+      setFormError('La contraseña temporal debe tener al menos 8 caracteres.')
+      return
+    }
     const departamentoId = formData.role === 'departamento' ? formData.departamentoId : undefined
     if (isEditing && selectedUser) {
-      updateUser(selectedUser.id, {
+      await updateUser(selectedUser.id, {
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role, departamentoId,
       })
     } else {
-      addUser({
+      await addUser({
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role,
-        departamentoId, status: 'active',
+        departamentoId, status: 'active', password: formData.password,
       })
     }
     setShowUserModal(false)
     setFormData(initialFormData)
     setFormError('')
+  }
+
+  const handlePersistedSubmit = async () => {
+    try {
+      await handleSubmit()
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'No se pudo guardar el usuario.')
+    }
   }
 
   return (
@@ -344,7 +365,7 @@ export default function ITGestionUsuarios() {
           formData={formData}
           formError={formError}
           onClose={() => setShowUserModal(false)}
-          onSubmit={handleSubmit}
+          onSubmit={handlePersistedSubmit}
           onFormDataChange={setFormData}
         />
       </div>
