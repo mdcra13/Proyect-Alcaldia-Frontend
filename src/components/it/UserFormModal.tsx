@@ -131,21 +131,6 @@ useEffect(() => {
                 </p>
             </div>
 
-            {!isEditing && (
-                <div>
-                <label htmlFor="user-password" className="mb-1 block text-sm font-medium text-foreground">
-                    Contraseña temporal *
-                </label>
-                <input
-                    id="user-password"
-                    type="password"
-                    value={formData.password}
-                    onChange={e => onFormDataChange({ ...formData, password: e.target.value })}
-                    minLength={8}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
-                />
-                </div>
-            )}
             <button
                 type="button"
                 onClick={onClose}
@@ -195,16 +180,35 @@ useEffect(() => {
 
             <div>
                 <label htmlFor="user-username" className="mb-1 block text-sm font-medium text-foreground">
-                Usuario *
+                Correo electrónico *
                 </label>
                 <input
                 id="user-username"
-                type="text"
+                type="email"
                 value={formData.username}
                 onChange={e => onFormDataChange({ ...formData, username: e.target.value })}
+                autoComplete="email"
+                placeholder="usuario@alcaldia.local"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                 />
             </div>
+
+            {!isEditing && (
+                <div>
+                <label htmlFor="user-password" className="mb-1 block text-sm font-medium text-foreground">
+                    Contraseña temporal *
+                </label>
+                <input
+                    id="user-password"
+                    type="password"
+                    value={formData.password}
+                    onChange={e => onFormDataChange({ ...formData, password: e.target.value })}
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                />
+                </div>
+            )}
 
             <div>
                 <label htmlFor="user-role" className="mb-1 block text-sm font-medium text-foreground">

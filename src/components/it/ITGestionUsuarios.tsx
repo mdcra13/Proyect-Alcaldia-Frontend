@@ -110,6 +110,10 @@ export default function ITGestionUsuarios() {
       setFormError('Completa todos los campos obligatorios.')
       return
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.username.trim())) {
+      setFormError('Ingresa un correo electrónico válido.')
+      return
+    }
     const requiereDepartamento = formData.role === 'departamento'
     if (requiereDepartamento && !formData.departamentoId) {
       setFormError('Selecciona el departamento del usuario.')
@@ -214,7 +218,7 @@ export default function ITGestionUsuarios() {
               <input
                 id="users-search"
                 type="text"
-                placeholder="Buscar por nombre o usuario..."
+                placeholder="Buscar por nombre o correo..."
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
@@ -245,7 +249,7 @@ export default function ITGestionUsuarios() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Usuario</th>
-                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Username</th>
+                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Correo</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Rol</th>
                   <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">Departamento</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Estado</th>
