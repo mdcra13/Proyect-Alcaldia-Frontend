@@ -54,13 +54,12 @@ export default function ITGestionDepartamentos() {
 
   const getAssignedUsersCount = (departamentoId: string) =>
     users.filter(user =>
-      user.departamentoId === departamentoId && user.role === 'departamento'
+      user.departamentoId === departamentoId
     ).length
 
   const getActiveAssignedUsersCount = (departamentoId: string) =>
     users.filter(user =>
       user.departamentoId === departamentoId &&
-      user.role === 'departamento' &&
       user.status === 'active'
     ).length
 

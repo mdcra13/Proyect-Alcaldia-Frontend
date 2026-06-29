@@ -28,6 +28,7 @@ export default function ITDashboard() {
   const usersByRole: Record<UserRole, number> = {
     alcalde:      users.filter(u => u.role === 'alcalde').length,
     secretaria:   users.filter(u => u.role === 'secretaria').length,
+    funcionario:  users.filter(u => u.role === 'funcionario').length,
     departamento: users.filter(u => u.role === 'departamento').length,
     it:           users.filter(u => u.role === 'it').length,
   }
@@ -130,7 +131,8 @@ export default function ITDashboard() {
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="category-badge border-border">Alcaldes: {usersByRole.alcalde}</span>
               <span className="category-badge border-border">Secretarias: {usersByRole.secretaria}</span>
-              <span className="category-badge border-border">Departamentos: {usersByRole.departamento}</span>
+              <span className="category-badge border-border">Funcionarios: {usersByRole.funcionario}</span>
+              <span className="category-badge border-border">Jefes: {usersByRole.departamento}</span>
               <span className="category-badge border-border">IT: {usersByRole.it}</span>
             </div>
           </button>
