@@ -1,14 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { api, clearTokens, persistTokens, toUser } from '@/lib/api'
-import type { User, UserFormData, UserRole, UserStatus } from '@/lib/types'
+import { backendApi, clearTokens, mapBackendUser } from '@/lib/api/backend'
+import type { User, UserFormData, UserRole } from '@/lib/types'
 
 interface LoginResult {
-  success: boolean
-  error?: string
-}
-
-interface PasswordChangeResult {
   success: boolean
   error?: string
 }
@@ -20,13 +15,11 @@ interface AuthState {
   users: User[]
   login: (username: string, password: string, remember: boolean) => Promise<LoginResult>
   logout: () => void
-  fetchCurrentUser: () => Promise<void>
   fetchUsers: () => Promise<void>
-  updateUser: (userId: string, updates: Partial<User>) => void
-  updateCurrentUser: (updates: Partial<User>) => void
-  addUser: (newUser: UserFormData) => User
-  toggleUserStatus: (userId: string) => void
-  changePassword: (currentPassword: string, newPassword: string) => PasswordChangeResult
+  updateUser: (userId: string, updates: Partial<User>) => Promise<User>
+  updateCurrentUser: (updates: Partial<User>) => Promise<User | null>
+  addUser: (newUser: UserFormData) => Promise<User>
+  toggleUserStatus: (userId: string) => Promise<User>
   isUsernameUnique: (username: string, excludeId?: string) => boolean
   getUsersByRole: (role: UserRole) => User[]
   getUsersByDepartamento: (departamentoId: string) => User[]
@@ -40,171 +33,106 @@ const useAuthStore = create<AuthState>()(
       rememberSession: false,
       users: [],
 
-      login: async (
-        username: string,
-        password: string,
-        remember: boolean,
-      ): Promise<LoginResult> => {
+      login: async (username, password, remember) => {
         try {
-          const auth = await api.login(username.trim().toLowerCase(), password)
-          persistTokens(auth)
+          await backendApi.login(username, password)
+          const user = mapBackendUser(await backendApi.me())
+          set({ user, isAuthenticated: true, rememberSession: remember })
 
-          const apiUser = await api.me()
-          const user = toUser(apiUser)
-
-          set({
-            user,
-            isAuthenticated: true,
-            rememberSession: remember,
-          })
-
+          if (user.role === 'it') {
+            try {
+              const users = (await backendApi.users()).map(mapBackendUser)
+              set({ users })
+            } catch {
+              set({ users: [user] })
+            }
+          }
           return { success: true }
         } catch (error) {
           clearTokens()
-
           return {
             success: false,
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Credenciales incorrectas. Verifique su usuario y contrasena.',
+            error: error instanceof Error
+              ? error.message
+              : 'Credenciales incorrectas. Verifique su usuario y contraseña.',
           }
         }
       },
 
       logout: () => {
         clearTokens()
-        set({
-          user: null,
-          isAuthenticated: false,
-          rememberSession: false,
-        })
-      },
-
-      fetchCurrentUser: async () => {
-        const apiUser = await api.me()
-        const user = toUser(apiUser)
-
-        set({
-          user,
-          isAuthenticated: true,
-        })
+        set({ user: null, isAuthenticated: false, rememberSession: false, users: [] })
       },
 
       fetchUsers: async () => {
-        const users = (await api.users()).map(toUser)
+        const users = (await backendApi.users()).map(mapBackendUser)
         set({ users })
       },
 
-      updateUser: (userId: string, updates: Partial<User>) => {
-        set(state => ({
-          users: state.users.map(user =>
-            user.id === userId ? { ...user, ...updates } : user,
-          ),
-          user:
-            state.user?.id === userId
-              ? { ...state.user, ...updates }
-              : state.user,
+      updateUser: async (userId, updates) => {
+        const updated = mapBackendUser(await backendApi.updateUser(userId, {
+          nombre: updates.nombre,
+          apellido: updates.apellido,
+          email: updates.username,
+          role: updates.role,
+          departamentoId: updates.departamentoId,
+          isActive: updates.status ? updates.status === 'active' : undefined,
         }))
+        set(state => ({
+          users: state.users.map(user => user.id === userId ? updated : user),
+          user: state.user?.id === userId ? updated : state.user,
+        }))
+        return updated
       },
 
-      updateCurrentUser: (updates: Partial<User>) => {
+      updateCurrentUser: async updates => {
         const currentUser = get().user
-
-        if (!currentUser) return
-
-        set(state => ({
-          user: { ...currentUser, ...updates },
-          users: state.users.map(user =>
-            user.id === currentUser.id ? { ...user, ...updates } : user,
-          ),
-        }))
+        if (!currentUser) return null
+        return get().updateUser(currentUser.id, updates)
       },
 
-      addUser: (newUser: UserFormData): User => {
-        const user: User = {
-          id: crypto.randomUUID(),
+      addUser: async newUser => {
+        const created = mapBackendUser(await backendApi.createUser({
           nombre: newUser.nombre,
           apellido: newUser.apellido,
-          username: newUser.username,
+          email: newUser.username,
+          password: newUser.password,
           role: newUser.role,
           departamentoId: newUser.departamentoId,
-          status: newUser.status,
-          avatar: null,
-          createdAt: new Date().toISOString(),
-        }
-
-        set(state => ({
-          users: [...state.users, user],
         }))
-
-        return user
+        set(state => ({ users: [...state.users, created] }))
+        return created
       },
 
-      toggleUserStatus: (userId: string) => {
-        set(state => ({
-          users: state.users.map(user =>
-            user.id === userId
-              ? {
-                  ...user,
-                  status: (user.status === 'active' ? 'inactive' : 'active') as UserStatus,
-                }
-              : user,
-          ),
-        }))
+      toggleUserStatus: async userId => {
+        const user = get().users.find(item => item.id === userId)
+        if (!user) throw new Error('Usuario no encontrado')
+        return get().updateUser(userId, {
+          status: user.status === 'active' ? 'inactive' : 'active',
+        })
       },
 
-      changePassword: (
-        currentPassword: string,
-        newPassword: string,
-      ): PasswordChangeResult => {
-        if (currentPassword.length < 1) {
-          return {
-            success: false,
-            error: 'La contrasena actual es requerida.',
-          }
-        }
-
-        if (newPassword.length < 8) {
-          return {
-            success: false,
-            error: 'La nueva contrasena debe tener al menos 8 caracteres.',
-          }
-        }
-
-        return { success: true }
-      },
-
-      isUsernameUnique: (username: string, excludeId?: string): boolean => {
-        const normalizedUsername = username.trim().toLowerCase()
-
-        return !get().users.some(
-          user =>
-            user.username.toLowerCase() === normalizedUsername &&
-            user.id !== excludeId,
+      isUsernameUnique: (username, excludeId) => {
+        const normalized = username.trim().toLowerCase()
+        return !get().users.some(user =>
+          user.username.toLowerCase() === normalized && user.id !== excludeId
         )
       },
-
-      getUsersByRole: (role: UserRole): User[] => {
-        return get().users.filter(user => user.role === role)
-      },
-
-      getUsersByDepartamento: (departamentoId: string): User[] => {
-        return get().users.filter(user => user.departamentoId === departamentoId)
-      },
+      getUsersByRole: role => get().users.filter(user => user.role === role),
+      getUsersByDepartamento: departamentoId =>
+        get().users.filter(user => user.departamentoId === departamentoId),
     }),
     {
       name: 'auth-storage',
-      partialize: state =>
-        state.rememberSession
-          ? {
-              user: state.user,
-              isAuthenticated: state.isAuthenticated,
-              rememberSession: state.rememberSession,
-            }
-          : {},
-    },
-  ),
+      partialize: state => state.rememberSession
+        ? {
+            user: state.user,
+            isAuthenticated: state.isAuthenticated,
+            rememberSession: state.rememberSession,
+          }
+        : {},
+    }
+  )
 )
 
 export { useAuthStore }

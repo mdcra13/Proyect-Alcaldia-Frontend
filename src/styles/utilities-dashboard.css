@@ -1,4 +1,13 @@
-/* ========== UTILIDADES DASHBOARD ========== */
+﻿/* ========== UTILIDADES DASHBOARD ========== */
+
+/*
+ * NOTA SonarQube (css:S8776 "Missing scoping root"):
+ * Los selectores anidados con & dentro de los bloques @utility son la
+ * sintaxis oficial de Tailwind CSS v4 (docs: adding-custom-styles).
+ * SonarQube aun no reconoce @utility como scoping root valido y marca
+ * estos selectores como falsos positivos. Se marcan con NOSONAR linea por
+ * linea en vez de reescribir la sintaxis, para no romper la generacion de Tailwind.
+ */
 
 @utility dashboard-section {
   margin-bottom: 1.5rem;
@@ -57,7 +66,7 @@
   gap: 1rem;
   width: 100%;
 
-  & > div:first-child {
+  & > div:first-child { /* NOSONAR */
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -139,6 +148,23 @@
   color: var(--success);
 }
 
+@utility dashboard-nav-icon-primary {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
+/* Fila reutilizable para listas tipo "usuario reciente" / "estado del sistema"
+   (antes repetida como className inline en cada fila de ITDashboard). */
+@utility info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--muted) 50%, transparent);
+  padding: 0.75rem;
+}
+
 /* ---------- Sección "Notas próximas a vencer" ---------- */
 
 @utility dashboard-section-header {
@@ -157,7 +183,7 @@
   color: var(--primary);
   transition: opacity 150ms ease;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     opacity: 0.8;
   }
 }
@@ -172,20 +198,12 @@
   border-radius: 0.75rem;
   transition: background-color 150ms ease;
 
-  &:hover {
+  &:hover { /* NOSONAR */
     background-color: color-mix(in srgb, var(--accent) 50%, transparent);
   }
 }
 
-/* ---------- Logo del sidebar (sin borde punteado, más grande) ---------- */
-/* OJO: si ya tienes .layout-sidebar-logo definida en otra parte de tu CSS,
-   reemplaza aquella por esta. No debe quedar declarada dos veces. */
-
-@utility layout-sidebar-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 0.75rem;
-  /* sin border ni background: se elimina el recuadro punteado del placeholder */
-}
+/* layout-sidebar-logo: eliminada. Sidebar.tsx ya no usa esta clase; el logo
+   se renderiza con clases Tailwind inline + icono HeartHandshake. Quedaba
+   duplicada con utilities-layout.css y sin ningun uso real (ver auditoria
+   de utilities). */

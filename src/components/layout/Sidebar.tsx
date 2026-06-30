@@ -1,8 +1,9 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+﻿import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Building2,
   ClipboardList,
   FileSearch,
+  HeartHandshake,
   LayoutDashboard,
   LogOut,
   Upload,
@@ -38,6 +39,8 @@ const navLinksByRole: Record<UserRole, NavLink[]> = {
   ],
   departamento: [
     { path: '/departamento', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/departamento/pendientes', label: 'Notas Pendientes', icon: ClipboardList },
+    { path: '/departamento/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
   it: [
     { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,13 +93,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="layout-sidebar-section">
           <div className="flex flex-col items-center relative">
             {/* Logo centrado sin bordes */}
-            <div className="border-none shadow-none bg-transparent">
-              <img
-                src="/img-001.jpg"
-                alt="Logo Alcaldía"
-                className="h-12 w-auto object-contain"
-              />
-            </div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 shadow-inner ring-1 ring-white/25 mb-3">
+          <HeartHandshake 
+            className="h-7 w-7 text-white"
+            strokeWidth={1.75} 
+          />
+        </div>
             <p className="text-sm font-semibold leading-tight text-center mt-1">
               Sistema de Ayuda Social
             </p>

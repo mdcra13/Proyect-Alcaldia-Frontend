@@ -1,10 +1,12 @@
-import { useState } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, PenLine, CornerDownLeft, XCircle, X } from 'lucide-react'
+import { toast } from 'sonner'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
 import type { Solicitud, SolicitudEstado } from '@/lib/types'
 import { ESTADO_TRANSITIONS_DEPARTAMENTO, ESTADO_TRANSITIONS_ALCALDE, ESTADO_CONFIG } from '@/lib/types'
 import { EstadoBadge } from '@/components/shared/EstadoBadge'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
 interface CambiarEstadoModalProps {
   solicitud: Solicitud
@@ -44,9 +46,18 @@ export function CambiarEstadoModal({
   const { user } = useAuthStore()
   const { cambiarEstado } = useSolicitudesStore()
 
-  const [selectedEstado, setSelectedEstado] = useState<SolicitudEstado | ''>(presetEstado ?? '')
+  const [selectedEstado, setSelectedEstado] = useState<SolicitudEstado | ''>('')
   const [observacion, setObservacion] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (open && presetEstado) {
+      // Sincroniza el valor al abrir el modal con una accion preseleccionada.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedEstado(presetEstado)
+    }
+  }, [open, presetEstado])
 
   const validTransitions = getValidTransitions(solicitud.estado, user?.role)
 
@@ -64,24 +75,31 @@ export function CambiarEstadoModal({
     if (!user || !selectedEstado || !isValid) return
 
     setIsSubmitting(true)
-    await cambiarEstado(
-      solicitud.id,
-      selectedEstado,
-      user.id,
-      `${user.nombre} ${user.apellido}`,
-      observacion || undefined
-    )
-
-    setIsSubmitting(false)
-    resetState()
-    onOpenChange(false)
-    onSuccess?.()
+    try {
+      await cambiarEstado(
+        solicitud.id,
+        selectedEstado,
+        user.id,
+        `${user.nombre} ${user.apellido}`,
+        observacion || undefined
+      )
+      resetState()
+      onOpenChange(false)
+      onSuccess?.()
+      toast.success('Estado actualizado correctamente')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el estado')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = () => {
     resetState()
     onOpenChange(false)
   }
+
+  useModalAccessibility(open, dialogRef, handleClose)
 
   const headerConfig = getHeaderConfig(selectedEstado)
   const HeaderIcon = headerConfig.icon
@@ -94,6 +112,7 @@ export function CambiarEstadoModal({
 
   return (
     <div
+      ref={dialogRef}
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"

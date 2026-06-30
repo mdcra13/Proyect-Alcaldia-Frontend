@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useRef, useState } from 'react'
 import {
   ArrowRightLeft,
   ChevronLeft,
@@ -19,9 +19,12 @@ import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
 import { filterSolicitudes } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
+import { backendApi, mapBackendHistory } from '@/lib/api/backend'
 import {
   ESTADO_CONFIG,
   PRIORIDAD_LABELS,
+  type HistorialEntry,
   type Solicitud,
 } from '@/lib/types'
 
@@ -47,10 +50,38 @@ export default function SeguimientoSolicitudes() {
   const [viewSolicitud, setViewSolicitud] = useState<Solicitud | null>(null)
   const [changeDeptSolicitud, setChangeDeptSolicitud] = useState<Solicitud | null>(null)
   const [historialSolicitud, setHistorialSolicitud] = useState<Solicitud | null>(null)
+  const [historialEntries, setHistorialEntries] = useState<HistorialEntry[]>([])
+  const [isHistorialLoading, setIsHistorialLoading] = useState(false)
+  const historialDialogRef = useRef<HTMLDivElement>(null)
 
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
-  const fetchHistorial = useSolicitudesStore(state => state.fetchHistorial)
   const departamentos = useDepartamentosStore(state => state.departamentos)
+
+  const closeHistorial = () => {
+    setHistorialSolicitud(null)
+    setHistorialEntries([])
+    setIsHistorialLoading(false)
+  }
+
+  const openHistorial = (solicitud: Solicitud) => {
+    setHistorialSolicitud(solicitud)
+    setHistorialEntries(solicitud.historial)
+    setIsHistorialLoading(true)
+
+    void backendApi.requestHistory(solicitud.id)
+      .then(entries => {
+        const mappedEntries = mapBackendHistory(entries)
+        setHistorialEntries(mappedEntries.length > 0 ? mappedEntries : solicitud.historial)
+      })
+      .catch(() => {
+        setHistorialEntries(solicitud.historial)
+      })
+      .finally(() => {
+        setIsHistorialLoading(false)
+      })
+  }
+
+  useModalAccessibility(Boolean(historialSolicitud), historialDialogRef, closeHistorial)
 
   const getDepartamentoNombre = (departamentoId?: string) => {
     if (!departamentoId) return 'Sin asignar'
@@ -238,12 +269,7 @@ export default function SeguimientoSolicitudes() {
 
                           <button
                             type="button"
-                            onClick={async () => {
-                              await fetchHistorial(solicitud.id)
-                              setHistorialSolicitud(
-                                useSolicitudesStore.getState().getSolicitudById(solicitud.id) ?? solicitud,
-                              )
-                            }}
+                            onClick={() => openHistorial(solicitud)}
                             className="icon-button hover:bg-secondary"
                             title="Ver historial"
                             aria-label={`Ver historial de ${solicitud.radicado}`}
@@ -357,12 +383,7 @@ export default function SeguimientoSolicitudes() {
 
                     <button
                       type="button"
-                      onClick={async () => {
-                        await fetchHistorial(solicitud.id)
-                        setHistorialSolicitud(
-                          useSolicitudesStore.getState().getSolicitudById(solicitud.id) ?? solicitud,
-                        )
-                      }}
+                      onClick={() => openHistorial(solicitud)}
                       className="mobile-card-btn border border-border bg-card text-foreground"
                       aria-label={`Ver historial de ${solicitud.radicado}`}
                     >
@@ -436,11 +457,20 @@ export default function SeguimientoSolicitudes() {
         )}
 
         {historialSolicitud && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
-              <div className="flex items-start justify-between border-b border-border px-6 py-4">
+          <div
+            ref={historialDialogRef}
+            className="modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seguimiento-historial-title"
+          >
+            <div className="modal-card max-h-[80vh] max-w-lg overflow-y-auto">
+              <div className="modal-header">
                 <div>
-                  <h3 className="font-serif text-xl font-semibold text-foreground">
+                  <h3
+                    id="seguimiento-historial-title"
+                    className="font-serif text-xl font-semibold text-foreground"
+                  >
                     Historial de Cambios
                   </h3>
                   <p className="text-sm text-muted-foreground">
@@ -450,7 +480,7 @@ export default function SeguimientoSolicitudes() {
 
                 <button
                   type="button"
-                  onClick={() => setHistorialSolicitud(null)}
+                  onClick={closeHistorial}
                   className="icon-button hover:bg-secondary"
                   aria-label="Cerrar historial"
                 >
@@ -459,14 +489,20 @@ export default function SeguimientoSolicitudes() {
               </div>
 
               <div className="p-6">
-                <HistorialTimeline historial={historialSolicitud.historial} />
+                {isHistorialLoading ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Cargando historial...
+                  </p>
+                ) : (
+                  <HistorialTimeline historial={historialEntries} />
+                )}
               </div>
 
-              <div className="flex justify-end border-t border-border px-6 py-4">
+              <div className="modal-footer">
                 <button
                   type="button"
-                  onClick={() => setHistorialSolicitud(null)}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                  onClick={closeHistorial}
+                  className="modal-btn-cancel"
                 >
                   Cerrar
                 </button>

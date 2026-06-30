@@ -66,6 +66,7 @@ export interface Solicitud {
   subidoPor: string
   subidoPorId: string
   documento?: string
+  documentoUrl?: string 
   motivoRechazo?: string | null
   historial: HistorialEntry[]
 }
@@ -134,6 +135,7 @@ export interface UserFormData {
   role: UserRole
   departamentoId?: string
   status: UserStatus
+  password: string
 }
 
 export interface SolicitudFormData {
@@ -145,6 +147,7 @@ export interface SolicitudFormData {
   solicitante: string
   identificacion: string
   descripcion: string
+  prioridad: SolicitudPrioridad 
   documento?: File | null
 }
 
@@ -184,42 +187,42 @@ export const ESTADO_CONFIG: Record<
 > = {
   received: {
     label: 'Recibida',
-    color: 'bg-slate-100 text-slate-700 border-slate-200',
+    color: 'status-received',
   },
   assigned_to_department: {
     label: 'Asignada a departamento',
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    color: 'status-assigned-to-department',
   },
   in_review: {
     label: 'En revisión',
-    color: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    color: 'status-in-review',
   },
   approved_by_department: {
     label: 'Aprobada por departamento',
-    color: 'bg-green-100 text-green-700 border-green-200',
+    color: 'status-approved-by-department',
   },
   rejected_by_department: {
     label: 'Rechazada por departamento',
-    color: 'bg-red-100 text-red-700 border-red-200',
+    color: 'status-rejected-by-department',
   },
   awaiting_mayor_signature: {
     label: 'Pendiente de firma',
-    color: 'bg-purple-100 text-purple-700 border-purple-200',
+    color: 'status-awaiting-mayor-signature',
   },
   returned_to_department: {
     label: 'Devuelta a departamento',
-    color: 'bg-orange-100 text-orange-700 border-orange-200',
+    color: 'status-returned-to-department',
   },
   rejected_by_mayor_office: {
     label: 'Rechazada por Alcaldía',
-    color: 'bg-red-200 text-red-800 border-red-300',
+    color: 'status-rejected-by-mayor-office',
   },
   signed: {
     label: 'Firmada',
-    color: 'bg-green-200 text-green-800 border-green-300',
+    color: 'status-signed',
   },
   closed: {
     label: 'Cerrada',
-    color: 'bg-gray-200 text-gray-700 border-gray-300',
+    color: 'status-closed',
   },
 }

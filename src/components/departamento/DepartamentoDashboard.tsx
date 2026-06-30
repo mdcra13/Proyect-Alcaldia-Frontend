@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { Building2, CheckCircle2, Clock, FileText, XCircle } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
@@ -41,7 +41,7 @@ function StatCard({ label, value, icon: Icon, cardVariant = '', iconVariant = ''
           <p className="stat-value">{value}</p>
         </div>
         <div className={`stat-icon ${iconVariant} ml-auto`}>
-          <Icon className="h-7 w-7" />
+          <Icon className="h-7 w-7" aria-hidden="true" focusable="false" />
         </div>
       </div>
     </div>
@@ -83,31 +83,31 @@ export default function DepartamentoDashboard() {
   return (
     <AppLayout title="Dashboard">
       <div className="flex flex-col gap-6 p-4 max-w-7xl mx-auto w-full">
-        <div>
+        <header>
           <h1 className="dashboard-title">
-            Bienvenido, Departamento {user?.nombre ?? ''}
+            Bienvenido, {user?.nombre ?? ''}
           </h1>
           <p className="dashboard-subtitle capitalize">{fechaHoy}</p>
-        </div>
+        </header>
 
-        <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-5">
+        <section className="flex items-center gap-4 rounded-xl border border-border bg-card p-5" aria-labelledby="departamento-title">
           <div className="flex items-center justify-center rounded-xl bg-muted p-3">
-            <Building2 className="h-8 w-8 text-foreground" />
+            <Building2 className="h-8 w-8 text-foreground" aria-hidden="true" focusable="false" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">{departamentoNombre}</h2>
+            <h2 id="departamento-title" className="text-2xl font-bold text-foreground">{departamentoNombre}</h2>
             <p className="text-sm text-muted-foreground">
               Revisa y aprueba las solicitudes asignadas. Las aprobadas pasan al Alcalde.
             </p>
           </div>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full" aria-label="Resumen de notas">
           <StatCard label="Notas Pendientes" value={stats.pendientes} icon={Clock}        cardVariant="stat-card-amber" iconVariant="stat-icon-amber" />
           <StatCard label="Total Recibidas"  value={stats.total}      icon={FileText} />
           <StatCard label="Aprobadas"        value={stats.aprobadas}  icon={CheckCircle2} cardVariant="stat-card-green" iconVariant="stat-icon-green" />
           <StatCard label="Rechazadas"       value={stats.rechazadas} icon={XCircle}      cardVariant="stat-card-red"   iconVariant="stat-icon-red" />
-        </div>
+        </section>
       </div>
     </AppLayout>
   )

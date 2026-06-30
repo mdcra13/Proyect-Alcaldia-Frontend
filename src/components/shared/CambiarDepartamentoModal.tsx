@@ -1,9 +1,11 @@
-import { useState } from 'react'
+﻿import { useRef, useState } from 'react'
 import { Building2, X } from 'lucide-react'
+import { toast } from 'sonner'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
 import type { Solicitud } from '@/lib/types'
+import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
 interface CambiarDepartamentoModalProps {
   solicitud: Solicitud
@@ -27,6 +29,7 @@ export function CambiarDepartamentoModal({
   const [selectedDepartamentoId, setSelectedDepartamentoId] = useState(solicitud.departamentoId ?? '')
   const [motivo, setMotivo] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const departamentosActivos = getDepartamentosActivos()
 
@@ -34,21 +37,23 @@ export function CambiarDepartamentoModal({
     if (!user || !selectedDepartamentoId || selectedDepartamentoId === solicitud.departamentoId) return
 
     setIsSubmitting(true)
-    // TODO: Replace with API call PATCH /api/v1/requests/:id/departamento
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    cambiarDepartamento(
-      solicitud.id,
-      selectedDepartamentoId,
-      user.id,
-      `${user.nombre} ${user.apellido}`,
-      motivo || undefined
-    )
-
-    setIsSubmitting(false)
-    setMotivo('')
-    onOpenChange(false)
-    onSuccess?.()
+    try {
+      await cambiarDepartamento(
+        solicitud.id,
+        selectedDepartamentoId,
+        user.id,
+        `${user.nombre} ${user.apellido}`,
+        motivo || undefined
+      )
+      setMotivo('')
+      onOpenChange(false)
+      onSuccess?.()
+      toast.success('Departamento actualizado correctamente')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el departamento')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = () => {
@@ -57,10 +62,13 @@ export function CambiarDepartamentoModal({
     onOpenChange(false)
   }
 
+  useModalAccessibility(open, dialogRef, handleClose)
+
   if (!open) return null
 
   return (
     <div
+      ref={dialogRef}
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"
