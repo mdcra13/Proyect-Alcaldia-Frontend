@@ -3,6 +3,7 @@ import type { Solicitud } from '@/lib/types'
 
 interface FilterParams {
   searchQuery: string
+  identificadorQuery?: string
   estado: string
   categoria: string
   prioridad: string
@@ -17,10 +18,17 @@ export function useFilteredSolicitudes(
   filters: FilterParams,
   sortBy: SortBy
 ) {
-  const { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta } = filters
+  const { searchQuery, identificadorQuery, estado, categoria, prioridad, fechaDesde, fechaHasta } = filters
 
   return useMemo(() => {
     let results = [...baseSolicitudes]
+
+    if (identificadorQuery?.trim()) {
+      const query = identificadorQuery.toLowerCase()
+      results = results.filter(solicitud =>
+        solicitud.radicado.toLowerCase().includes(query)
+      )
+    }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
@@ -63,5 +71,5 @@ export function useFilteredSolicitudes(
     }
 
     return results
-  }, [baseSolicitudes, searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta, sortBy])
+  }, [baseSolicitudes, searchQuery, identificadorQuery, estado, categoria, prioridad, fechaDesde, fechaHasta, sortBy])
 }

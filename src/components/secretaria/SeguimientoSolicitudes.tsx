@@ -68,6 +68,7 @@ export default function SeguimientoSolicitudes() {
   const filteredSolicitudes = useMemo(() => {
   return filterSolicitudes(solicitudes, {
     searchQuery: filters.searchQuery,
+    identificadorQuery: filters.identificadorQuery,
     estado: filters.estado,
     departamento: filters.departamento,
     categoria: filters.categoria,
@@ -78,6 +79,7 @@ export default function SeguimientoSolicitudes() {
 }, [
   solicitudes,
   filters.searchQuery,
+  filters.identificadorQuery,
   filters.estado,
   filters.departamento,
   filters.categoria,
@@ -95,7 +97,7 @@ export default function SeguimientoSolicitudes() {
 
   const handleExport = () => {
     const headers = [
-      'Radicado',
+      'Identificador',
       'Solicitante',
       'Identificación',
       'Categoría',
@@ -151,6 +153,7 @@ export default function SeguimientoSolicitudes() {
           idPrefix="seguimiento-solicitudes"
           departamentos={departamentos}
           searchQuery={filters.searchQuery}
+          identificadorQuery={filters.identificadorQuery}
           estado={filters.estado}
           departamento={filters.departamento}
           categoria={filters.categoria}
@@ -178,7 +181,7 @@ export default function SeguimientoSolicitudes() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="table-th text-left"># Radicado</th>
+                    <th className="table-th text-left"># Identificador</th>
                     <th className="table-th text-left">Solicitante</th>
                     <th className="table-th text-left">Departamento</th>
                     <th className="table-th text-left">Prioridad</th>

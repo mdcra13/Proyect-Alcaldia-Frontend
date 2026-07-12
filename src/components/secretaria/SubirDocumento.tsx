@@ -192,18 +192,18 @@ export default function SubirDocumento() {
         <div className="rounded-xl border border-border bg-card p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
-            {/* Título */}
+            {/* Identificador */}
             <div>
               <label htmlFor="titulo" className="form-label">
-                Título <span className="text-destructive">*</span>
+                Identificador <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <FileText className="form-icon" />
                 <input
                   id="titulo"
                   type="text"
-                  {...register('titulo', { required: 'El título es requerido' })}
-                  placeholder="Título de solicitud..."
+                  {...register('titulo', { required: 'El identificador es requerido' })}
+                  placeholder="Identificador de solicitud..."
                   className="form-input pl-10"
                 />
               </div>

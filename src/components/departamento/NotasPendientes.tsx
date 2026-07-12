@@ -33,6 +33,7 @@ export default function NotasPendientes() {
 
   const {
     searchQuery,
+    identificadorQuery,
     estado,
     categoria,
     prioridad,
@@ -71,7 +72,7 @@ export default function NotasPendientes() {
 
   const filteredSolicitudes = useFilteredSolicitudes(
     notasDepartamento,
-    { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
+    { searchQuery, identificadorQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
     'fechaLimite-asc',
   )
 
@@ -173,6 +174,7 @@ export default function NotasPendientes() {
           idPrefix="notas-pendientes"
           departamentos={[]}
           searchQuery={searchQuery}
+          identificadorQuery={identificadorQuery}
           estado={estado}
           departamento="todos"
           categoria={categoria}
@@ -272,8 +274,8 @@ export default function NotasPendientes() {
             </div>
 
             <div className="space-y-1 px-6 py-4 text-sm">
-              <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-              <p><strong>Título:</strong> {selectedSolicitud.titulo}</p>
+              <p><strong>Identificador:</strong> {selectedSolicitud.radicado}</p>
+              <p><strong>Identificador:</strong> {selectedSolicitud.titulo}</p>
               <p><strong>Solicitante:</strong> {selectedSolicitud.solicitante}</p>
             </div>
 
@@ -320,8 +322,8 @@ export default function NotasPendientes() {
 
             <div className="space-y-4 px-6 py-4">
               <div className="text-sm">
-                <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-                <p className="mt-1"><strong>Título:</strong> {selectedSolicitud.titulo}</p>
+                <p><strong>Identificador:</strong> {selectedSolicitud.radicado}</p>
+                <p className="mt-1"><strong>Identificador:</strong> {selectedSolicitud.titulo}</p>
               </div>
 
               <div>

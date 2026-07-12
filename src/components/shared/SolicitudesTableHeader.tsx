@@ -8,8 +8,8 @@ export default function SolicitudesTableHeader({
   return (
     <thead className="border-b bg-muted/50">
       <tr>
-        <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Radicado</th>
-        <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Título</th>
+        <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Identificador</th>
+        <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Identificador</th>
         <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">
           Solicitante
         </th>
