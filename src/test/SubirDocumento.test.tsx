@@ -42,7 +42,7 @@ describe('SubirDocumento', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: /registrar nueva solicitud/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /título/i })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /identificador/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /registrar solicitud/i })).toBeInTheDocument()
   })
 
