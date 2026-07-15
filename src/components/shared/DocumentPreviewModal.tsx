@@ -9,11 +9,11 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Solicitud } from '@/lib/types'
 import { ESTADO_CONFIG, PRIORIDAD_LABELS } from '@/lib/types'
 import useAuthStore from '@/lib/stores/authStore'
-import { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
@@ -35,6 +35,7 @@ export default function DocumentPreviewModal({
 }: DocumentPreviewModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const user      = useAuthStore(state => state.user)
+  const registrarVista = useSolicitudesStore(state => state.registrarVista)
   const category  = CATEGORIES[solicitud.categoria]
   const status    = ESTADO_CONFIG[solicitud.estado]
   const titleId       = `document-preview-title-${solicitud.id}`
@@ -46,6 +47,16 @@ export default function DocumentPreviewModal({
     Boolean(onApprove || onDecline)
 
   useModalAccessibility(open, dialogRef, onClose)
+
+  useEffect(() => {
+    if (!open || !user) return
+
+    registrarVista(
+      solicitud.id,
+      user.id,
+      `${user.nombre} ${user.apellido}`,
+    )
+  }, [open, registrarVista, solicitud.id, user])
 
   if (!open) return null
 

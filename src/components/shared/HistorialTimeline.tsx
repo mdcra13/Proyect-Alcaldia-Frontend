@@ -4,6 +4,7 @@ import {
   Building2,
   CheckCircle,
   Clock,
+  Eye,
   FileText,
   Flag,
   PenLine,
@@ -69,6 +70,11 @@ const accionConfig: Record<string, { icon: LucideIcon; color: string; label: str
     icon: Flag,
     color: 'text-gray-600 bg-gray-100',
     label: 'Cerrada',
+  },
+  viewed: {
+    icon: Eye,
+    color: 'text-sky-700 bg-sky-100',
+    label: 'Vista',
   },
 
   recibido: {

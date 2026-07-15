@@ -57,6 +57,7 @@ export default function SecretariaNotas() {
   const filters = useSolicitudFilters()
   const { user } = useAuthStore()
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
+  const registrarVista = useSolicitudesStore(state => state.registrarVista)
   const getDepartamentosActivos = useDepartamentosStore(
     state => state.getDepartamentosActivos
   )
@@ -147,7 +148,12 @@ export default function SecretariaNotas() {
   }
 
   const handleViewDetail = (solicitud: Solicitud) => {
-    setSelectedSolicitud(solicitud)
+    const fullName = user ? `${user.nombre} ${user.apellido}` : 'Usuario'
+    const solicitudVista = user
+      ? registrarVista(solicitud.id, user.id, fullName)
+      : undefined
+
+    setSelectedSolicitud(solicitudVista ?? solicitud)
     setShowDetailModal(true)
   }
 
