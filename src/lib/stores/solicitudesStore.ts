@@ -413,6 +413,7 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     set(state => ({
       solicitudes: state.solicitudes.map(item => item.id === id ? updatedSolicitud : item),
     }))
+    void backendApi.registerDocumentView(id).catch(() => undefined)
     return updatedSolicitud
   },
   search: (query: string, filters: SolicitudFilters = {}, departamentoId?: string): Solicitud[] => {
