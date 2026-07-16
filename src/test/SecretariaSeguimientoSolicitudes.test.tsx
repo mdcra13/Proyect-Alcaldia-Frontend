@@ -48,6 +48,7 @@ const mockSolicitud: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 describe('SeguimientoSolicitudes', () => {

@@ -21,7 +21,7 @@ export default function SolicitudTableRow({
       </th>
 
       <td className="p-4">
-        <p className="max-w-[220px] truncate font-medium">{solicitud.titulo}</p>
+        <p className="max-w-55 truncate font-medium">{solicitud.titulo}</p>
       </td>
 
       <td className="hidden p-4 md:table-cell">

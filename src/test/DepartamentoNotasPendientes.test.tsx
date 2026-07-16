@@ -49,6 +49,7 @@ const solicitudPendiente: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 function renderNotasPendientes() {

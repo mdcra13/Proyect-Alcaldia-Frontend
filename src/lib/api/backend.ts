@@ -352,6 +352,7 @@ export function mapBackendRequest(
         usuarioId: 'backend',
       },
     ],
+    anotaciones: [],
   }
 }
 

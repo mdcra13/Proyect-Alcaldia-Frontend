@@ -31,7 +31,7 @@ function escapeCSVCell(value: string | number | null | undefined) {
 }
 
 function exportSolicitudesCSV(solicitudes: Solicitud[]) {
-  const headers = ['Radicado', 'Título', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
+  const headers = ['Identificador', 'Identificador', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
 
   const rows = solicitudes.map(solicitud => [
     solicitud.radicado,
@@ -64,6 +64,7 @@ export default function SeguimientoNotas() {
 
   const {
     searchQuery,
+    identificadorQuery,
     estado,
     categoria,
     prioridad,
@@ -95,7 +96,7 @@ export default function SeguimientoNotas() {
 
   const filteredSolicitudes = useFilteredSolicitudes(
   notasDepartamento,
-  { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
+  { searchQuery, identificadorQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
   'fechaSolicitud-desc'
 )
 
@@ -173,6 +174,7 @@ export default function SeguimientoNotas() {
           idPrefix="seguimiento-notas"
           departamentos={[]}
           searchQuery={searchQuery}
+          identificadorQuery={identificadorQuery}
           estado={estado}
           departamento="todos"
           categoria={categoria}

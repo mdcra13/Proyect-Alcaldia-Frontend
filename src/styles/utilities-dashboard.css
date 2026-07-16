@@ -9,6 +9,15 @@
  * linea en vez de reescribir la sintaxis, para no romper la generacion de Tailwind.
  */
 
+/*
+ * NOTA SonarQube (css:S8776 "Missing scoping root"):
+ * Los selectores anidados con & dentro de los bloques @utility son la
+ * sintaxis oficial de Tailwind CSS v4 (docs: adding-custom-styles).
+ * SonarQube aun no reconoce @utility como scoping root valido y marca
+ * estos selectores como falsos positivos. Se marcan con NOSONAR linea por
+ * linea en vez de reescribir la sintaxis, para no romper la generacion de Tailwind.
+ */
+
 @utility dashboard-section {
   margin-bottom: 1.5rem;
 }

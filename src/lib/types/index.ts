@@ -49,6 +49,19 @@ export interface HistorialEntry {
   usuarioId: string
 }
 
+export type AnotacionAutorRole = 'departamento' | 'alcalde' | 'secretaria' | 'it'
+
+export interface Anotacion {
+  id: string
+  solicitudId: string
+  fecha: string
+  mensaje: string
+  autorId: string
+  autorNombre: string
+  autorRole: AnotacionAutorRole
+  esRevision: boolean
+}
+
 export interface Solicitud {
   id: string
   radicado: string
@@ -69,6 +82,7 @@ export interface Solicitud {
   documentoUrl?: string 
   motivoRechazo?: string | null
   historial: HistorialEntry[]
+  anotaciones: Anotacion[]
 }
 
 export type UrgenciaLevel = 'vencida' | 'urgente' | 'proxima' | 'normal'
