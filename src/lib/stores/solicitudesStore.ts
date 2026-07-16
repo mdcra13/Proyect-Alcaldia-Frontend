@@ -526,6 +526,7 @@ interface SolicitudesState {
   declinar: (id: string, motivo: string, userId: string, userName: string) => void
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => void
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => void
+  registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   addSolicitud: (solicitud: NewSolicitudData) => Solicitud
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
@@ -772,6 +773,39 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
         }
       }),
     }))
+  },
+
+  registrarVista: (id: string, userId: string, userName: string): Solicitud | undefined => {
+    const solicitud = get().getSolicitudById(id)
+    if (!solicitud) return undefined
+
+    const vistaExistente = solicitud.historial.some(
+      entry => entry.accion === 'viewed' && entry.usuarioId === userId
+    )
+
+    if (vistaExistente) return solicitud
+
+    const historialEntry: HistorialEntry = {
+      id: `h-viewed-${id}-${userId}-${Date.now()}`,
+      fecha: new Date().toISOString(),
+      accion: 'viewed',
+      descripcion: `Primera vista de la nota por ${userName}`,
+      usuario: userName,
+      usuarioId: userId,
+    }
+
+    const updatedSolicitud = {
+      ...solicitud,
+      historial: [...solicitud.historial, historialEntry],
+    }
+
+    set(state => ({
+      solicitudes: state.solicitudes.map(item =>
+        item.id === id ? updatedSolicitud : item
+      ),
+    }))
+
+    return updatedSolicitud
   },
 
   addSolicitud: (solicitud: NewSolicitudData): Solicitud => {
