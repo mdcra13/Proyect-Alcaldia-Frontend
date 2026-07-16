@@ -12,6 +12,7 @@ interface SolicitudFiltersPanelProps {
   headingLevel?: 2 | 3
   departamentos: Departamento[]
   searchQuery: string
+  identificadorQuery?: string
   estado: string
   departamento: string
   categoria: string
@@ -29,6 +30,7 @@ export default function SolicitudFiltersPanel({
   headingLevel = 3,
   departamentos,
   searchQuery,
+  identificadorQuery = '',
   estado,
   departamento,
   categoria,
@@ -62,7 +64,7 @@ export default function SolicitudFiltersPanel({
           <input
             id={`${idPrefix}-search`}
             type="text"
-            placeholder="Buscar por radicado, título, solicitante o identificación..."
+            placeholder="Buscar por identificador, título, solicitante o identificación..."
             value={searchQuery}
             onChange={event => updateFilter('q', event.target.value)}
             className="search-input text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"

@@ -7,6 +7,7 @@ import type {
 
 export type SolicitudFilterKey =
   | 'q'
+  | 'identificador'
   | 'estado'
   | 'departamento'
   | 'categoria'
@@ -27,6 +28,7 @@ export function useSolicitudFilters() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const searchQuery = searchParams.get('q') || ''
+  const identificadorQuery = searchParams.get('identificador') || ''
   const estado = getParam(searchParams, 'estado') as SolicitudEstadoFiltro
   const departamento = getParam(searchParams, 'departamento')
   const categoria = getParam(searchParams, 'categoria') as SolicitudCategoria | 'todos'
@@ -57,6 +59,7 @@ export function useSolicitudFilters() {
 
   const activeFiltersCount = [
     searchQuery,
+    identificadorQuery,
     estado !== 'todos',
     departamento !== 'todos',
     categoria !== 'todos',
@@ -67,6 +70,7 @@ export function useSolicitudFilters() {
 
   return {
     searchQuery,
+    identificadorQuery,
     estado,
     departamento,
     categoria,

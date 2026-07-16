@@ -37,6 +37,7 @@ const ALCALDE_VISIBLE_ESTADOS: SolicitudEstado[] = [
 
 type FilterKey =
   | 'q'
+  | 'identificador'
   | 'estado'
   | 'departamento'
   | 'categoria'
@@ -60,6 +61,7 @@ export default function AlcaldeNotas() {
   const [presetEstado, setPresetEstado] = useState<SolicitudEstado | undefined>()
 
   const searchQuery = searchParams.get('q') || ''
+  const identificadorQuery = searchParams.get('identificador') || ''
   const filterEstado = getParam(searchParams, 'estado') as SolicitudEstado | 'todos'
   const filterDepartamento = getParam(searchParams, 'departamento')
   const filterCategoria = getParam(searchParams, 'categoria') as SolicitudCategoria | 'todos'
@@ -93,6 +95,13 @@ export default function AlcaldeNotas() {
 
   const filteredSolicitudes = useMemo(() => {
     let results = [...baseSolicitudes]
+
+    if (identificadorQuery) {
+      const query = identificadorQuery.toLowerCase()
+      results = results.filter((solicitud) =>
+        solicitud.radicado.toLowerCase().includes(query)
+      )
+    }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
@@ -132,6 +141,7 @@ export default function AlcaldeNotas() {
     )
   }, [
     baseSolicitudes,
+    identificadorQuery,
     searchQuery,
     filterEstado,
     filterDepartamento,
@@ -150,6 +160,7 @@ export default function AlcaldeNotas() {
 
   const activeFiltersCount = [
     searchQuery,
+    identificadorQuery,
     filterEstado !== 'todos',
     filterDepartamento !== 'todos',
     filterCategoria !== 'todos',
@@ -220,9 +231,20 @@ export default function AlcaldeNotas() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
-                placeholder="Buscar por radicado, título o solicitante..."
+                placeholder="Buscar por identificador, título o solicitante..."
                 value={searchQuery}
                 onChange={(event) => updateFilter('q', event.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
+              />
+            </div>
+
+            <div className="relative sm:col-span-2">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                placeholder="Filtrar por identificador..."
+                value={identificadorQuery}
+                onChange={(event) => updateFilter('identificador', event.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
             </div>
@@ -321,8 +343,8 @@ export default function AlcaldeNotas() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Radicado</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Título</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Identificador</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Identificador</th>
                   <th className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">
                     Departamento
                   </th>
