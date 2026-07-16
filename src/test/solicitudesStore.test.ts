@@ -34,6 +34,7 @@ const baseSolicitud: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 describe('solicitudesStore registrarVista', () => {

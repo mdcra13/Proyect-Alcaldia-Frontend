@@ -48,6 +48,7 @@ const mockSolicitudSecretaria: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 const mockSolicitudOtroUsuario: Solicitud = {

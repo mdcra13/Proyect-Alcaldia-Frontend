@@ -588,7 +588,7 @@ interface SolicitudesState {
   ponerEnSeguimiento: (id: string, observacion: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
   addAnotacion: (id: string, mensaje: string, autorId: string, autorNombre: string, autorRole: AnotacionAutorRole, esRevision: boolean) => void
   resolverSeguimiento: (id: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
-  registrarVista: (id: string, userId: string, userName: string) => void
+  registrarVista: (id: string, userId: string, userName: string) => Solicitud[]
   CATEGORIES: CategoriesMap
 }
 

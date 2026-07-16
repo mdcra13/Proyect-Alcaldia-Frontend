@@ -49,6 +49,7 @@ const solicitudDepartamento: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 function renderDepartamentoDashboard() {

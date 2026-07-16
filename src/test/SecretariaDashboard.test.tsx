@@ -64,6 +64,7 @@ const mockSolicitudSecretaria: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 describe('SecretariaDashboard', () => {

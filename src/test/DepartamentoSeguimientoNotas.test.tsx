@@ -57,6 +57,7 @@ const solicitudSeguimiento: Solicitud = {
       usuarioId: '1',
     },
   ],
+  anotaciones: []
 }
 
 function renderSeguimientoNotas() {
