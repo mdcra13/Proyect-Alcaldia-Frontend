@@ -88,7 +88,13 @@ describe('AlcaldeNotas', () => {
 
     renderAlcaldeNotas()
 
-    expect(screen.getByRole('heading', { name: /listado de notas/i })).toBeInTheDocument()
+    expect(
+    screen.getByRole('heading', {
+      level: 1,
+      name: /listado de notas/i,
+    }),
+  ).toBeInTheDocument()
+
     expect(screen.getByText('Solicitud de apoyo medico')).toBeInTheDocument()
     expect(screen.getByText('#5001')).toBeInTheDocument()
     expect(screen.queryByText('Solicitud en departamento')).not.toBeInTheDocument()

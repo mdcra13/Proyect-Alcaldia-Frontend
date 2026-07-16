@@ -588,7 +588,7 @@ interface SolicitudesState {
   ponerEnSeguimiento: (id: string, observacion: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
   addAnotacion: (id: string, mensaje: string, autorId: string, autorNombre: string, autorRole: AnotacionAutorRole, esRevision: boolean) => void
   resolverSeguimiento: (id: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
-  registrarVista: (id: string, userId: string, userName: string) => Solicitud[]
+  registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   CATEGORIES: CategoriesMap
 }
 
@@ -958,31 +958,46 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
   },
   
   registrarVista: (id, userId, userName) => {
-    // TODO: Replace with API call POST /api/v1/requests/:id/vistas
+  // TODO: Replace with API call POST /api/v1/requests/:id/vistas
+
+    let solicitudActualizada: Solicitud | undefined
+
     set(state => ({
       solicitudes: state.solicitudes.map(s => {
         if (s.id !== id) return s
-        const entradaExistente = s.historial.find(
-          h => h.accion === 'vista' && h.usuarioId === userId,
+
+        const yaExiste = s.historial.some(
+          h =>
+            h.descripcion === `Documento revisado por ${userName}` &&
+            h.usuarioId === userId,
         )
-        // No duplicar si el mismo usuario ya registró una vista
-        if (entradaExistente) return s
-        return {
+
+        if (yaExiste) {
+          solicitudActualizada = s
+          return s
+        }
+
+        const updated = {
           ...s,
           historial: [
             ...s.historial,
             {
               id: crypto.randomUUID(),
               fecha: new Date().toISOString(),
-              accion: 'vista',
+              accion: s.estado,
               descripcion: `Documento revisado por ${userName}`,
               usuario: userName,
               usuarioId: userId,
             },
           ],
         }
+
+        solicitudActualizada = updated
+        return updated
       }),
     }))
+
+    return solicitudActualizada
   },
   CATEGORIES,
 }))
