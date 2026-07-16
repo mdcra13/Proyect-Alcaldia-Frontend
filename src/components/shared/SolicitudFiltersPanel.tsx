@@ -71,25 +71,6 @@ export default function SolicitudFiltersPanel({
           />
         </div>
 
-        <div className="relative lg:col-span-2">
-          <label htmlFor={`${idPrefix}-identificador`} className="sr-only">
-            Filtrar por identificador
-          </label>
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-            focusable="false"
-          />
-          <input
-            id={`${idPrefix}-identificador`}
-            type="text"
-            placeholder="Filtrar por identificador..."
-            value={identificadorQuery}
-            onChange={event => updateFilter('identificador', event.target.value)}
-            className="search-input text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          />
-        </div>
-
         <label htmlFor={`${idPrefix}-estado`} className="sr-only">
           Estado
         </label>
