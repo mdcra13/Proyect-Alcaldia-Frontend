@@ -10,6 +10,8 @@ import type {
   UrgenciaLevel,
   Departamento,
   SolicitudPrioridad,
+  Anotacion,
+  AnotacionAutorRole,
 } from '@/lib/types'
 import {
   ESTADO_TRANSITIONS_ALCALDE,
@@ -55,13 +57,9 @@ const mockDepartamentos: Record<string, Departamento> = {
 export function getUrgenciaLevel(fechaLimite: string): UrgenciaLevel {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
   const limite = new Date(fechaLimite)
   limite.setHours(0, 0, 0, 0)
-
-  const diffTime = limite.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
+  const diffDays = Math.ceil((limite.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
   if (diffDays < 0) return 'vencida'
   if (diffDays <= 3) return 'urgente'
   if (diffDays <= 7) return 'proxima'
@@ -71,12 +69,9 @@ export function getUrgenciaLevel(fechaLimite: string): UrgenciaLevel {
 export function getDiasRestantes(fechaLimite: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
   const limite = new Date(fechaLimite)
   limite.setHours(0, 0, 0, 0)
-
-  const diffTime = limite.getTime() - today.getTime()
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return Math.ceil((limite.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 export function ordenarPorFechaLimite(solicitudes: Solicitud[]): Solicitud[] {
@@ -86,15 +81,10 @@ export function ordenarPorFechaLimite(solicitudes: Solicitud[]): Solicitud[] {
     proxima: 2,
     normal: 3,
   }
-
   return [...solicitudes].sort((a, b) => {
-    const urgencyA = getUrgenciaLevel(a.fechaLimite)
-    const urgencyB = getUrgenciaLevel(b.fechaLimite)
-
-    if (urgencyOrder[urgencyA] !== urgencyOrder[urgencyB]) {
-      return urgencyOrder[urgencyA] - urgencyOrder[urgencyB]
-    }
-
+    const uA = getUrgenciaLevel(a.fechaLimite)
+    const uB = getUrgenciaLevel(b.fechaLimite)
+    if (urgencyOrder[uA] !== urgencyOrder[uB]) return urgencyOrder[uA] - urgencyOrder[uB]
     return new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime()
   })
 }
@@ -112,7 +102,7 @@ const createHistorial = (
   accion: SolicitudEstado,
   descripcion: string,
   usuario: string,
-  usuarioId: string
+  usuarioId: string,
 ): HistorialEntry => ({
   id,
   fecha: getDate(daysOffset),
@@ -138,6 +128,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'María García',
     subidoPorId: '2',
     documento: 'solicitud_1001.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1001-1', -10, 'received', 'Solicitud registrada por María García', 'María García', '2'),
     ],
@@ -159,6 +150,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'María García',
     subidoPorId: '2',
     documento: 'solicitud_1002.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1002-1', -8, 'received', 'Solicitud registrada por María García', 'María García', '2'),
       createHistorial('h-1002-2', -8, 'assigned_to_department', 'Solicitud asignada al departamento Educación por María García', 'María García', '2'),
@@ -181,6 +173,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'Ana López',
     subidoPorId: '3',
     documento: 'solicitud_1003.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1003-1', -7, 'received', 'Solicitud registrada por Ana López', 'Ana López', '3'),
       createHistorial('h-1003-2', -6, 'assigned_to_department', 'Solicitud asignada al departamento Desarrollo Social por Ana López', 'Ana López', '3'),
@@ -205,6 +198,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPorId: '4',
     documento: 'solicitud_1004.pdf',
     motivoRechazo: null,
+    anotaciones: [],
     historial: [
       createHistorial('h-1004-1', -12, 'received', 'Solicitud registrada por Lucía Torres', 'Lucía Torres', '4'),
       createHistorial('h-1004-2', -11, 'assigned_to_department', 'Solicitud asignada al departamento Obras Públicas por Lucía Torres', 'Lucía Torres', '4'),
@@ -228,6 +222,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'Ana López',
     subidoPorId: '3',
     documento: 'solicitud_1005.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1005-1', -15, 'received', 'Solicitud registrada por Ana López', 'Ana López', '3'),
       createHistorial('h-1005-2', -14, 'assigned_to_department', 'Solicitud asignada al departamento Salud por Ana López', 'Ana López', '3'),
@@ -255,6 +250,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPorId: '2',
     documento: 'solicitud_1006.pdf',
     motivoRechazo: 'Documentación incompleta. Se requiere certificado de estudios actualizado.',
+    anotaciones: [],
     historial: [
       createHistorial('h-1006-1', -20, 'received', 'Solicitud registrada por María García', 'María García', '2'),
       createHistorial('h-1006-2', -19, 'assigned_to_department', 'Solicitud asignada al departamento Educación por María García', 'María García', '2'),
@@ -279,6 +275,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'Ana López',
     subidoPorId: '3',
     documento: 'solicitud_1007.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1007-1', -5, 'received', 'Solicitud registrada por Ana López', 'Ana López', '3'),
       createHistorial('h-1007-2', -5, 'assigned_to_department', 'Solicitud asignada al departamento Desarrollo Social por Ana López', 'Ana López', '3'),
@@ -305,6 +302,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPorId: '2',
     documento: 'solicitud_1008.pdf',
     motivoRechazo: 'Falta el presupuesto detallado del proyecto.',
+    anotaciones: [],
     historial: [
       createHistorial('h-1008-1', -3, 'received', 'Solicitud registrada por María García', 'María García', '2'),
       createHistorial('h-1008-2', -3, 'assigned_to_department', 'Solicitud asignada al departamento Obras Públicas por María García', 'María García', '2'),
@@ -331,6 +329,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPorId: '4',
     documento: 'solicitud_1009.pdf',
     motivoRechazo: 'La solicitud no corresponde a los programas vigentes de la Alcaldía.',
+    anotaciones: [],
     historial: [
       createHistorial('h-1009-1', -4, 'received', 'Solicitud registrada por Lucía Torres', 'Lucía Torres', '4'),
       createHistorial('h-1009-2', -4, 'assigned_to_department', 'Solicitud asignada al departamento Salud por Lucía Torres', 'Lucía Torres', '4'),
@@ -356,6 +355,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'María García',
     subidoPorId: '2',
     documento: 'solicitud_1010.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1010-1', -25, 'received', 'Solicitud registrada por María García', 'María García', '2'),
       createHistorial('h-1010-2', -24, 'assigned_to_department', 'Solicitud asignada al departamento Alcaldía por María García', 'María García', '2'),
@@ -382,6 +382,7 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'Lucía Torres',
     subidoPorId: '4',
     documento: 'solicitud_1011.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1011-1', -2, 'received', 'Solicitud registrada por Lucía Torres', 'Lucía Torres', '4'),
       createHistorial('h-1011-2', -2, 'assigned_to_department', 'Solicitud asignada al departamento Hacienda por Lucía Torres', 'Lucía Torres', '4'),
@@ -402,8 +403,57 @@ const mockSolicitudes: Solicitud[] = [
     subidoPor: 'Ana López',
     subidoPorId: '3',
     documento: 'solicitud_1012.pdf',
+    anotaciones: [],
     historial: [
       createHistorial('h-1012-1', -1, 'received', 'Solicitud registrada por Ana López', 'Ana López', '3'),
+    ],
+  },
+  // Mock con estado under_observation para demostrar el flujo
+  {
+    id: '1013',
+    radicado: '#1013',
+    titulo: 'Apoyo para rehabilitación',
+    descripcion: 'Solicitud de apoyo económico para terapia de rehabilitación post-accidente.',
+    solicitante: 'Elena Vargas',
+    identificacion: '8-111-222',
+    categoria: 'salud',
+    departamentoId: 'dep-1',
+    departamento: mockDepartamentos['dep-1'],
+    fechaSolicitud: getDate(-6),
+    fechaLimite: getDate(3),
+    estado: 'under_observation',
+    prioridad: 'HIGH',
+    subidoPor: 'María García',
+    subidoPorId: '2',
+    documento: 'solicitud_1013.pdf',
+    motivoRechazo: null,
+    anotaciones: [
+      {
+        id: 'a-1013-1',
+        solicitudId: '1013',
+        fecha: getDate(-4),
+        mensaje: 'Se requiere adjuntar el diagnóstico médico oficial firmado por el especialista tratante.',
+        autorId: '5',
+        autorNombre: 'Juan Hernández',
+        autorRole: 'departamento',
+        esRevision: true,
+      },
+      {
+        id: 'a-1013-2',
+        solicitudId: '1013',
+        fecha: getDate(-3),
+        mensaje: 'Adjunto el diagnóstico médico solicitado. El especialista firmó el documento ayer.',
+        autorId: '2',
+        autorNombre: 'María García',
+        autorRole: 'secretaria',
+        esRevision: false,
+      },
+    ],
+    historial: [
+      createHistorial('h-1013-1', -6, 'received', 'Solicitud registrada por María García', 'María García', '2'),
+      createHistorial('h-1013-2', -6, 'assigned_to_department', 'Solicitud asignada al departamento Salud por María García', 'María García', '2'),
+      createHistorial('h-1013-3', -5, 'in_review', 'Revisión iniciada por Juan Hernández del departamento Salud', 'Juan Hernández', '5'),
+      createHistorial('h-1013-4', -4, 'under_observation', 'Nota puesta en seguimiento por Juan Hernández. Se solicita documentación adicional.', 'Juan Hernández', '5'),
     ],
   },
 ]
@@ -427,12 +477,14 @@ const ESTADOS_PENDIENTES: SolicitudEstado[] = [
   'received',
   'assigned_to_department',
   'in_review',
+  'under_observation',
   'awaiting_mayor_signature',
   'returned_to_department',
 ]
 const ESTADOS_DEPARTAMENTO_PENDIENTES: SolicitudEstado[] = [
   'assigned_to_department',
   'in_review',
+  'under_observation',
   'returned_to_department',
 ]
 const ESTADOS_EN_PROCESO: SolicitudEstado[] = [
@@ -450,31 +502,34 @@ const ESTADOS_CON_MOTIVO: SolicitudEstado[] = [
   'rejected_by_department',
   'returned_to_department',
   'rejected_by_mayor_office',
+  'under_observation',
 ]
 
 function buildHistorialDescripcion(
   estado: SolicitudEstado,
   userName: string,
   departamentoNombre?: string,
-  motivo?: string
+  motivo?: string,
 ): string {
   switch (estado) {
     case 'received':
       return `Solicitud registrada por ${userName}`
     case 'assigned_to_department':
-      return `Solicitud asignada al departamento ${departamentoNombre || 'responsable'} por ${userName}`
+      return `Solicitud asignada al departamento ${departamentoNombre ?? 'responsable'} por ${userName}`
     case 'in_review':
-      return `Revisión iniciada por ${userName} del departamento ${departamentoNombre || 'responsable'}`
+      return `Revisión iniciada por ${userName} del departamento ${departamentoNombre ?? 'responsable'}`
+    case 'under_observation':
+      return `Nota puesta en seguimiento por ${userName}. ${motivo ? `Observación: ${motivo}` : 'Se solicita información adicional.'}`
     case 'approved_by_department':
-      return `Aprobada por el departamento ${departamentoNombre || 'responsable'}`
+      return `Aprobada por el departamento ${departamentoNombre ?? 'responsable'}`
     case 'rejected_by_department':
-      return `Rechazada por el departamento ${departamentoNombre || 'responsable'}. Motivo: ${motivo || 'No especificado'}`
+      return `Rechazada por el departamento ${departamentoNombre ?? 'responsable'}. Motivo: ${motivo ?? 'No especificado'}`
     case 'awaiting_mayor_signature':
       return `Enviada a Alcaldía para revisión por ${userName}`
     case 'returned_to_department':
-      return `Devuelta al departamento ${departamentoNombre || 'responsable'}. Motivo: ${motivo || 'No especificado'}`
+      return `Devuelta al departamento ${departamentoNombre ?? 'responsable'}. Motivo: ${motivo ?? 'No especificado'}`
     case 'rejected_by_mayor_office':
-      return `Rechazada por el despacho de Alcaldía. Motivo: ${motivo || 'No especificado'}`
+      return `Rechazada por el despacho de Alcaldía. Motivo: ${motivo ?? 'No especificado'}`
     case 'signed':
       return `Firmada lógicamente por ${userName} — Alcaldía Municipal`
     case 'closed':
@@ -487,7 +542,7 @@ function createHistorialEntry(
   userId: string,
   userName: string,
   departamentoNombre?: string,
-  motivo?: string
+  motivo?: string,
 ): HistorialEntry {
   return {
     id: crypto.randomUUID(),
@@ -502,7 +557,7 @@ function createHistorialEntry(
 function isValidTransition(
   transitions: Partial<Record<SolicitudEstado, SolicitudEstado[]>>,
   currentEstado: SolicitudEstado,
-  nuevoEstado: SolicitudEstado
+  nuevoEstado: SolicitudEstado,
 ): boolean {
   return transitions[currentEstado]?.includes(nuevoEstado) ?? false
 }
@@ -526,10 +581,14 @@ interface SolicitudesState {
   declinar: (id: string, motivo: string, userId: string, userName: string) => void
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => void
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => void
-  registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   addSolicitud: (solicitud: NewSolicitudData) => Solicitud
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
+  // Nuevas acciones de seguimiento/anotaciones
+  ponerEnSeguimiento: (id: string, observacion: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
+  addAnotacion: (id: string, mensaje: string, autorId: string, autorNombre: string, autorRole: AnotacionAutorRole, esRevision: boolean) => void
+  resolverSeguimiento: (id: string, userId: string, userName: string, autorRole: AnotacionAutorRole) => void
+  registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   CATEGORIES: CategoriesMap
 }
 
@@ -538,10 +597,7 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
 
   getStats: (departamentoId?: string): SolicitudStats => {
     let solicitudes = get().solicitudes
-    if (departamentoId) {
-      solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
-    }
-
+    if (departamentoId) solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
     return {
       total: solicitudes.length,
       pendientes: solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado)).length,
@@ -554,7 +610,6 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
 
   getStatsForUser: (userId: string): SolicitudStats => {
     const solicitudes = get().solicitudes.filter(s => s.subidoPorId === userId)
-
     return {
       total: solicitudes.length,
       pendientes: solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado)).length,
@@ -567,80 +622,58 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
 
   getPendientes: (departamentoId?: string): Solicitud[] => {
     let solicitudes = get().solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado))
-    if (departamentoId) {
-      solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
-    }
+    if (departamentoId) solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
     return ordenarPorFechaLimite(solicitudes)
   },
 
-  getPendientesDepartamento: (departamentoId: string): Solicitud[] => {
-    return ordenarPorFechaLimite(
+  getPendientesDepartamento: (departamentoId: string): Solicitud[] =>
+    ordenarPorFechaLimite(
       get().solicitudes.filter(s =>
-        ESTADOS_DEPARTAMENTO_PENDIENTES.includes(s.estado) && s.departamentoId === departamentoId
-      )
-    )
-  },
+        ESTADOS_DEPARTAMENTO_PENDIENTES.includes(s.estado) && s.departamentoId === departamentoId,
+      ),
+    ),
 
-  getPendientesAlcalde: (): Solicitud[] => {
-    return ordenarPorFechaLimite(
-      get().solicitudes.filter(s => s.estado === 'awaiting_mayor_signature')
-    )
-  },
+  getPendientesAlcalde: (): Solicitud[] =>
+    ordenarPorFechaLimite(
+      get().solicitudes.filter(s =>
+        s.estado === 'awaiting_mayor_signature' || s.estado === 'under_observation',
+      ),
+    ),
 
   getByStatus: (status: string, departamentoId?: string): Solicitud[] => {
     let solicitudes = get().solicitudes
-    if (departamentoId) {
-      solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
-    }
+    if (departamentoId) solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
     if (status === 'todos') return ordenarPorFechaLimite(solicitudes)
-    if (status === 'pendientes') {
-      return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado)))
-    }
-    if (status === 'en_proceso') {
-      return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_EN_PROCESO.includes(s.estado)))
-    }
-    if (status === 'aprobado') {
-      return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_APROBADAS.includes(s.estado)))
-    }
-    if (status === 'declinado') {
-      return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_DECLINADAS.includes(s.estado)))
-    }
+    if (status === 'pendientes') return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado)))
+    if (status === 'en_proceso') return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_EN_PROCESO.includes(s.estado)))
+    if (status === 'aprobado') return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_APROBADAS.includes(s.estado)))
+    if (status === 'declinado') return ordenarPorFechaLimite(solicitudes.filter(s => ESTADOS_DECLINADAS.includes(s.estado)))
     return ordenarPorFechaLimite(solicitudes.filter(s => s.estado === status))
   },
 
-  getByDepartamento: (departamentoId: string): Solicitud[] => {
-    return ordenarPorFechaLimite(get().solicitudes.filter(s => s.departamentoId === departamentoId))
-  },
+  getByDepartamento: (departamentoId: string): Solicitud[] =>
+    ordenarPorFechaLimite(get().solicitudes.filter(s => s.departamentoId === departamentoId)),
 
-  getBySubidoPor: (userId: string): Solicitud[] => {
-    return ordenarPorFechaLimite(get().solicitudes.filter(s => s.subidoPorId === userId))
-  },
+  getBySubidoPor: (userId: string): Solicitud[] =>
+    ordenarPorFechaLimite(get().solicitudes.filter(s => s.subidoPorId === userId)),
 
-  getUrgentes: (limit: number = 5, departamentoId?: string): Solicitud[] => {
+  getUrgentes: (limit = 5, departamentoId?: string): Solicitud[] => {
     let solicitudes = get().solicitudes.filter(s => ESTADOS_PENDIENTES.includes(s.estado))
-    if (departamentoId) {
-      solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
-    }
+    if (departamentoId) solicitudes = solicitudes.filter(s => s.departamentoId === departamentoId)
     return ordenarPorFechaLimite(solicitudes).slice(0, limit)
   },
 
-  asignarDepartamento: (id: string, departamentoId: string, departamentoNombre: string, usuario: string, usuarioId = 'system') => {
+  asignarDepartamento: (id, departamentoId, departamentoNombre, usuario, usuarioId = 'system') => {
     // TODO: Replace with API call PATCH /api/v1/requests/:id/departamento
-    const departamento = mockDepartamentos[departamentoId] || {
-      id: departamentoId,
-      nombre: departamentoNombre,
-      activo: true,
-    }
-
+    const departamento = mockDepartamentos[departamentoId] ?? { id: departamentoId, nombre: departamentoNombre, activo: true }
     set(state => ({
       solicitudes: state.solicitudes.map(s => {
         if (s.id !== id || s.estado !== 'received') return s
-
         return {
           ...s,
           departamentoId,
           departamento,
-          estado: 'assigned_to_department',
+          estado: 'assigned_to_department' as SolicitudEstado,
           historial: [
             ...s.historial,
             {
@@ -657,101 +690,73 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     }))
   },
 
-cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
-  // TODO: Replace with API call PATCH /api/v1/requests/:id/status
-  set(state => ({
-    solicitudes: state.solicitudes.map(s => {
-      if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, s.estado, nuevoEstado)) {
-        return s
-      }
-
-      const historial = [
-        ...s.historial,
-        createHistorialEntry(
-          nuevoEstado,
-          userId,
-          userName,
-          s.departamento?.nombre,
-          observacion
-        ),
-      ]
-
-      return {
-        ...s,
-        estado: nuevoEstado,
-        motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado)
-          ? observacion || s.motivoRechazo
-          : s.motivoRechazo,
-        historial,
-      }
-    }),
-  }))
-},
-
-  cambiarEstadoAlcalde: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
+  cambiarEstadoDepartamento: (id, nuevoEstado, userId, userName, observacion) => {
     // TODO: Replace with API call PATCH /api/v1/requests/:id/status
     set(state => ({
       solicitudes: state.solicitudes.map(s => {
-        if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_ALCALDE, s.estado, nuevoEstado)) {
-          return s
-        }
-
+        if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, s.estado, nuevoEstado)) return s
         return {
           ...s,
           estado: nuevoEstado,
-          motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado) ? observacion || s.motivoRechazo : s.motivoRechazo,
-          historial: [
-            ...s.historial,
-            createHistorialEntry(nuevoEstado, userId, userName, s.departamento?.nombre, observacion),
-          ],
+          motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado) ? observacion ?? s.motivoRechazo : s.motivoRechazo,
+          historial: [...s.historial, createHistorialEntry(nuevoEstado, userId, userName, s.departamento?.nombre, observacion)],
         }
       }),
     }))
   },
 
-  aprobarDepartamento: (id: string, userId: string, userName: string) => {
-  get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
-  get().cambiarEstadoAlcalde(id, 'awaiting_mayor_signature', userId, userName)
+  cambiarEstadoAlcalde: (id, nuevoEstado, userId, userName, observacion) => {
+    // TODO: Replace with API call PATCH /api/v1/requests/:id/status
+    set(state => ({
+      solicitudes: state.solicitudes.map(s => {
+        if (s.id !== id || !isValidTransition(ESTADO_TRANSITIONS_ALCALDE, s.estado, nuevoEstado)) return s
+        return {
+          ...s,
+          estado: nuevoEstado,
+          motivoRechazo: ESTADOS_CON_MOTIVO.includes(nuevoEstado) ? observacion ?? s.motivoRechazo : s.motivoRechazo,
+          historial: [...s.historial, createHistorialEntry(nuevoEstado, userId, userName, s.departamento?.nombre, observacion)],
+        }
+      }),
+    }))
   },
 
-  aprobar: (id: string, userId: string, userName: string) => {
+  aprobarDepartamento: (id, userId, userName) => {
+    get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
+    get().cambiarEstadoAlcalde(id, 'awaiting_mayor_signature', userId, userName)
+  },
+
+  aprobar: (id, userId, userName) => {
     get().cambiarEstadoAlcalde(id, 'signed', userId, userName)
   },
 
-  declinar: (id: string, motivo: string, userId: string, userName: string) => {
+  declinar: (id, motivo, userId, userName) => {
     const solicitud = get().getSolicitudById(id)
     if (!solicitud) return
-
     if (ESTADOS_DEPARTAMENTO_PENDIENTES.includes(solicitud.estado)) {
       get().cambiarEstadoDepartamento(id, 'rejected_by_department', userId, userName, motivo)
       return
     }
-
     get().cambiarEstadoAlcalde(id, 'rejected_by_mayor_office', userId, userName, motivo)
   },
 
-  cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => {
+  cambiarEstado: (id, nuevoEstado, userId, userName, observacion) => {
     const solicitud = get().getSolicitudById(id)
     if (!solicitud) return
-
     if (isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, solicitud.estado, nuevoEstado)) {
       get().cambiarEstadoDepartamento(id, nuevoEstado, userId, userName, observacion)
       return
     }
-
     get().cambiarEstadoAlcalde(id, nuevoEstado, userId, userName, observacion)
   },
 
-  cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => {
+  cambiarDepartamento: (id, nuevoDepartamentoId, userId, userName, motivo) => {
     // TODO: Replace with API call PATCH /api/v1/requests/:id/departamento
     const nuevoDepartamento = mockDepartamentos[nuevoDepartamentoId]
-
     set(state => ({
       solicitudes: state.solicitudes.map(s => {
         if (s.id !== id) return s
-
-        const oldDep = s.departamento?.nombre || 'Sin departamento'
-        const newDep = nuevoDepartamento?.nombre || 'Sin departamento'
+        const oldDep = s.departamento?.nombre ?? 'Sin departamento'
+        const newDep = nuevoDepartamento?.nombre ?? 'Sin departamento'
         const debeAsignar = s.estado === 'received' && Boolean(nuevoDepartamentoId)
         const historialEntry: HistorialEntry = debeAsignar
           ? createHistorialEntry('assigned_to_department', userId, userName, newDep)
@@ -763,49 +768,15 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
               usuario: userName,
               usuarioId: userId,
             }
-
         return {
           ...s,
           departamentoId: nuevoDepartamentoId,
           departamento: nuevoDepartamento,
-          estado: debeAsignar ? 'assigned_to_department' : s.estado,
+          estado: debeAsignar ? ('assigned_to_department' as SolicitudEstado) : s.estado,
           historial: [...s.historial, historialEntry],
         }
       }),
     }))
-  },
-
-  registrarVista: (id: string, userId: string, userName: string): Solicitud | undefined => {
-    const solicitud = get().getSolicitudById(id)
-    if (!solicitud) return undefined
-
-    const vistaExistente = solicitud.historial.some(
-      entry => entry.accion === 'viewed' && entry.usuarioId === userId
-    )
-
-    if (vistaExistente) return solicitud
-
-    const historialEntry: HistorialEntry = {
-      id: `h-viewed-${id}-${userId}-${Date.now()}`,
-      fecha: new Date().toISOString(),
-      accion: 'viewed',
-      descripcion: `Primera vista de la nota por ${userName}`,
-      usuario: userName,
-      usuarioId: userId,
-    }
-
-    const updatedSolicitud = {
-      ...solicitud,
-      historial: [...solicitud.historial, historialEntry],
-    }
-
-    set(state => ({
-      solicitudes: state.solicitudes.map(item =>
-        item.id === id ? updatedSolicitud : item
-      ),
-    }))
-
-    return updatedSolicitud
   },
 
   addSolicitud: (solicitud: NewSolicitudData): Solicitud => {
@@ -814,7 +785,7 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
     const nextId = Math.max(...ids) + 1
     const departamento = solicitud.departamentoId ? mockDepartamentos[solicitud.departamentoId] : undefined
     const now = new Date().toISOString()
-    const fechaSolicitud = solicitud.fechaSolicitud || now.split('T')[0]
+    const fechaSolicitud = solicitud.fechaSolicitud ?? now.split('T')[0]
     const tieneDepartamento = Boolean(solicitud.departamentoId && departamento)
     const estadoInicial: SolicitudEstado = tieneDepartamento ? 'assigned_to_department' : 'received'
 
@@ -847,7 +818,7 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
       categoria: solicitud.categoria,
       departamentoId: solicitud.departamentoId,
       departamento,
-      fechaSolicitud: fechaSolicitud,
+      fechaSolicitud,
       fechaLimite: solicitud.fechaLimite,
       solicitante: solicitud.solicitante,
       identificacion: solicitud.identificacion,
@@ -857,82 +828,177 @@ cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: st
       subidoPor: solicitud.subidoPor,
       subidoPorId: solicitud.subidoPorId,
       documento: solicitud.documento,
+      anotaciones: [],
       historial,
     }
 
-    set(state => ({
-      solicitudes: [newSolicitud, ...state.solicitudes],
-    }))
-
+    set(state => ({ solicitudes: [newSolicitud, ...state.solicitudes] }))
     return newSolicitud
   },
 
-  search: (query: string, filters: SolicitudFilters = {}, departamentoId?: string): Solicitud[] => {
+  search: (query, filters = {}, departamentoId) => {
     let results = get().solicitudes
-
-    if (departamentoId) {
-      results = results.filter(s => s.departamentoId === departamentoId)
-    }
-
+    if (departamentoId) results = results.filter(s => s.departamentoId === departamentoId)
     if (query) {
       const q = query.toLowerCase()
       results = results.filter(s =>
         s.solicitante.toLowerCase().includes(q) ||
         s.identificacion.toLowerCase().includes(q) ||
         s.radicado.toLowerCase().includes(q) ||
-        s.titulo.toLowerCase().includes(q)
+        s.titulo.toLowerCase().includes(q),
       )
     }
-
     if (filters.categorias && filters.categorias.length > 0) {
       results = results.filter(s => filters.categorias!.includes(s.categoria))
     }
-
     if (filters.estado && filters.estado !== 'todos') {
-      if (filters.estado === 'pendientes') {
-        results = results.filter(s => ESTADOS_PENDIENTES.includes(s.estado))
-      } else if (filters.estado === 'en_proceso') {
-        results = results.filter(s => ESTADOS_EN_PROCESO.includes(s.estado))
-      } else if (filters.estado === 'aprobado') {
-        results = results.filter(s => ESTADOS_APROBADAS.includes(s.estado))
-      } else if (filters.estado === 'declinado') {
-        results = results.filter(s => ESTADOS_DECLINADAS.includes(s.estado))
-      } else {
-        results = results.filter(s => s.estado === filters.estado)
-      }
+      if (filters.estado === 'pendientes') results = results.filter(s => ESTADOS_PENDIENTES.includes(s.estado))
+      else if (filters.estado === 'en_proceso') results = results.filter(s => ESTADOS_EN_PROCESO.includes(s.estado))
+      else if (filters.estado === 'aprobado') results = results.filter(s => ESTADOS_APROBADAS.includes(s.estado))
+      else if (filters.estado === 'declinado') results = results.filter(s => ESTADOS_DECLINADAS.includes(s.estado))
+      else results = results.filter(s => s.estado === filters.estado)
     }
-
-    if (filters.departamentoId) {
-      results = results.filter(s => s.departamentoId === filters.departamentoId)
-    }
-
-    if (filters.fechaDesde) {
-      results = results.filter(s => s.fechaSolicitud >= filters.fechaDesde!)
-    }
-
-    if (filters.fechaHasta) {
-      results = results.filter(s => s.fechaSolicitud <= filters.fechaHasta!)
-    }
-
-    if (filters.ordenar === 'antiguo') {
-      return [...results].sort((a, b) => new Date(a.fechaSolicitud).getTime() - new Date(b.fechaSolicitud).getTime())
-    }
-
-    if (filters.ordenar === 'nombre') {
-      return [...results].sort((a, b) => a.solicitante.localeCompare(b.solicitante))
-    }
-
-    if (filters.ordenar === 'reciente') {
-      return [...results].sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
-    }
-
+    if (filters.departamentoId) results = results.filter(s => s.departamentoId === filters.departamentoId)
+    if (filters.fechaDesde) results = results.filter(s => s.fechaSolicitud >= filters.fechaDesde!)
+    if (filters.fechaHasta) results = results.filter(s => s.fechaSolicitud <= filters.fechaHasta!)
+    if (filters.ordenar === 'antiguo') return [...results].sort((a, b) => new Date(a.fechaSolicitud).getTime() - new Date(b.fechaSolicitud).getTime())
+    if (filters.ordenar === 'nombre') return [...results].sort((a, b) => a.solicitante.localeCompare(b.solicitante))
+    if (filters.ordenar === 'reciente') return [...results].sort((a, b) => new Date(b.fechaSolicitud).getTime() - new Date(a.fechaSolicitud).getTime())
     return ordenarPorFechaLimite(results)
   },
 
-  getSolicitudById: (id: string): Solicitud | undefined => {
-    return get().solicitudes.find(s => s.id === id)
+  getSolicitudById: (id) => get().solicitudes.find(s => s.id === id),
+
+  // ── Seguimiento / Anotaciones ──────────────────────────────
+
+  ponerEnSeguimiento: (id, observacion, userId, userName, autorRole) => {
+    // TODO: Replace with API call PATCH /api/v1/requests/:id/status + POST /api/v1/requests/:id/anotaciones
+    const solicitud = get().getSolicitudById(id)
+    if (!solicitud) return
+
+    const anotacion: Anotacion = {
+      id: crypto.randomUUID(),
+      solicitudId: id,
+      fecha: new Date().toISOString(),
+      mensaje: observacion,
+      autorId: userId,
+      autorNombre: userName,
+      autorRole,
+      esRevision: true,
+    }
+
+    set(state => ({
+      solicitudes: state.solicitudes.map(s => {
+        if (s.id !== id) return s
+        const canTransition =
+          isValidTransition(ESTADO_TRANSITIONS_DEPARTAMENTO, s.estado, 'under_observation') ||
+          isValidTransition(ESTADO_TRANSITIONS_ALCALDE, s.estado, 'under_observation')
+        if (!canTransition) return s
+        return {
+          ...s,
+          estado: 'under_observation' as SolicitudEstado,
+          anotaciones: [...s.anotaciones, anotacion],
+          historial: [
+            ...s.historial,
+            createHistorialEntry('under_observation', userId, userName, s.departamento?.nombre, observacion),
+          ],
+        }
+      }),
+    }))
   },
 
+  addAnotacion: (id, mensaje, autorId, autorNombre, autorRole, esRevision) => {
+    // TODO: Replace with API call POST /api/v1/requests/:id/anotaciones
+    const anotacion: Anotacion = {
+      id: crypto.randomUUID(),
+      solicitudId: id,
+      fecha: new Date().toISOString(),
+      mensaje,
+      autorId,
+      autorNombre,
+      autorRole,
+      esRevision,
+    }
+    set(state => ({
+      solicitudes: state.solicitudes.map(s =>
+        s.id === id ? { ...s, anotaciones: [...s.anotaciones, anotacion] } : s,
+      ),
+    }))
+  },
+
+  resolverSeguimiento: (id, userId, userName, autorRole) => {
+    // TODO: Replace with API call PATCH /api/v1/requests/:id/status
+    const solicitud = get().getSolicitudById(id)
+    if (!solicitud || solicitud.estado !== 'under_observation') return
+
+    // Vuelve al estado previo según quién resuelve
+    const nuevoEstado: SolicitudEstado =
+      autorRole === 'alcalde' ? 'awaiting_mayor_signature' : 'in_review'
+
+    set(state => ({
+      solicitudes: state.solicitudes.map(s => {
+        if (s.id !== id) return s
+        return {
+          ...s,
+          estado: nuevoEstado,
+          historial: [
+            ...s.historial,
+            {
+              id: crypto.randomUUID(),
+              fecha: new Date().toISOString(),
+              accion: nuevoEstado,
+              descripcion: `Seguimiento resuelto por ${userName}. Nota devuelta a revisión.`,
+              usuario: userName,
+              usuarioId: userId,
+            },
+          ],
+        }
+      }),
+    }))
+  },
+  
+  registrarVista: (id, userId, userName) => {
+  // TODO: Replace with API call POST /api/v1/requests/:id/vistas
+
+    let solicitudActualizada: Solicitud | undefined
+
+    set(state => ({
+      solicitudes: state.solicitudes.map(s => {
+        if (s.id !== id) return s
+
+        const yaExiste = s.historial.some(
+          h =>
+            h.descripcion === `Documento revisado por ${userName}` &&
+            h.usuarioId === userId,
+        )
+
+        if (yaExiste) {
+          solicitudActualizada = s
+          return s
+        }
+
+        const updated = {
+          ...s,
+          historial: [
+            ...s.historial,
+            {
+              id: crypto.randomUUID(),
+              fecha: new Date().toISOString(),
+              accion: s.estado,
+              descripcion: `Documento revisado por ${userName}`,
+              usuario: userName,
+              usuarioId: userId,
+            },
+          ],
+        }
+
+        solicitudActualizada = updated
+        return updated
+      }),
+    }))
+
+    return solicitudActualizada
+  },
   CATEGORIES,
 }))
 

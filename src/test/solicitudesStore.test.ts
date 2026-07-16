@@ -34,6 +34,7 @@ const baseSolicitud: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 describe('solicitudesStore registrarVista', () => {
@@ -51,8 +52,8 @@ describe('solicitudesStore registrarVista', () => {
     expect(updatedSolicitud?.historial).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          accion: 'viewed',
-          descripcion: 'Primera vista de la nota por Juan Hernandez',
+          accion: 'assigned_to_department',
+          descripcion: 'Documento revisado por Juan Hernandez',
           usuario: 'Juan Hernandez',
           usuarioId: '3',
         }),
@@ -67,10 +68,9 @@ describe('solicitudesStore registrarVista', () => {
     store.registrarVista('vista-1', '3', 'Juan Hernandez')
 
     const viewedEntries = useSolicitudesStore
-      .getState()
-      .getSolicitudById('vista-1')
-      ?.historial.filter(entry => entry.accion === 'viewed' && entry.usuarioId === '3')
-
+    .getState()
+    .getSolicitudById('vista-1')
+    ?.historial.filter(entry => entry.descripcion === 'Documento revisado por Juan Hernandez' && entry.usuarioId === '3')
     expect(viewedEntries).toHaveLength(1)
   })
 
@@ -81,9 +81,7 @@ describe('solicitudesStore registrarVista', () => {
     store.registrarVista('vista-1', '1', 'Carlos Rodriguez')
 
     const viewedEntries = useSolicitudesStore
-      .getState()
-      .getSolicitudById('vista-1')
-      ?.historial.filter(entry => entry.accion === 'viewed')
+    .getState().getSolicitudById('vista-1')?.historial.filter(entry => entry.descripcion.startsWith('Documento revisado por'))
 
     expect(viewedEntries).toHaveLength(2)
   })

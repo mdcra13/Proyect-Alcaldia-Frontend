@@ -69,6 +69,7 @@ const mockSolicitudAlcalde: Solicitud = {
       usuarioId: '2',
     },
   ],
+  anotaciones: []
 }
 
 const mockSolicitudDepartamento: Solicitud = {
