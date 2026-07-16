@@ -23,6 +23,7 @@ const CATEGORIA_LABELS: Record<SolicitudCategoria, string> = {
 
 interface SolicitudFilterValues {
   searchQuery: string
+  identificadorQuery?: string
   estado: SolicitudEstadoFiltro
   departamento: string
   categoria: SolicitudCategoria | 'todos'
@@ -83,6 +84,11 @@ export function filterSolicitudes(
         return false
       }
 
+      if (filters.identificadorQuery?.trim()) {
+        const query = filters.identificadorQuery.toLowerCase()
+        if (!solicitud.radicado.toLowerCase().includes(query)) return false
+      }
+
       if (filters.searchQuery.trim()) {
         const query = filters.searchQuery.toLowerCase()
 
@@ -140,7 +146,7 @@ export function exportToCSV(
   filename = 'solicitudes.csv'
 ): void {
   const headers = [
-    '# Radicado',
+    '# Identificador',
     'Solicitante',
     'Categoría',
     'Departamento',

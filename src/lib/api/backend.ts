@@ -264,6 +264,7 @@ function mapHistoryAction(eventType: string): string {
   if (normalized === 'assigned') return 'Cambio de departamento'
   if (normalized === 'status_changed') return 'Cambio de estado'
   if (normalized === 'internal_observation') return 'Observación interna'
+  if (normalized === 'document_viewed') return 'Documento revisado'
 
   return eventType
 }
@@ -277,6 +278,7 @@ function mapHistoryDescription(entry: BackendHistoryEntry): string {
   if (normalized === 'assigned') return 'Solicitud asignada'
   if (normalized === 'status_changed') return 'Cambio de estado registrado'
   if (normalized === 'internal_observation') return 'Observación interna registrada'
+  if (normalized === 'document_viewed') return `Documento revisado por ${entry.userName}`
 
   return entry.eventType
 }
@@ -352,6 +354,7 @@ export function mapBackendRequest(
         usuarioId: 'backend',
       },
     ],
+    anotaciones: [],
   }
 }
 
@@ -488,6 +491,11 @@ export const backendApi = {
     return apiRequest<BackendHistoryEntry[]>(`/requests/${id}/history`)
   },
 
+  registerDocumentView(id: string) {
+    return apiRequest<BackendHistoryEntry>(`/requests/${id}/document-views`, {
+      method: 'POST',
+    })
+  },
   async createRequest(input: {
     titulo: string
     descripcion: string

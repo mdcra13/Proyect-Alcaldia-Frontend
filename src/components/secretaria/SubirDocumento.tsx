@@ -204,7 +204,7 @@ export default function SubirDocumento() {
             {/* Título */}
             <div>
               <label htmlFor="titulo" className="form-label">
-                Título <span className="text-destructive">*</span>
+                Identificador / título <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <FileText className="form-icon" />

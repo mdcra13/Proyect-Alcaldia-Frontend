@@ -170,6 +170,7 @@ interface SolicitudesState {
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => Promise<void>
   addSolicitud: (solicitud: NewSolicitudData) => Promise<Solicitud>
+  registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
   CATEGORIES: CategoriesMap
@@ -385,6 +386,36 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     return persisted
   },
 
+  registrarVista: (id, userId, userName) => {
+    const solicitud = get().getSolicitudById(id)
+    if (!solicitud) return undefined
+
+    const descripcion = `Documento revisado por ${userName}`
+    const alreadyRegistered = solicitud.historial.some(
+      entry => entry.usuarioId === userId && entry.descripcion === descripcion
+    )
+    if (alreadyRegistered) return solicitud
+
+    const updatedSolicitud: Solicitud = {
+      ...solicitud,
+      historial: [
+        ...solicitud.historial,
+        {
+          id: crypto.randomUUID(),
+          fecha: new Date().toISOString(),
+          accion: solicitud.estado,
+          descripcion,
+          usuario: userName,
+          usuarioId: userId,
+        },
+      ],
+    }
+    set(state => ({
+      solicitudes: state.solicitudes.map(item => item.id === id ? updatedSolicitud : item),
+    }))
+    void backendApi.registerDocumentView(id).catch(() => undefined)
+    return updatedSolicitud
+  },
   search: (query: string, filters: SolicitudFilters = {}, departamentoId?: string): Solicitud[] => {
     let results = get().solicitudes
 

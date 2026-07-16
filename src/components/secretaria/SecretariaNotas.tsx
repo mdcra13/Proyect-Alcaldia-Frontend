@@ -57,6 +57,7 @@ export default function SecretariaNotas() {
   const filters = useSolicitudFilters()
   const { user } = useAuthStore()
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
+  const registrarVista = useSolicitudesStore(state => state.registrarVista)
   const getDepartamentosActivos = useDepartamentosStore(
     state => state.getDepartamentosActivos
   )
@@ -83,6 +84,7 @@ export default function SecretariaNotas() {
     solicitudes,
     {
       searchQuery: filters.searchQuery,
+      identificadorQuery: filters.identificadorQuery,
       estado: filters.estado,
       departamento: filters.departamento,
       categoria: filters.categoria,
@@ -98,6 +100,7 @@ export default function SecretariaNotas() {
   user,
   solicitudes,
   filters.searchQuery,
+  filters.identificadorQuery,
   filters.estado,
   filters.departamento,
   filters.categoria,
@@ -115,8 +118,8 @@ export default function SecretariaNotas() {
 
   const handleExportCSV = () => {
     const headers = [
-      'Radicado',
-      'Título',
+      'Identificador',
+      'Identificador',
       'Solicitante',
       'Identificación',
       'Categoría',
@@ -147,7 +150,12 @@ export default function SecretariaNotas() {
   }
 
   const handleViewDetail = (solicitud: Solicitud) => {
-    setSelectedSolicitud(solicitud)
+    const fullName = user ? `${user.nombre} ${user.apellido}` : 'Usuario'
+    const solicitudVista = user
+      ? registrarVista(solicitud.id, user.id, fullName)
+      : undefined
+
+    setSelectedSolicitud(solicitudVista ?? solicitud)
     setShowDetailModal(true)
   }
 
@@ -191,6 +199,7 @@ export default function SecretariaNotas() {
           headingLevel={2}
           departamentos={departamentos}
           searchQuery={filters.searchQuery}
+          identificadorQuery={filters.identificadorQuery}
           estado={filters.estado}
           departamento={filters.departamento}
           categoria={filters.categoria}
@@ -209,10 +218,10 @@ export default function SecretariaNotas() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">
-                    Radicado
+                    Identificador
                   </th>
                   <th className="p-4 text-left font-medium text-muted-foreground">
-                    Título
+                    Identificador
                   </th>
                   <th className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">
                     Departamento
@@ -401,7 +410,7 @@ export default function SecretariaNotas() {
               <div className="space-y-6 p-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Título</p>
+                    <p className="text-sm text-muted-foreground">Identificador</p>
                     <p className="font-medium">{selectedSolicitud.titulo}</p>
                   </div>
 
