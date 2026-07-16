@@ -43,7 +43,7 @@ export default function DocumentPreviewModal({
 
   const canReview =
     ((user?.role === 'alcalde' && solicitud.estado === 'awaiting_mayor_signature') ||
-     (user?.role === 'departamento' && ['assigned_to_department', 'in_review', 'returned_to_department'].includes(solicitud.estado))) &&
+    (user?.role === 'departamento' && ['assigned_to_department', 'in_review', 'returned_to_department'].includes(solicitud.estado))) &&
     Boolean(onApprove || onDecline)
 
   useModalAccessibility(open, dialogRef, onClose)

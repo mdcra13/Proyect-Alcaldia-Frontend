@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -14,28 +14,51 @@ export function useModalAccessibility(
   dialogRef: RefObject<HTMLElement | null>,
   onClose: () => void,
 ) {
+  const onCloseRef = useRef(onClose)
+
   useEffect(() => {
-    if (!open) return
+    onCloseRef.current = onClose
+  }, [onClose])
 
-    const previousActiveElement = document.activeElement
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const previousActiveElement = document.activeElement as HTMLElement | null
     const dialog = dialogRef.current
-    const focusableElements = () =>
-      Array.from(dialog?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
-        .filter(element => !element.hasAttribute('disabled'))
 
-    const [firstElement] = focusableElements()
-    firstElement?.focus()
+    if (!dialog) {
+      return
+    }
+
+    const getFocusableElements = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((element) => !element.hasAttribute('disabled'))
+
+    const focusable = getFocusableElements()
+
+    if (
+      focusable.length > 0 &&
+      !dialog.contains(document.activeElement)
+    ) {
+      focusable[0].focus()
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
 
-      if (event.key !== 'Tab') return
+      if (event.key !== 'Tab') {
+        return
+      }
 
-      const elements = focusableElements()
+      const elements = getFocusableElements()
+
       if (elements.length === 0) {
         event.preventDefault()
         return
@@ -44,26 +67,31 @@ export function useModalAccessibility(
       const first = elements[0]
       const last = elements[elements.length - 1]
 
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        }
         return
       }
 
-      if (!event.shiftKey && document.activeElement === last) {
+      if (document.activeElement === last) {
         event.preventDefault()
         first.focus()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
+    dialog.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
+      dialog.removeEventListener('keydown', handleKeyDown)
 
-      if (previousActiveElement instanceof HTMLElement) {
+      if (
+        previousActiveElement &&
+        document.contains(previousActiveElement)
+      ) {
         previousActiveElement.focus()
       }
     }
-  }, [dialogRef, onClose, open])
+  }, [open, dialogRef])
 }
