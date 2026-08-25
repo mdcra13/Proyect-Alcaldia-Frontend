@@ -13,6 +13,7 @@ import { useFilteredSolicitudes } from '@/lib/hooks/useFilteredSolicitudes'
 import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
+import { decodeText } from '@/lib/utils'
 import type { Solicitud } from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
@@ -22,11 +23,13 @@ export default function NotasPendientes() {
   const {
     getPendientesDepartamento,
     aprobarDepartamento,
+    reenviarConCorrecciones,
     declinar,
   } = useSolicitudesStore()
 
   const {
     searchQuery,
+    identificadorQuery,
     estado,
     categoria,
     prioridad,
@@ -46,6 +49,8 @@ export default function NotasPendientes() {
   const [motivoRechazo, setMotivoRechazo]       = useState('')
   const [formError, setFormError]               = useState('')
   const [isSubmitting, setIsSubmitting]         = useState(false)
+  const [correctionFile, setCorrectionFile]     = useState<File | null>(null)
+  const [correctionFileError, setCorrectionFileError] = useState('')
 
   // Refs para restaurar foco al botón que abrió cada modal
   const approveButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -60,7 +65,7 @@ export default function NotasPendientes() {
 
   const filteredSolicitudes = useFilteredSolicitudes(
     notasDepartamento,
-    { searchQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
+    { searchQuery, identificadorQuery, estado, categoria, prioridad, fechaDesde, fechaHasta },
     'fechaLimite-asc',
   )
 
@@ -82,6 +87,8 @@ export default function NotasPendientes() {
     setSelectedSolicitud(solicitud)
     setShowApproveModal(true)
     setShowDetailModal(false)
+    setCorrectionFile(null)
+    setCorrectionFileError('')
   }
 
   const handleOpenDecline = (solicitud: Solicitud, trigger?: HTMLButtonElement | null) => {
@@ -96,6 +103,8 @@ export default function NotasPendientes() {
   const handleCloseApprove = () => {
     setShowApproveModal(false)
     setSelectedSolicitud(null)
+    setCorrectionFile(null)
+    setCorrectionFileError('')
     // AccessibleDialog ya restaura el foco al elemento anterior al montarse,
     // pero si el modal fue abierto desde otro modal (detail → approve) el ref
     // garantiza el destino correcto.
@@ -118,12 +127,28 @@ export default function NotasPendientes() {
 
   const handleApprove = async () => {
     if (!selectedSolicitud || !user) return
+    const isResubmission = selectedSolicitud.estado === 'returned_to_department'
+    if (isResubmission && !correctionFile) {
+      setCorrectionFileError('Debes adjuntar el documento corregido o faltante.')
+      return
+    }
     setIsSubmitting(true)
     try {
-      await aprobarDepartamento(selectedSolicitud.id, user.id, `${user.nombre} ${user.apellido}`)
+      if (isResubmission && correctionFile) {
+        await reenviarConCorrecciones(
+          selectedSolicitud.id,
+          correctionFile,
+          user.id,
+          `${user.nombre} ${user.apellido}`,
+        )
+      } else {
+        await aprobarDepartamento(selectedSolicitud.id, user.id, `${user.nombre} ${user.apellido}`)
+      }
       setShowApproveModal(false)
       setSelectedSolicitud(null)
-      toast.success('Solicitud enviada a Alcaldía')
+      setCorrectionFile(null)
+      setCorrectionFileError('')
+      toast.success(isResubmission ? 'Correcciones reenviadas a Alcaldía' : 'Solicitud enviada a Alcaldía')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo aprobar la solicitud')
     } finally {
@@ -172,6 +197,7 @@ export default function NotasPendientes() {
           idPrefix="notas-pendientes"
           departamentos={[]}
           searchQuery={searchQuery}
+          identificadorQuery={identificadorQuery}
           estado={estado}
           departamento="todos"
           categoria={categoria}
@@ -247,6 +273,7 @@ export default function NotasPendientes() {
             onClose={handleCloseDetail}
             onApprove={() => handleOpenApprove(selectedSolicitud)}
             onDecline={() => handleOpenDecline(selectedSolicitud)}
+            approveLabel={selectedSolicitud.estado === 'returned_to_department' ? 'Reenviar a Alcaldía' : undefined}
           />
         )}
 
@@ -263,24 +290,63 @@ export default function NotasPendientes() {
                 id="approve-modal-title"
                 className="font-serif text-xl font-semibold text-success"
               >
-                Aprobar solicitud
+                {selectedSolicitud.estado === 'returned_to_department'
+                  ? 'Reenviar solicitud corregida'
+                  : 'Aprobar solicitud'}
               </h2>
               <p id="approve-modal-desc" className="mt-2 text-sm text-muted-foreground">
-                Al aprobar esta solicitud, será enviada al alcalde para revisión final.
+                {selectedSolicitud.estado === 'returned_to_department'
+                  ? 'Adjunta el documento corregido o faltante solicitado por Alcaldía.'
+                  : 'Al aprobar esta solicitud, será enviada al alcalde para revisión final.'}
               </p>
             </div>
 
             <div className="space-y-1 px-6 py-4 text-sm">
-              <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-              <p><strong>Título:</strong> {selectedSolicitud.titulo}</p>
-              <p><strong>Solicitante:</strong> {selectedSolicitud.solicitante}</p>
+              <p><strong>Código de seguimiento:</strong> {selectedSolicitud.radicado}</p>
+              <p><strong>Identificador:</strong> {selectedSolicitud.titulo}</p>
+              <p><strong>Solicitante:</strong> {decodeText(selectedSolicitud.solicitante)}</p>
+              {selectedSolicitud.estado === 'returned_to_department' && (
+                <div className="mt-4 space-y-2">
+                  <label htmlFor="correction-document" className="block font-medium">
+                    Documento corregido o faltante *
+                  </label>
+                  <input
+                    id="correction-document"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                    onChange={event => {
+                      const file = event.target.files?.[0] ?? null
+                      setCorrectionFileError('')
+                      if (file && !['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                        setCorrectionFile(null)
+                        setCorrectionFileError('Solo se permiten archivos PDF, JPG, PNG o WebP.')
+                        return
+                      }
+                      if (file && file.size > 10 * 1024 * 1024) {
+                        setCorrectionFile(null)
+                        setCorrectionFileError('El archivo no debe superar los 10 MB.')
+                        return
+                      }
+                      setCorrectionFile(file)
+                    }}
+                    className="modal-form-field"
+                    aria-invalid={correctionFileError ? true : undefined}
+                    aria-describedby={correctionFileError ? 'correction-file-error' : undefined}
+                  />
+                  {correctionFileError && (
+                    <p id="correction-file-error" role="alert" className="text-xs text-destructive">
+                      {correctionFileError}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">
               <button
                 type="button"
                 onClick={handleCloseApprove}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (selectedSolicitud.estado === 'returned_to_department' && !correctionFile)}
                 className="modal-btn-cancel"
               >
                 Cancelar
@@ -291,7 +357,11 @@ export default function NotasPendientes() {
                 disabled={isSubmitting}
                 className="modal-btn-success"
               >
-                {isSubmitting ? 'Aprobando...' : 'Confirmar aprobación'}
+                {isSubmitting
+                  ? 'Enviando...'
+                  : selectedSolicitud.estado === 'returned_to_department'
+                    ? 'Reenviar a Alcaldía'
+                    : 'Confirmar aprobación'}
               </button>
             </div>
           </AccessibleDialog>
@@ -319,8 +389,8 @@ export default function NotasPendientes() {
 
             <div className="space-y-4 px-6 py-4">
               <div className="text-sm">
-                <p><strong>Radicado:</strong> {selectedSolicitud.radicado}</p>
-                <p className="mt-1"><strong>Título:</strong> {selectedSolicitud.titulo}</p>
+                <p><strong>Código de seguimiento:</strong> {selectedSolicitud.radicado}</p>
+                <p className="mt-1"><strong>Identificador:</strong> {selectedSolicitud.titulo}</p>
               </div>
 
               <div>

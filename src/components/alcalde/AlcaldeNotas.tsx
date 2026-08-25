@@ -9,6 +9,7 @@ import {
   PenLine,
   Search,
   Undo2,
+  XCircle,
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
@@ -16,6 +17,7 @@ import { CambiarEstadoModal } from '@/components/shared/CambiarEstadoModal'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import { EstadoBadge } from '@/components/shared/EstadoBadge'
 import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import {
@@ -32,6 +34,7 @@ const ITEMS_PER_PAGE = 10
 const ALCALDE_VISIBLE_ESTADOS: SolicitudEstado[] = [
   'approved_by_department',
   'awaiting_mayor_signature',
+  'rejected_by_mayor_office',
   'signed',
 ]
 
@@ -185,7 +188,14 @@ export default function AlcaldeNotas() {
     }
   }
 
-  const handlePreviewDecline = () => {
+  const handlePreviewReject = () => {
+    if (!selectedSolicitud || selectedSolicitud.estado === 'signed') return
+
+    setShowPreviewModal(false)
+    handleAlcaldeAction(selectedSolicitud, 'rejected_by_mayor_office')
+  }
+
+  const handlePreviewRequestChanges = () => {
     if (!selectedSolicitud || selectedSolicitud.estado === 'signed') return
 
     setShowPreviewModal(false)
@@ -220,7 +230,7 @@ export default function AlcaldeNotas() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
-                placeholder="Buscar por radicado, título o solicitante..."
+                placeholder="Buscar por código de seguimiento, título o solicitante..."
                 value={searchQuery}
                 onChange={(event) => updateFilter('q', event.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
@@ -321,8 +331,8 @@ export default function AlcaldeNotas() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Radicado</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Título</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Código de seguimiento</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Identificador</th>
                   <th className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">
                     Departamento
                   </th>
@@ -345,7 +355,7 @@ export default function AlcaldeNotas() {
                 ) : (
                   paginatedSolicitudes.map((solicitud) => {
                     const canApprove = solicitud.estado === 'approved_by_department'
-                    const canReturn =
+                    const canDecide =
                       solicitud.estado === 'approved_by_department' ||
                       solicitud.estado === 'awaiting_mayor_signature'
                     const canSign = solicitud.estado === 'awaiting_mayor_signature'
@@ -370,7 +380,7 @@ export default function AlcaldeNotas() {
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
-                              {solicitud.departamento?.nombre ?? 'Sin asignar'}
+                              {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ?? 'Sin asignar'}
                             </span>
                           </div>
                         </td>
@@ -415,20 +425,6 @@ export default function AlcaldeNotas() {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                handleAlcaldeAction(solicitud, 'returned_to_department')
-                              }
-                              disabled={!canReturn}
-                              className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
-                              title="Rechazar y devolver al departamento"
-                              aria-label={`Rechazar y devolver ${solicitud.radicado}`}
-                            >
-                              <Undo2 className="h-4 w-4" />
-                              <span className="hidden xl:inline">Rechazar</span>
-                            </button>
-
-                            <button
-                              type="button"
                               onClick={() => handleAlcaldeAction(solicitud, 'signed')}
                               disabled={!canSign}
                               className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
@@ -445,6 +441,34 @@ export default function AlcaldeNotas() {
                               <span className="hidden xl:inline">
                                 {isSigned ? 'Firmada' : 'Firmar'}
                               </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleAlcaldeAction(solicitud, 'rejected_by_mayor_office')
+                              }
+                              disabled={!canDecide}
+                              className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
+                              title="Rechazar definitivamente"
+                              aria-label={`Rechazar ${solicitud.radicado}`}
+                            >
+                              <XCircle className="h-4 w-4" />
+                              <span className="hidden xl:inline">Rechazar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleAlcaldeAction(solicitud, 'returned_to_department')
+                              }
+                              disabled={!canDecide}
+                              className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-500"
+                              title="Solicitar cambios al departamento"
+                              aria-label={`Solicitar cambios para ${solicitud.radicado}`}
+                            >
+                              <Undo2 className="h-4 w-4" />
+                              <span className="hidden xl:inline">Cambios</span>
                             </button>
                           </div>
                         </td>
@@ -499,7 +523,8 @@ export default function AlcaldeNotas() {
             open={showPreviewModal}
             onClose={() => setShowPreviewModal(false)}
             onApprove={handlePreviewApprove}
-            onDecline={handlePreviewDecline}
+            onDecline={handlePreviewReject}
+            onRequestChanges={handlePreviewRequestChanges}
           />
         )}
 

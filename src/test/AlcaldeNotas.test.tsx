@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { axe } from 'vitest-axe'
 import AlcaldeNotas from '@/components/alcalde/AlcaldeNotas'
@@ -109,5 +109,30 @@ describe('AlcaldeNotas', () => {
     const results = await axe(container)
 
     expect(results.violations).toHaveLength(0)
+  })
+
+  it('separates rejection from requesting changes', () => {
+    useSolicitudesStore.setState({ solicitudes: [mockSolicitudAlcalde] })
+    renderAlcaldeNotas()
+
+    expect(screen.getByRole('button', { name: 'Aprobar #5001' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Firmar #5001' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Rechazar #5001' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Solicitar cambios para #5001' })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rechazar #5001' }))
+    expect(screen.getByRole('heading', { name: 'Rechazar Solicitud' })).toBeInTheDocument()
+    expect(screen.getAllByText('Rechazada por Alcaldía')).toHaveLength(2)
+  })
+
+  it('opens the change request flow independently', () => {
+    useSolicitudesStore.setState({ solicitudes: [mockSolicitudAlcalde] })
+    renderAlcaldeNotas()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar cambios para #5001' }))
+    expect(
+      screen.getByRole('heading', { name: 'Solicitar cambios al departamento' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Devuelta a departamento')).toBeInTheDocument()
   })
 })

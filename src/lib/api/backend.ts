@@ -1,3 +1,4 @@
+import { decodeText } from '@/lib/utils'
 import type {
   Departamento,
   HistorialEntry,
@@ -106,12 +107,15 @@ interface BackendStatus {
   id: string
   name: string
   description?: string
+  isActive?: boolean
 }
 
 interface BackendRequestListItem {
   id: string
   subject: string
+  description: string
   applicantName: string
+  applicantContact: string
   categoryName: string
   departmentName: string
   statusName: string
@@ -120,6 +124,7 @@ interface BackendRequestListItem {
   trackingCode: string
   createdAt: string
   receivedById: string
+  receivedByName: string
   requestDate: string
   deadline: string | null
   documentName: string | null
@@ -127,9 +132,6 @@ interface BackendRequestListItem {
 }
 
 interface BackendRequestDetails extends BackendRequestListItem {
-  description: string
-  applicantContact: string
-  receivedByName: string
   updatedAt: string
 }
 
@@ -137,9 +139,26 @@ interface BackendHistoryEntry {
   id: string
   eventType: string
   observation?: string | null
+  previousStatusName?: string | null
+  newStatusName?: string | null
+  previousAssignedUserName?: string | null
+  newAssignedUserName?: string | null
   userId: string
   userName: string
   createdAt: string
+}
+
+interface BackendDocumentVersion {
+  id: string
+  fileName: string
+  fileType: string
+  size: number
+  url: string
+  uploadedById: string
+  uploadedByName: string
+  createdAt: string
+  version: number
+  isCurrent: boolean
 }
 
 export interface BackendCatalogs {
@@ -240,19 +259,19 @@ function normalize(value?: string | null) {
 }
 
 function mapRole(roleName?: string): UserRole {
-  return ROLE_MAP[normalize(roleName)] ?? 'secretaria'
+  return ROLE_MAP[normalize(decodeText(roleName))] ?? 'secretaria'
 }
 
 function mapStatus(statusName?: string): SolicitudEstado {
-  return STATUS_MAP[normalize(statusName)] ?? 'received'
+  return STATUS_MAP[normalize(decodeText(statusName))] ?? 'received'
 }
 
 function mapPriority(priority?: string): SolicitudPrioridad {
-  return PRIORITY_FROM_BACKEND[normalize(priority)] ?? 'MEDIUM'
+  return PRIORITY_FROM_BACKEND[normalize(decodeText(priority))] ?? 'MEDIUM'
 }
 
 function mapCategory(categoryName?: string): SolicitudCategoria {
-  const normalized = normalize(categoryName)
+  const normalized = normalize(decodeText(categoryName))
   const match = Object.entries(CATEGORY_MAP).find(([key]) => normalized.includes(key))
   return match?.[1] ?? 'comunidad'
 }
@@ -264,38 +283,70 @@ function mapHistoryAction(eventType: string): string {
   if (normalized === 'assigned') return 'Cambio de departamento'
   if (normalized === 'status_changed') return 'Cambio de estado'
   if (normalized === 'internal_observation') return 'Observación interna'
+  if (normalized === 'document_uploaded') return 'Documento cargado'
   if (normalized === 'document_viewed') return 'Documento revisado'
 
   return eventType
 }
 
 function mapHistoryDescription(entry: BackendHistoryEntry): string {
-  if (entry.observation) return entry.observation
-
   const normalized = normalize(entry.eventType)
+
+  if (normalized === 'status_changed' && entry.newStatusName) {
+    const previous = entry.previousStatusName
+      ? statusLabel(entry.previousStatusName)
+      : 'estado inicial'
+    const change = `${previous} → ${statusLabel(entry.newStatusName)}`
+    return entry.observation ? `${change}. Motivo: ${decodeText(entry.observation)}` : change
+  }
+
+  if (normalized === 'assigned' && entry.newAssignedUserName) {
+    const assignment = `Asignada a ${decodeText(entry.newAssignedUserName)}`
+    return entry.observation ? `${assignment}. Motivo: ${decodeText(entry.observation)}` : assignment
+  }
+
+  if (entry.observation) return decodeText(entry.observation)
 
   if (normalized === 'request_created') return 'Solicitud creada'
   if (normalized === 'assigned') return 'Solicitud asignada'
   if (normalized === 'status_changed') return 'Cambio de estado registrado'
   if (normalized === 'internal_observation') return 'Observación interna registrada'
-  if (normalized === 'document_viewed') return `Documento revisado por ${entry.userName}`
+  if (normalized === 'document_uploaded') return `Nueva versión cargada por ${decodeText(entry.userName)}`
+  if (normalized === 'document_viewed') return `Documento revisado por ${decodeText(entry.userName)}`
 
-  return entry.eventType
+  return decodeText(entry.eventType)
+}
+
+function statusLabel(statusName: string): string {
+  const labels: Record<SolicitudEstado, string> = {
+    received: 'Recibida',
+    assigned_to_department: 'Asignada a departamento',
+    in_review: 'En revisión',
+    approved_by_department: 'Aprobada por departamento',
+    rejected_by_department: 'Rechazada por departamento',
+    awaiting_mayor_signature: 'Pendiente de firma',
+    returned_to_department: 'Devuelta para cambios',
+    rejected_by_mayor_office: 'Rechazada por Alcaldía',
+    signed: 'Firmada',
+    closed: 'Cerrada',
+  }
+
+  return labels[mapStatus(statusName)] ?? decodeText(statusName)
 }
 
 export function mapBackendUser(user: BackendUser): User {
   return {
     id: user.id,
-    nombre: user.firstName,
-    apellido: user.lastName,
+    nombre: decodeText(user.firstName),
+    apellido: decodeText(user.lastName),
     username: user.email,
     role: mapRole(user.role?.name),
     departamentoId: user.departmentId,
     departamento: user.department
       ? {
           id: user.department.id,
-          nombre: user.department.name,
-          descripcion: user.department.description,
+          nombre: decodeText(user.department.name),
+          descripcion: decodeText(user.department.description),
           activo: user.department.isActive ?? true,
         }
       : undefined,
@@ -308,8 +359,8 @@ export function mapBackendUser(user: BackendUser): User {
 export function mapBackendDepartment(department: BackendDepartment): Departamento {
   return {
     id: department.id,
-    nombre: department.name,
-    descripcion: department.description,
+    nombre: decodeText(department.name),
+    descripcion: decodeText(department.description),
     activo: department.isActive ?? true,
   }
 }
@@ -328,11 +379,11 @@ export function mapBackendRequest(
 
   return {
     id: request.id,
-    radicado: request.trackingCode || request.id,
-    titulo: request.subject,
-    descripcion: 'description' in request ? request.description : request.subject,
-    solicitante: request.applicantName,
-    identificacion: 'applicantContact' in request ? request.applicantContact : '',
+    radicado: decodeText(request.trackingCode || request.id),
+    titulo: decodeText(request.subject),
+    descripcion: decodeText(request.description),
+    solicitante: decodeText(request.applicantName),
+    identificacion: decodeText(request.applicantContact) || 'No especificada',
     categoria: mapCategory(request.categoryName),
     departamentoId: departamento?.id,
     departamento,
@@ -340,9 +391,9 @@ export function mapBackendRequest(
     fechaLimite: request.deadline || fallbackDeadline.toISOString().slice(0, 10),
     estado,
     prioridad: mapPriority(request.priority),
-    subidoPor: 'receivedByName' in request ? request.receivedByName : 'Backend',
+    subidoPor: decodeText(request.receivedByName) || 'Usuario no disponible',
     subidoPorId: request.receivedById,
-    documento: request.documentName ?? undefined,
+    documento: request.documentName ? decodeText(request.documentName) : undefined,
     documentoUrl: resolveBackendAssetUrl(request.documentUrl),
     historial: [
       {
@@ -364,8 +415,23 @@ export function mapBackendHistory(entries: BackendHistoryEntry[]): HistorialEntr
     fecha: entry.createdAt,
     accion: mapHistoryAction(entry.eventType),
     descripcion: mapHistoryDescription(entry),
-    usuario: entry.userName,
+    usuario: decodeText(entry.userName),
     usuarioId: entry.userId,
+  }))
+}
+
+export function mapBackendDocuments(entries: BackendDocumentVersion[]) {
+  return entries.map(entry => ({
+    id: entry.id,
+    nombre: decodeText(entry.fileName),
+    tipo: entry.fileType,
+    tamano: entry.size,
+    url: resolveBackendAssetUrl(entry.url) ?? '',
+    subidoPorId: entry.uploadedById,
+    subidoPor: decodeText(entry.uploadedByName),
+    fecha: entry.createdAt,
+    version: entry.version,
+    esActual: entry.isCurrent,
   }))
 }
 
@@ -491,6 +557,10 @@ export const backendApi = {
     return apiRequest<BackendHistoryEntry[]>(`/requests/${id}/history`)
   },
 
+  requestDocuments(id: string) {
+    return apiRequest<BackendDocumentVersion[]>(`/requests/${id}/documents`)
+  },
+
   registerDocumentView(id: string) {
     return apiRequest<BackendHistoryEntry>(`/requests/${id}/document-views`, {
       method: 'POST',
@@ -558,7 +628,9 @@ export const backendApi = {
 
   async changeStatus(id: string, estado: SolicitudEstado, observation?: string) {
     const statuses = await this.statuses()
-    const status = statuses.find(item => mapStatus(item.name) === estado)
+    const status =
+      statuses.find(item => item.isActive !== false && mapStatus(item.name) === estado) ??
+      statuses.find(item => mapStatus(item.name) === estado)
     if (!status) {
       throw new ApiError(`El backend no tiene el estado ${estado}.`, 400)
     }

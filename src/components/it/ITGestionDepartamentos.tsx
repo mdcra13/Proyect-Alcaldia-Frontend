@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import AccessibleDialog from '@/components/shared/AccessibleDialog'
+import { decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import type { Departamento } from '@/lib/types'
@@ -78,8 +79,8 @@ export default function ITGestionDepartamentos() {
     triggerRef.current = trigger
     setEditingDepartamento(departamento)
     setFormData({
-      nombre: departamento.nombre,
-      descripcion: departamento.descripcion ?? '',
+      nombre: normalizeDepartamentoNombre(departamento.nombre),
+      descripcion: decodeText(departamento.descripcion) ?? '',
       activo: departamento.activo,
     })
     setIsModalOpen(true)
@@ -230,14 +231,14 @@ export default function ITGestionDepartamentos() {
                               focusable="false"
                             />
                             <span className="font-medium text-foreground">
-                              {departamento.nombre}
+                              {normalizeDepartamentoNombre(departamento.nombre)}
                             </span>
                           </div>
                         </td>
 
                         <td className="p-4">
                           <p className="max-w-md text-sm text-muted-foreground">
-                            {departamento.descripcion || 'Sin descripcion'}
+                            {decodeText(departamento.descripcion) || 'Sin descripcion'}
                           </p>
                         </td>
 
@@ -252,7 +253,7 @@ export default function ITGestionDepartamentos() {
                           <button
                             type="button"
                             onClick={() => handleToggleDepartamento(departamento)}
-                            aria-label={`${departamento.activo ? 'Desactivar' : 'Activar'} ${departamento.nombre}`}
+                            aria-label={`${departamento.activo ? 'Desactivar' : 'Activar'} ${normalizeDepartamentoNombre(departamento.nombre)}`}
                             className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition ${
                               departamento.activo
                                 ? 'bg-success/10 text-success hover:bg-success/20'
@@ -274,7 +275,7 @@ export default function ITGestionDepartamentos() {
                               type="button"
                               onClick={event => handleOpenEditModal(departamento, event.currentTarget)}
                               className="icon-button hover:bg-secondary"
-                              aria-label={`Editar ${departamento.nombre}`}
+                              aria-label={`Editar ${normalizeDepartamentoNombre(departamento.nombre)}`}
                             >
                               <Edit2 className="h-4 w-4" aria-hidden="true" focusable="false" />
                             </button>
@@ -380,7 +381,7 @@ export default function ITGestionDepartamentos() {
 
                           if (activeUsersCount > 0) {
                             toast.error(
-                              `No se puede desactivar ${editingDepartamento.nombre} porque tiene ${activeUsersCount} usuario(s) activo(s) asignado(s).`
+                              `No se puede desactivar ${normalizeDepartamentoNombre(editingDepartamento.nombre)} porque tiene ${activeUsersCount} usuario(s) activo(s) asignado(s).`
                             )
                             return
                           }

@@ -13,6 +13,7 @@ import { useFilteredSolicitudes } from '@/lib/hooks/useFilteredSolicitudes'
 import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
+import { decodeText } from '@/lib/utils'
 import { backendApi, mapBackendHistory } from '@/lib/api/backend'
 import { ESTADO_CONFIG, type HistorialEntry, type Solicitud } from '@/lib/types'
 
@@ -31,12 +32,12 @@ function escapeCSVCell(value: string | number | null | undefined) {
 }
 
 function exportSolicitudesCSV(solicitudes: Solicitud[]) {
-  const headers = ['Identificador', 'Identificador', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
+  const headers = ['Código de seguimiento', 'Identificador', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
 
   const rows = solicitudes.map(solicitud => [
     solicitud.radicado,
     solicitud.titulo,
-    solicitud.solicitante,
+    decodeText(solicitud.solicitante),
     solicitud.fechaLimite,
     solicitud.fechaSolicitud,
     ESTADO_CONFIG[solicitud.estado]?.label ?? solicitud.estado,

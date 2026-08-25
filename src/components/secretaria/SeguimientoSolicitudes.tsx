@@ -16,7 +16,7 @@ import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
-import { filterSolicitudes } from '@/lib/utils'
+import { filterSolicitudes, decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
@@ -123,7 +123,7 @@ export default function SeguimientoSolicitudes() {
 
   const handleExport = () => {
     const headers = [
-      'Identificador',
+      'Código de seguimiento',
       'Solicitante',
       'Identificación',
       'Categoría',
@@ -136,10 +136,10 @@ export default function SeguimientoSolicitudes() {
 
     const rows = filteredSolicitudes.map(solicitud => [
       solicitud.radicado,
-      solicitud.solicitante,
-      solicitud.identificacion,
-      CATEGORIES[solicitud.categoria]?.label ?? solicitud.categoria,
-      solicitud.departamento?.nombre ?? getDepartamentoNombre(solicitud.departamentoId),
+      decodeText(solicitud.solicitante),
+      decodeText(solicitud.identificacion),
+      CATEGORIES[solicitud.categoria]?.label ?? decodeText(solicitud.categoria),
+      normalizeDepartamentoNombre(solicitud.departamento?.nombre) ?? normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId)),
       PRIORIDAD_LABELS[solicitud.prioridad] ?? solicitud.prioridad,
       solicitud.fechaSolicitud,
       solicitud.fechaLimite,
@@ -207,7 +207,7 @@ export default function SeguimientoSolicitudes() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="table-th text-left"># Identificador</th>
+                    <th className="table-th text-left"># Código de seguimiento</th>
                     <th className="table-th text-left">Solicitante</th>
                     <th className="table-th text-left">Departamento</th>
                     <th className="table-th text-left">Prioridad</th>
@@ -231,16 +231,16 @@ export default function SeguimientoSolicitudes() {
                       </td>
 
                       <td className="table-td">
-                        <p className="font-medium">{solicitud.solicitante}</p>
+                        <p className="font-medium">{decodeText(solicitud.solicitante)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {solicitud.identificacion}
+                          {decodeText(solicitud.identificacion)}
                         </p>
                       </td>
 
                       <td className="table-td">
-                        <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-                          {solicitud.departamento?.nombre ??
-                            getDepartamentoNombre(solicitud.departamentoId)}
+                        <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
+                          {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ??
+                            normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId))}
                         </span>
                       </td>
 
@@ -354,20 +354,20 @@ export default function SeguimientoSolicitudes() {
                   </div>
 
                   <p className="mb-1 font-medium text-foreground">
-                    {solicitud.solicitante}
+                    {decodeText(solicitud.solicitante)}
                   </p>
 
                   <p className="mb-3 text-sm text-muted-foreground">
-                    {solicitud.identificacion}
+                    {decodeText(solicitud.identificacion)}
                   </p>
 
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-                      {solicitud.departamento?.nombre ??
-                        getDepartamentoNombre(solicitud.departamentoId)}
+                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
+                      {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ??
+                        normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId))}
                     </span>
 
-                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
+                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
                       {PRIORIDAD_LABELS[solicitud.prioridad]}
                     </span>
 

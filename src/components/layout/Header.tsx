@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
+import { decodeText } from '@/lib/utils'
 import { ROLE_LABELS } from '@/lib/types'
 
 interface HeaderProps {
@@ -69,8 +70,8 @@ export default function Header({
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   const unreadNotifications = unreadCount()
-  const fullName = user ? `${user.nombre} ${user.apellido}` : ''
-  const initials = `${user?.nombre?.[0] ?? ''}${user?.apellido?.[0] ?? ''}`.toUpperCase()
+  const fullName = user ? `${decodeText(user.nombre)} ${decodeText(user.apellido)}` : ''
+  const initials = `${decodeText(user?.nombre)?.[0] ?? ''}${decodeText(user?.apellido)?.[0] ?? ''}`.toUpperCase()
   const roleLabel = user ? ROLE_LABELS[user.role] : ''
 
   useEffect(() => {
@@ -222,7 +223,7 @@ export default function Header({
             {showUserMenu && (
               <div className="dropdown-panel w-56">
                 <div className="border-b border-border px-4 py-3">
-                  <p className="truncate font-medium">{fullName}</p>
+                  <p className="truncate font-medium">{decodeText(fullName)}</p>
                   <span className="mt-2 inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
                     {roleLabel}
                   </span>

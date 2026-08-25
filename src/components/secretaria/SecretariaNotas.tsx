@@ -15,7 +15,7 @@ import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
 import { HistorialTimeline } from '@/components/shared/HistorialTimeline'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
 import useAuthStore from '@/lib/stores/authStore'
-import { filterSolicitudes } from '@/lib/utils'
+import { filterSolicitudes, decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
@@ -118,7 +118,7 @@ export default function SecretariaNotas() {
 
   const handleExportCSV = () => {
     const headers = [
-      'Identificador',
+      'Código de seguimiento',
       'Identificador',
       'Solicitante',
       'Identificación',
@@ -133,10 +133,10 @@ export default function SecretariaNotas() {
     const rows = filteredSolicitudes.map(solicitud => [
       solicitud.radicado,
       solicitud.titulo,
-      solicitud.solicitante,
-      solicitud.identificacion,
-      CATEGORIES[solicitud.categoria]?.label ?? solicitud.categoria,
-      solicitud.departamento?.nombre ?? getDepartamentoNombre(solicitud.departamentoId),
+      decodeText(solicitud.solicitante),
+      decodeText(solicitud.identificacion),
+      CATEGORIES[solicitud.categoria]?.label ?? decodeText(solicitud.categoria),
+      normalizeDepartamentoNombre(solicitud.departamento?.nombre) ?? normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId)),
       PRIORIDAD_LABELS[solicitud.prioridad] ?? solicitud.prioridad,
       solicitud.fechaSolicitud,
       solicitud.fechaLimite,
@@ -218,7 +218,7 @@ export default function SecretariaNotas() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">
-                    Identificador
+                    Código de seguimiento
                   </th>
                   <th className="p-4 text-left font-medium text-muted-foreground">
                     Identificador
@@ -265,19 +265,19 @@ export default function SecretariaNotas() {
 
                       <td className="p-4">
                         <div>
-                          <p className="max-w-[220px] truncate font-medium">
+                          <p className="truncate font-medium max-w-[300px]">
                             {solicitud.titulo}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {solicitud.solicitante}
+                          <p className="text-sm text-muted-foreground whitespace-nowrap">
+                            {decodeText(solicitud.solicitante)}
                           </p>
                         </div>
                       </td>
 
                       <td className="hidden p-4 md:table-cell">
                         <span className="text-sm">
-                          {solicitud.departamento?.nombre ??
-                            getDepartamentoNombre(solicitud.departamentoId)}
+                          {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ??
+                            normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId))}
                         </span>
                       </td>
 
@@ -421,7 +421,7 @@ export default function SecretariaNotas() {
 
                   <div>
                     <p className="text-sm text-muted-foreground">Solicitante</p>
-                    <p className="font-medium">{selectedSolicitud.solicitante}</p>
+                    <p className="font-medium">{decodeText(selectedSolicitud.solicitante)}</p>
                   </div>
 
                   <div>
@@ -429,7 +429,7 @@ export default function SecretariaNotas() {
                       Identificación
                     </p>
                     <p className="font-medium">
-                      {selectedSolicitud.identificacion}
+                      {decodeText(selectedSolicitud.identificacion)}
                     </p>
                   </div>
 
@@ -437,7 +437,7 @@ export default function SecretariaNotas() {
                     <p className="text-sm text-muted-foreground">Categoría</p>
                     <p className="font-medium">
                       {CATEGORIES[selectedSolicitud.categoria]?.label ??
-                        selectedSolicitud.categoria}
+                        decodeText(selectedSolicitud.categoria)}
                     </p>
                   </div>
 
@@ -451,8 +451,8 @@ export default function SecretariaNotas() {
                   <div>
                     <p className="text-sm text-muted-foreground">Departamento</p>
                     <p className="font-medium">
-                      {selectedSolicitud.departamento?.nombre ??
-                        getDepartamentoNombre(selectedSolicitud.departamentoId)}
+                      {normalizeDepartamentoNombre(selectedSolicitud.departamento?.nombre) ??
+                        normalizeDepartamentoNombre(getDepartamentoNombre(selectedSolicitud.departamentoId))}
                     </p>
                   </div>
 
@@ -465,7 +465,7 @@ export default function SecretariaNotas() {
                 <div>
                   <p className="mb-2 text-sm text-muted-foreground">Descripción</p>
                   <p className="rounded-lg bg-muted p-3 text-sm">
-                    {selectedSolicitud.descripcion}
+                    {selectedSolicitud.descripcion || 'Sin descripción'}
                   </p>
                 </div>
 
