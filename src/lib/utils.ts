@@ -58,7 +58,8 @@ export function decodeText(text: string | null | undefined): string {
   result = result.replace(/\\x([0-9a-f]{2})/gi, (_, code: string) =>
     String.fromCharCode(Number.parseInt(code, 16))
   )
-  result = result.replace(/\x00/g, '')
+  result = result.split(String.fromCharCode(0)).join('')
+
   if (/%[0-9a-f]{2}/i.test(result)) {
     try {
       result = decodeURIComponent(result)
@@ -74,7 +75,7 @@ export function normalizeDepartamentoNombre(name: string | null | undefined): st
   const result = decodeText(name).replace(/\s+/g, ' ').trim()
   const key = result
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\p{Diacritic}/gu, '')
     .toLocaleLowerCase('es')
     .replace(/\s+/g, '')
 
