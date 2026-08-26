@@ -58,7 +58,7 @@ export function decodeText(text: string | null | undefined): string {
   result = result.replace(/\\x([0-9a-f]{2})/gi, (_, code: string) =>
     String.fromCharCode(Number.parseInt(code, 16))
   )
-  result = result.replace(/[\x00]/g, '')
+  result = result.replace(/\u0000/g, '')
 
   if (/%[0-9a-f]{2}/i.test(result)) {
     try {
