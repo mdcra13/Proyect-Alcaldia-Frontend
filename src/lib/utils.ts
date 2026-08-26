@@ -22,7 +22,7 @@ const KNOWN_CORRUPT_TEXT: Array<[RegExp, string]> = [
 ]
 
 function mojibakeScore(value: string) {
-  return (value.match(/[ÃÂð�]/g) ?? []).length
+  return (value.match(/[ÃÂð\uFFFD]/g) ?? []).length
 }
 
 function repairUtf8ReadAsLatin1(value: string) {
