@@ -4,6 +4,7 @@ import { CheckCircle, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import { ROLE_LABELS } from '@/lib/types'
 
 interface ProfileFormValues {
@@ -164,7 +165,7 @@ export default function PerfilUsuario() {
                 </span>
                 <input
                   type="text"
-                  value={user.departamento?.nombre ?? '—'}
+                  value={normalizeDepartamentoNombre(user.departamento?.nombre) ?? '—'}
                   readOnly
                   className="w-full rounded-md border border-input bg-secondary px-3 py-2 text-muted-foreground"
                 />

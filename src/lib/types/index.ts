@@ -49,6 +49,19 @@ export interface HistorialEntry {
   usuarioId: string
 }
 
+export interface DocumentoVersion {
+  id: string
+  nombre: string
+  tipo: string
+  tamano: number
+  url: string
+  subidoPorId: string
+  subidoPor: string
+  fecha: string
+  version: number
+  esActual: boolean
+}
+
 export type AnotacionAutorRole = 'departamento' | 'alcalde' | 'secretaria' | 'it'
 
 export interface Anotacion {
@@ -80,6 +93,7 @@ export interface Solicitud {
   subidoPorId: string
   documento?: string
   documentoUrl?: string 
+  documentos?: DocumentoVersion[]
   motivoRechazo?: string | null
   historial: HistorialEntry[]
   anotaciones: Anotacion[]
@@ -176,8 +190,16 @@ export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<
 export const ESTADO_TRANSITIONS_ALCALDE: Partial<
   Record<SolicitudEstado, SolicitudEstado[]>
 > = {
-  approved_by_department: ['awaiting_mayor_signature', 'returned_to_department'],
-  awaiting_mayor_signature: ['signed', 'returned_to_department'],
+  approved_by_department: [
+    'awaiting_mayor_signature',
+    'rejected_by_mayor_office',
+    'returned_to_department',
+  ],
+  awaiting_mayor_signature: [
+    'signed',
+    'rejected_by_mayor_office',
+    'returned_to_department',
+  ],
   signed: ['closed'],
 }
 

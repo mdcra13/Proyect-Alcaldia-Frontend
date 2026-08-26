@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import type { Solicitud } from '@/lib/types'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
@@ -105,7 +106,7 @@ export function CambiarDepartamentoModal({
             <label className="text-sm text-muted-foreground">Departamento actual</label>
             <div className="modal-info-row">
               <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{solicitud.departamento?.nombre || 'Sin asignar'}</span>
+              <span className="font-medium">{normalizeDepartamentoNombre(solicitud.departamento?.nombre) || 'Sin asignar'}</span>
             </div>
           </div>
 

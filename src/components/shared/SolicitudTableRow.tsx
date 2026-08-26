@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { Solicitud } from '@/lib/types'
 import { EstadoBadge } from '@/components/shared/EstadoBadge'
 import { FechaLimiteBadge } from '@/components/shared/FechaLimiteBadge'
+import { decodeText } from '@/lib/utils'
 
 interface SolicitudTableRowProps {
   solicitud: Solicitud
@@ -25,7 +26,7 @@ export default function SolicitudTableRow({
       </td>
 
       <td className="hidden p-4 md:table-cell">
-        <span className="text-sm">{solicitud.solicitante}</span>
+        <span className="text-sm">{decodeText(solicitud.solicitante)}</span>
       </td>
 
       {fechaIngresoFormatted && (

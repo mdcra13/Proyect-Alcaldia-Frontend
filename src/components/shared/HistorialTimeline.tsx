@@ -76,6 +76,11 @@ const accionConfig: Record<string, { icon: LucideIcon; color: string; label: str
     color: 'text-sky-700 bg-sky-100',
     label: 'Vista',
   },
+  'Documento cargado': {
+    icon: FileText,
+    color: 'text-indigo-700 bg-indigo-100',
+    label: 'Nueva versión del documento',
+  },
 
   recibido: {
     icon: FileText,
@@ -166,7 +171,7 @@ function formatDate(dateStr: string): string {
 
 export function HistorialTimeline({ historial, className }: HistorialTimelineProps) {
   const sortedHistorial = [...historial].sort(
-    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
   )
 
   if (sortedHistorial.length === 0) {

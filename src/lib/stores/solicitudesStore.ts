@@ -5,6 +5,7 @@ import {
   mapBackendDepartment,
   mapBackendRequest,
   mapBackendHistory,
+  mapBackendDocuments,
 } from '@/lib/api/backend'
 import type {
   Solicitud,
@@ -136,22 +137,25 @@ function isValidTransition(
 }
 
 async function loadPersistedRequest(id: string): Promise<Solicitud> {
-  const [details, backendDepartments, history] = await Promise.all([
+  const [details, backendDepartments, history, documents] = await Promise.all([
     backendApi.requestDetails(id),
     backendApi.departments(),
     backendApi.requestHistory(id),
+    backendApi.requestDocuments(id),
   ])
   const solicitud = mapBackendRequest(
     details,
     backendDepartments.map(mapBackendDepartment)
   )
   solicitud.historial = mapBackendHistory(history)
+  solicitud.documentos = mapBackendDocuments(documents)
   return solicitud
 }
 
 interface SolicitudesState {
   solicitudes: Solicitud[]
   fetchSolicitudes: () => Promise<void>
+  loadSolicitudDetails: (id: string) => Promise<Solicitud>
   getStats: (departamentoId?: string) => SolicitudStats
   getStatsForUser: (userId: string) => SolicitudStats
   getPendientes: (departamentoId?: string) => Solicitud[]
@@ -165,6 +169,7 @@ interface SolicitudesState {
   cambiarEstadoDepartamento: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
   cambiarEstadoAlcalde: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
   aprobarDepartamento: (id: string, userId: string, userName: string) => Promise<void>
+  reenviarConCorrecciones: (id: string, file: File, userId: string, userName: string) => Promise<void>
   aprobar: (id: string, userId: string, userName: string) => Promise<void>
   declinar: (id: string, motivo: string, userId: string, userName: string) => Promise<void>
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
@@ -194,6 +199,14 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     } catch {
       set({ solicitudes: [] })
     }
+  },
+
+  loadSolicitudDetails: async id => {
+    const persisted = await loadPersistedRequest(id)
+    set(state => ({
+      solicitudes: state.solicitudes.map(item => item.id === id ? persisted : item),
+    }))
+    return persisted
   },
 
   getStats: (departamentoId?: string): SolicitudStats => {
@@ -308,7 +321,24 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
 
   aprobarDepartamento: async (id, userId, userName) => {
     await get().cambiarEstadoDepartamento(id, 'approved_by_department', userId, userName)
-    await get().cambiarEstadoAlcalde(id, 'awaiting_mayor_signature', userId, userName)
+  },
+
+  reenviarConCorrecciones: async (id, file, userId, userName) => {
+    await backendApi.uploadRequestDocument(id, file)
+    await get().cambiarEstadoDepartamento(
+      id,
+      'in_review',
+      userId,
+      userName,
+      'Correcciones recibidas; el departamento inició una nueva revisión',
+    )
+    await get().cambiarEstadoDepartamento(
+      id,
+      'approved_by_department',
+      userId,
+      userName,
+      `Documento corregido reenviado a Alcaldía: ${file.name}`,
+    )
   },
 
   aprobar: async (id, userId, userName) => {

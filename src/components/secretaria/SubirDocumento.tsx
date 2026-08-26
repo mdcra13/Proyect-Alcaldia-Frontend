@@ -25,6 +25,7 @@ const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
+  'image/webp',
 ]
 
 export default function SubirDocumento() {
@@ -75,7 +76,7 @@ export default function SubirDocumento() {
     if (!selectedFile) return
 
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
-      setFileError('Solo se permiten archivos PDF, JPG o PNG')
+      setFileError('Solo se permiten archivos PDF, JPG, PNG o WebP')
       return
     }
     if (selectedFile.size > MAX_FILE_SIZE) {
@@ -165,7 +166,7 @@ export default function SubirDocumento() {
             <p className="mb-4 text-muted-foreground">
               La solicitud ha sido registrada exitosamente con el número de radicado:
             </p>
-            <p className="mb-6 text-2xl font-bold text-primary">{newRadicado}</p>
+            <p className="mb-6 text-2xl font-bold text-primary">Código de seguimiento: {newRadicado}</p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleNewSolicitud}
@@ -204,15 +205,15 @@ export default function SubirDocumento() {
             {/* Título */}
             <div>
               <label htmlFor="titulo" className="form-label">
-                Identificador / título <span className="text-destructive">*</span>
+                Identificador <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <FileText className="form-icon" />
                 <input
                   id="titulo"
                   type="text"
-                  {...register('titulo', { required: 'El título es requerido' })}
-                  placeholder="Título de solicitud..."
+                  {...register('titulo', { required: 'El identificador es requerido' })}
+                  placeholder="Identificador de solicitud..."
                   className="form-input pl-10"
                 />
               </div>
@@ -388,7 +389,7 @@ export default function SubirDocumento() {
                 id="documento"
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
                 onChange={handleFileSelect}
                 className="hidden"
               />

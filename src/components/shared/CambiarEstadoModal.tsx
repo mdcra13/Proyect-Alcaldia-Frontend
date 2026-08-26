@@ -31,7 +31,7 @@ function getValidTransitions(estado: SolicitudEstado, role?: string): SolicitudE
 
 function getHeaderConfig(estado: SolicitudEstado | '') {
   if (estado === 'signed') return { icon: PenLine, label: 'Firmar Solicitud', color: 'text-success' }
-  if (estado === 'returned_to_department') return { icon: CornerDownLeft, label: 'Devolver a Departamento', color: 'text-warning' }
+  if (estado === 'returned_to_department') return { icon: CornerDownLeft, label: 'Solicitar cambios al departamento', color: 'text-warning' }
   if (estado === 'rejected_by_mayor_office' || estado === 'rejected_by_department') return { icon: XCircle, label: 'Rechazar Solicitud', color: 'text-destructive' }
   return { icon: RefreshCw, label: 'Cambiar Estado', color: 'text-primary' }
 }
@@ -62,6 +62,8 @@ export function CambiarEstadoModal({
   const validTransitions = getValidTransitions(solicitud.estado, user?.role)
 
   const isSign = selectedEstado === 'signed'
+  const isReject = selectedEstado === 'rejected_by_mayor_office' || selectedEstado === 'rejected_by_department'
+  const isRequestChanges = selectedEstado === 'returned_to_department'
   const isMotivoRequired = !!selectedEstado && ESTADOS_CON_MOTIVO.includes(selectedEstado as SolicitudEstado)
   const motivoTooShort = observacion.trim().length < MOTIVO_MIN_LENGTH
   const isValid = !!selectedEstado && (!isMotivoRequired || !motivoTooShort)
@@ -235,13 +237,17 @@ export function CambiarEstadoModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitDisabled}
-            className={isSign ? 'modal-btn-success' : 'modal-btn-primary'}
+            className={isSign ? 'modal-btn-success' : isReject ? 'modal-btn-danger' : 'modal-btn-primary'}
           >
             {isSubmitting
               ? 'Guardando...'
               : isSign
                 ? 'Firmar solicitud'
-                : 'Confirmar cambio'}
+                : isReject
+                  ? 'Rechazar definitivamente'
+                  : isRequestChanges
+                    ? 'Enviar solicitud de cambios'
+                    : 'Confirmar cambio'}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import {
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import { decodeText } from '@/lib/utils'
 import type { User, UserRole } from '@/lib/types'
 import UserFormModal, { type UserFormData } from './UserFormModal'
 import { toast } from 'sonner'
@@ -291,7 +292,7 @@ export default function ITGestionUsuarios() {
                         </span>
                       </td>
                       <td className="hidden p-4 lg:table-cell">
-                        <span className="text-sm">{getDepartamentoNombre(user.departamentoId)}</span>
+                        <span className="text-sm">{decodeText(getDepartamentoNombre(user.departamentoId))}</span>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
