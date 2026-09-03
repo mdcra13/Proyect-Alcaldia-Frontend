@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { axe } from 'vitest-axe'
 import AlcaldeDashboard from '@/components/alcalde/AlcaldeDashboard'
 import useAuthStore from '@/lib/stores/authStore'

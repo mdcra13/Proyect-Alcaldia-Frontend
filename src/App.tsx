@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
@@ -114,9 +114,7 @@ function BackendBootstrap() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <BrowserRouter>
         <BackendBootstrap />
         <Suspense fallback={<PageLoader />}>
           <Routes>
