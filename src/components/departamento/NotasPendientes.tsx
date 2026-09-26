@@ -15,6 +15,7 @@ import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import { decodeText } from '@/lib/utils'
 import type { Solicitud } from '@/lib/types'
+import { MAX_FILE_SIZE_BYTES } from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
 
@@ -322,7 +323,7 @@ export default function NotasPendientes() {
                         setCorrectionFileError('Solo se permiten archivos PDF, JPG, PNG o WebP.')
                         return
                       }
-                      if (file && file.size > 10 * 1024 * 1024) {
+                      if (file && file.size > MAX_FILE_SIZE_BYTES) {
                         setCorrectionFile(null)
                         setCorrectionFileError('El archivo no debe superar los 10 MB.')
                         return
@@ -346,7 +347,7 @@ export default function NotasPendientes() {
               <button
                 type="button"
                 onClick={handleCloseApprove}
-                disabled={isSubmitting || (selectedSolicitud.estado === 'returned_to_department' && !correctionFile)}
+                disabled={isSubmitting}
                 className="modal-btn-cancel"
               >
                 Cancelar
@@ -354,7 +355,7 @@ export default function NotasPendientes() {
               <button
                 type="button"
                 onClick={handleApprove}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (selectedSolicitud.estado === 'returned_to_department' && !correctionFile)}
                 className="modal-btn-success"
               >
                 {isSubmitting

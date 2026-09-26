@@ -44,3 +44,10 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   writable: true,
   value: vi.fn(),
 })
+
+if (typeof window.URL.createObjectURL !== 'function') {
+  window.URL.createObjectURL = vi.fn((blob: Blob) => `blob:mock-url-${blob.size || 1}`)
+}
+if (typeof window.URL.revokeObjectURL !== 'function') {
+  window.URL.revokeObjectURL = vi.fn()
+}

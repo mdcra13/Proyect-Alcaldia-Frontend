@@ -1,4 +1,4 @@
-﻿import {
+import {
   Calendar,
   CheckCircle,
   Download,
@@ -22,6 +22,7 @@ import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import { decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
+import { backendApi } from '@/lib/api/backend'
 
 interface DocumentPreviewModalProps {
   solicitud: Solicitud
@@ -43,17 +44,32 @@ export default function DocumentPreviewModal({
   approveLabel,
 }: DocumentPreviewModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
+  const [prevId, setPrevId] = useState(initialSolicitud.id)
   const [solicitud, setSolicitud] = useState(initialSolicitud)
-  const [selectedDocument, setSelectedDocument] = useState<DocumentoVersion | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<DocumentoVersion | null>(() => (
+    initialSolicitud.documentos?.find(document => document.esActual) ??
+    initialSolicitud.documentos?.[0] ??
+    null
+  ))
+
+  if (initialSolicitud.id !== prevId) {
+    setPrevId(initialSolicitud.id)
+    setSolicitud(initialSolicitud)
+    setSelectedDocument(
+      initialSolicitud.documentos?.find(document => document.esActual) ??
+      initialSolicitud.documentos?.[0] ??
+      null
+    )
+  }
   const user      = useAuthStore(state => state.user)
   const registrarVista = useSolicitudesStore(state => state.registrarVista)
   const loadSolicitudDetails = useSolicitudesStore(state => state.loadSolicitudDetails)
   const category  = CATEGORIES[solicitud.categoria]
   const status    = ESTADO_CONFIG[solicitud.estado]
   const displayedDocumentName = selectedDocument?.nombre ?? solicitud.documento
-  const displayedDocumentUrl = selectedDocument?.url ?? solicitud.documentoUrl
-  const isImageDocument = /\.(?:jpe?g|png|webp)(?:$|\?)/i.test(
-    displayedDocumentUrl ?? displayedDocumentName ?? '',
+  const isImageDocument = Boolean(
+    selectedDocument?.tipo?.startsWith('image/') ||
+    /\.(?:jpe?g|png|webp)(?:$|\?)/i.test(displayedDocumentName ?? '')
   )
   const titleId       = `document-preview-title-${solicitud.id}`
   const descriptionId = `document-preview-description-${solicitud.id}`
@@ -67,11 +83,6 @@ export default function DocumentPreviewModal({
     Boolean(onApprove || onDecline || onRequestChanges)
 
   useModalAccessibility(open, dialogRef, onClose)
-
-  useEffect(() => {
-    setSolicitud(initialSolicitud)
-    setSelectedDocument(null)
-  }, [initialSolicitud])
 
   useEffect(() => {
     if (!open) return
@@ -95,8 +106,55 @@ export default function DocumentPreviewModal({
     }
   }, [initialSolicitud.id, loadSolicitudDetails, open])
 
+  const [blobState, setBlobState] = useState<{
+    docId: string | null
+    url: string | null
+    error: string | null
+  }>({ docId: null, url: null, error: null })
+
+  const shouldFetchBlob = Boolean(
+    open && user?.role !== 'it' && solicitud.id && selectedDocument?.id
+  )
+  const blobLoading = Boolean(
+    shouldFetchBlob && blobState.docId !== selectedDocument?.id
+  )
+  const blobUrl = blobState.docId === selectedDocument?.id ? blobState.url : null
+  const blobError = blobState.docId === selectedDocument?.id ? blobState.error : null
+
   useEffect(() => {
-    if (!open || !user) return
+    if (!open || user?.role === 'it' || !solicitud.id || !selectedDocument?.id) {
+      return
+    }
+
+    const docId = selectedDocument.id
+    let active = true
+    let currentBlobUrl: string | null = null
+
+    void backendApi.getDocumentBlob(solicitud.id, docId)
+      .then(blob => {
+        if (!active) return
+        currentBlobUrl = URL.createObjectURL(blob)
+        setBlobState({ docId, url: currentBlobUrl, error: null })
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        setBlobState({
+          docId,
+          url: null,
+          error: err instanceof Error ? err.message : 'Error al cargar el documento',
+        })
+      })
+
+    return () => {
+      active = false
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl)
+      }
+    }
+  }, [open, user?.role, solicitud.id, selectedDocument?.id])
+
+  useEffect(() => {
+    if (!open || !user || user.role === 'it') return
 
     registrarVista(
       solicitud.id,
@@ -229,33 +287,72 @@ export default function DocumentPreviewModal({
               </div>
               <div className="rounded-lg border border-border">
                 <div className="flex items-center justify-between border-b border-border p-4">
-                  <p className="font-medium text-foreground">
-                    {displayedDocumentName ?? 'Sin documento adjunto'}
-                  </p>
-                  {displayedDocumentName && (
-                    <a  
-                      href={displayedDocumentUrl ?? '#'}
-                      download={displayedDocumentName}
-                      onClick={e => { if (!displayedDocumentUrl) e.preventDefault() }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
-                      aria-label={`Descargar ${displayedDocumentName}`}
-                    >
-                      <Download className="h-4 w-4" aria-hidden="true" />
-                      Descargar
-                    </a>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-foreground">
+                      {displayedDocumentName ?? 'Sin documento adjunto'}
+                    </p>
+                    {selectedDocument && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        Versión {selectedDocument.version}{selectedDocument.esActual ? ' (Actual)' : ''}
+                      </span>
+                    )}
+                  </div>
+                  {displayedDocumentName && user?.role !== 'it' && (
+                    blobUrl ? (
+                      <a  
+                        href={blobUrl}
+                        download={displayedDocumentName}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
+                        aria-label={`Descargar ${displayedDocumentName}`}
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                        Descargar {selectedDocument ? `(v${selectedDocument.version})` : ''}
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed"
+                        aria-label={`Descargar ${displayedDocumentName}`}
+                        title={blobLoading ? 'Cargando documento...' : (blobError ?? 'Documento no disponible')}
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                        Descargar {selectedDocument ? `(v${selectedDocument.version})` : ''}
+                      </button>
+                    )
                   )}
                 </div>
                 <div className="flex min-h-80 items-center justify-center bg-secondary/40 p-2">
-                  {displayedDocumentUrl && isImageDocument ? (
+                  {user?.role === 'it' ? (
+                    <div className="text-center py-16">
+                      <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground" aria-hidden="true" focusable="false" />
+                      <p className="font-medium text-foreground">Visualización y descarga restringidas</p>
+                      <p className="text-sm text-muted-foreground">
+                        La visualización y descarga de documentos adjuntos no está disponible para el rol Administrador IT.
+                      </p>
+                    </div>
+                  ) : blobLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                      <p className="text-sm text-muted-foreground">Cargando documento...</p>
+                    </div>
+                  ) : blobError ? (
+                    <div className="text-center py-16">
+                      <FileText className="mx-auto mb-3 h-12 w-12 text-destructive" aria-hidden="true" focusable="false" />
+                      <p className="font-medium text-destructive">No se pudo cargar el documento</p>
+                      <p className="text-sm text-muted-foreground">{blobError}</p>
+                    </div>
+                  ) : blobUrl && isImageDocument ? (
                     <img
-                      src={displayedDocumentUrl}
+                      src={blobUrl}
                       alt={`Vista previa de ${displayedDocumentName ?? 'la imagen adjunta'}`}
                       className="max-h-[65vh] w-full rounded-md object-contain"
                     />
-                  ) : displayedDocumentUrl ? (
+                  ) : blobUrl ? (
                     <embed
-                      src={displayedDocumentUrl}
-                      type="application/pdf"
+                      src={blobUrl}
+                      type={selectedDocument?.tipo || 'application/pdf'}
                       className="h-full w-full min-h-[300px] rounded-md"
                       aria-label="Vista previa del documento PDF"
                     />
@@ -279,31 +376,41 @@ export default function DocumentPreviewModal({
               </div>
               {solicitud.documentos?.length ? (
                 <div className="space-y-2">
-                  {solicitud.documentos.map(document => (
-                    <button
-                      key={document.id}
-                      type="button"
-                      onClick={() => setSelectedDocument(document)}
-                      className={`flex w-full flex-col gap-2 rounded-lg border p-3 text-left transition sm:flex-row sm:items-center sm:justify-between ${
-                        selectedDocument?.id === document.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:bg-secondary/60'
-                      }`}
-                    >
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2 font-medium text-foreground">
-                          Versión {document.version}: {document.nombre}
-                          {document.esActual && (
-                            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">Actual</span>
-                          )}
+                  {solicitud.documentos.map(document => {
+                    const isSelected = selectedDocument?.id === document.id
+                    return (
+                      <button
+                        key={document.id}
+                        type="button"
+                        onClick={() => setSelectedDocument(document)}
+                        aria-current={isSelected ? 'true' : undefined}
+                        aria-label={`Versión ${document.version}: ${document.nombre}`}
+                        className={`flex w-full flex-col gap-2 rounded-lg border p-3 text-left transition sm:flex-row sm:items-center sm:justify-between ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'border-border hover:bg-secondary/60'
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+                            Versión {document.version}: {document.nombre}
+                            {document.esActual && (
+                              <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">Actual</span>
+                            )}
+                            {isSelected && (
+                              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">Seleccionada</span>
+                            )}
+                          </span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            Subida por {document.subidoPor} · {new Date(document.fecha).toLocaleString('es-CO')} · {(document.tamano / 1024 / 1024).toFixed(2)} MB
+                          </span>
                         </span>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          Subida por {document.subidoPor} · {new Date(document.fecha).toLocaleString('es-CO')} · {(document.tamano / 1024 / 1024).toFixed(2)} MB
+                        <span className="shrink-0 text-sm font-medium text-primary">
+                          {isSelected ? 'Versión activa' : 'Ver versión'}
                         </span>
-                      </span>
-                      <span className="shrink-0 text-sm font-medium text-primary">Ver versión</span>
-                    </button>
-                  ))}
+                      </button>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">No hay versiones registradas.</p>

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { axe } from 'vitest-axe'
 import SubirDocumento from '@/components/secretaria/SubirDocumento'
 import useAuthStore from '@/lib/stores/authStore'
@@ -33,6 +33,9 @@ describe('SubirDocumento', () => {
 
     useSolicitudesStore.setState({
       solicitudes: [],
+      categories: [
+        { id: 'cat-test', name: 'Salud', departmentId: 'dep-1', isActive: true },
+      ],
     })
   })
 

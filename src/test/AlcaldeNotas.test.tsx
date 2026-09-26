@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { axe } from 'vitest-axe'
 import AlcaldeNotas from '@/components/alcalde/AlcaldeNotas'
 import useAuthStore from '@/lib/stores/authStore'

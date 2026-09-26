@@ -1,4 +1,4 @@
-﻿import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import {
   Building2,
   ClipboardList,
@@ -47,6 +47,7 @@ const navLinksByRole: Record<UserRole, NavLink[]> = {
     { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/it/usuarios', label: 'Usuarios', icon: Users },
     { path: '/it/departamentos', label: 'Departamentos', icon: Building2 },
+    { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
 }
 
