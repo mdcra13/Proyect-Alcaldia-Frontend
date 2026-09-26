@@ -15,6 +15,7 @@ import type { LucideIcon } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
@@ -217,7 +218,7 @@ export default function AlcaldeDashboard() {
 
                         <div className="min-w-0">
                           <p className="truncate font-medium text-foreground">
-                            {departamento.nombre}
+                            {normalizeDepartamentoNombre(departamento.nombre)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {departamento.pendientesFirma} pendientes de firma

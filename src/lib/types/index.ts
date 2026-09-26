@@ -30,7 +30,6 @@ export type SolicitudEstado =
   | 'received'
   | 'assigned_to_department'
   | 'in_review'
-  | 'under_observation'
   | 'approved_by_department'
   | 'rejected_by_department'
   | 'awaiting_mayor_signature'
@@ -50,7 +49,19 @@ export interface HistorialEntry {
   usuarioId: string
 }
 
-// Nueva: anotación de seguimiento (chat bidireccional)
+export interface DocumentoVersion {
+  id: string
+  nombre: string
+  tipo: string
+  tamano: number
+  url: string
+  subidoPorId: string
+  subidoPor: string
+  fecha: string
+  version: number
+  esActual: boolean
+}
+
 export type AnotacionAutorRole = 'departamento' | 'alcalde' | 'secretaria' | 'it'
 
 export interface Anotacion {
@@ -61,7 +72,6 @@ export interface Anotacion {
   autorId: string
   autorNombre: string
   autorRole: AnotacionAutorRole
-  // true = mensaje del revisor (departamento/alcalde), false = respuesta de secretaria
   esRevision: boolean
 }
 
@@ -82,10 +92,11 @@ export interface Solicitud {
   subidoPor: string
   subidoPorId: string
   documento?: string
-  documentoUrl?: string
+  documentoUrl?: string 
+  documentos?: DocumentoVersion[]
   motivoRechazo?: string | null
   historial: HistorialEntry[]
-  anotaciones: Anotacion[]   // ← nuevo
+  anotaciones: Anotacion[]
 }
 
 export type UrgenciaLevel = 'vencida' | 'urgente' | 'proxima' | 'normal'
@@ -152,6 +163,7 @@ export interface UserFormData {
   role: UserRole
   departamentoId?: string
   status: UserStatus
+  password: string
 }
 
 export interface SolicitudFormData {
@@ -163,7 +175,7 @@ export interface SolicitudFormData {
   solicitante: string
   identificacion: string
   descripcion: string
-  prioridad: SolicitudPrioridad
+  prioridad: SolicitudPrioridad 
   documento?: File | null
 }
 
@@ -171,17 +183,23 @@ export const ESTADO_TRANSITIONS_DEPARTAMENTO: Partial<
   Record<SolicitudEstado, SolicitudEstado[]>
 > = {
   assigned_to_department: ['in_review'],
-  in_review: ['under_observation', 'approved_by_department', 'rejected_by_department'],
-  under_observation: ['in_review', 'rejected_by_department'],
+  in_review: ['approved_by_department', 'rejected_by_department'],
   returned_to_department: ['in_review'],
 }
 
 export const ESTADO_TRANSITIONS_ALCALDE: Partial<
   Record<SolicitudEstado, SolicitudEstado[]>
 > = {
-  approved_by_department: ['awaiting_mayor_signature', 'returned_to_department'],
-  awaiting_mayor_signature: ['under_observation', 'signed', 'returned_to_department'],
-  under_observation: ['awaiting_mayor_signature', 'rejected_by_mayor_office'],
+  approved_by_department: [
+    'awaiting_mayor_signature',
+    'rejected_by_mayor_office',
+    'returned_to_department',
+  ],
+  awaiting_mayor_signature: [
+    'signed',
+    'rejected_by_mayor_office',
+    'returned_to_department',
+  ],
   signed: ['closed'],
 }
 
@@ -214,10 +232,6 @@ export const ESTADO_CONFIG: Record<
   in_review: {
     label: 'En revisión',
     color: 'status-in-review',
-  },
-  under_observation: {
-    label: 'En seguimiento',
-    color: 'status-under-observation',
   },
   approved_by_department: {
     label: 'Aprobada por departamento',

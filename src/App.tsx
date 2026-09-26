@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 import useAuthStore from '@/lib/stores/authStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { UserRole } from '@/lib/types'
 
 const LoginPage = lazy(() => import('@/components/auth/LoginPage'))
@@ -91,10 +93,31 @@ function AuthRedirect() {
   return <LoginPage />
 }
 
+function BackendBootstrap() {
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const role = useAuthStore(state => state.user?.role)
+  const fetchUsers = useAuthStore(state => state.fetchUsers)
+  const fetchDepartamentos = useDepartamentosStore(state => state.fetchDepartamentos)
+  const fetchSolicitudes = useSolicitudesStore(state => state.fetchSolicitudes)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    void fetchDepartamentos().catch(() => undefined)
+    void fetchSolicitudes()
+    if (role === 'it') void fetchUsers().catch(() => undefined)
+  }, [fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
+
+  return null
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <BackendBootstrap />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<AuthRedirect />} />

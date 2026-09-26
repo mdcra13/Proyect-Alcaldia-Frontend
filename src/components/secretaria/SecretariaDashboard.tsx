@@ -13,6 +13,7 @@ import {
 import AppLayout from '@/components/layout/AppLayout'
 import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import type { SolicitudEstado } from '@/lib/types'
@@ -230,7 +231,7 @@ export function SecretariaDashboard() {
                     <span className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span className="font-mono">{solicitud.radicado}</span>
                       <span>·</span>
-                      <span>{solicitud.departamento?.nombre ?? 'Sin asignar'}</span>
+                      <span>{normalizeDepartamentoNombre(solicitud.departamento?.nombre) ?? 'Sin asignar'}</span>
                     </span>
                   </div>
 

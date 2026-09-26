@@ -6,14 +6,16 @@ import {
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import { decodeText } from '@/lib/utils'
 import type { User, UserRole } from '@/lib/types'
 import UserFormModal, { type UserFormData } from './UserFormModal'
+import { toast } from 'sonner'
 
 const ITEMS_PER_PAGE = 10
 
 const ROLE_LABELS: Record<UserRole, string> = {
   secretaria:   'Secretaria',
-  departamento: 'Jefe de Departamento',
+  departamento: 'Departamento',
   alcalde:      'Alcalde',
   it:           'Operador IT',
 }
@@ -26,7 +28,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 const initialFormData: UserFormData = {
-  nombre: '', apellido: '', username: '', role: '', departamentoId: '',
+  nombre: '', apellido: '', username: '', role: '', departamentoId: '', password: '',
 }
 
 export default function ITGestionUsuarios() {
@@ -87,6 +89,7 @@ export default function ITGestionUsuarios() {
       nombre: user.nombre, apellido: user.apellido,
       username: user.username, role: user.role,
       departamentoId: user.departamentoId || '',
+      password: '',
     })
     setFormError('')
     setIsEditing(true)
@@ -94,33 +97,57 @@ export default function ITGestionUsuarios() {
     setShowUserModal(true)
   }
 
-  const handleToggleStatus = (user: User) => toggleUserStatus(user.id)
+  const handleToggleStatus = async (user: User) => {
+    try {
+      await toggleUserStatus(user.id)
+      toast.success('Estado del usuario actualizado')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el usuario')
+    }
+  }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.nombre.trim() || !formData.apellido.trim() || !formData.username.trim() || !formData.role) {
       setFormError('Completa todos los campos obligatorios.')
       return
     }
-    if (formData.role === 'departamento' && !formData.departamentoId) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.username.trim())) {
+      setFormError('Ingresa un correo electrónico válido.')
+      return
+    }
+    const requiereDepartamento = formData.role === 'departamento'
+    if (requiereDepartamento && !formData.departamentoId) {
       setFormError('Selecciona el departamento del usuario.')
       return
     }
-    const departamentoId = formData.role === 'departamento' ? formData.departamentoId : undefined
+    if (!isEditing && formData.password.length < 8) {
+      setFormError('La contraseña temporal debe tener al menos 8 caracteres.')
+      return
+    }
+    const departamentoId = requiereDepartamento ? formData.departamentoId : undefined
     if (isEditing && selectedUser) {
-      updateUser(selectedUser.id, {
+      await updateUser(selectedUser.id, {
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role, departamentoId,
       })
     } else {
-      addUser({
+      await addUser({
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role,
-        departamentoId, status: 'active',
+        departamentoId, status: 'active', password: formData.password,
       })
     }
     setShowUserModal(false)
     setFormData(initialFormData)
     setFormError('')
+  }
+
+  const handlePersistedSubmit = async () => {
+    try {
+      await handleSubmit()
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'No se pudo guardar el usuario.')
+    }
   }
 
   return (
@@ -192,7 +219,7 @@ export default function ITGestionUsuarios() {
               <input
                 id="users-search"
                 type="text"
-                placeholder="Buscar por nombre o usuario..."
+                placeholder="Buscar por nombre o correo..."
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
@@ -223,7 +250,7 @@ export default function ITGestionUsuarios() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Usuario</th>
-                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Username</th>
+                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Correo</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Rol</th>
                   <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">Departamento</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Estado</th>
@@ -265,7 +292,7 @@ export default function ITGestionUsuarios() {
                         </span>
                       </td>
                       <td className="hidden p-4 lg:table-cell">
-                        <span className="text-sm">{getDepartamentoNombre(user.departamentoId)}</span>
+                        <span className="text-sm">{decodeText(getDepartamentoNombre(user.departamentoId))}</span>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -344,7 +371,7 @@ export default function ITGestionUsuarios() {
           formData={formData}
           formError={formError}
           onClose={() => setShowUserModal(false)}
-          onSubmit={handleSubmit}
+          onSubmit={handlePersistedSubmit}
           onFormDataChange={setFormData}
         />
       </div>

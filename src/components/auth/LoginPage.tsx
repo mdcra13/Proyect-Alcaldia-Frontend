@@ -30,9 +30,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true)
     setLoginError(null)
 
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    const result = login(data.username, data.password, data.remember)
+    const result = await login(data.username, data.password, data.remember)
 
     if (result.success) {
       onLoginSuccess?.()

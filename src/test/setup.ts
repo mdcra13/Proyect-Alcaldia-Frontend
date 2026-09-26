@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest'
-import { vi } from 'vitest'
-import 'vitest-axe/extend-expect'
+import { expect, vi } from 'vitest'
+import { toHaveNoViolations } from 'vitest-axe/matchers'
+
+expect.extend({ toHaveNoViolations })
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}

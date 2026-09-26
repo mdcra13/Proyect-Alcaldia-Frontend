@@ -5,10 +5,19 @@ import type { UserRole } from '@/lib/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
     secretaria:   'Secretaria',
-    departamento: 'Jefe de Departamento',
+    departamento: 'Departamento',
     alcalde:      'Alcalde',
     it:           'Operador IT',
 }
+
+const RESERVED_DEPARTMENTS = new Set([
+    'despacho del alcalde',
+    'secretaria general',
+    'direccion de tecnologia de la informacion',
+])
+
+const normalizeDepartmentName = (name: string) =>
+    name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
 
 export interface UserFormData {
     nombre: string
@@ -16,6 +25,7 @@ export interface UserFormData {
     username: string
     role: UserRole | ''
     departamentoId: string
+    password: string
 }
 
 interface UserFormModalProps {
@@ -47,6 +57,9 @@ export default function UserFormModal({
     onFormDataChange,
 }: UserFormModalProps) {
     const departamentos = useDepartamentosStore(state => state.departamentos)
+    const selectableDepartments = departamentos.filter(
+        department => !RESERVED_DEPARTMENTS.has(normalizeDepartmentName(department.nombre)),
+    )
     const dialogRef     = useRef<HTMLDivElement>(null)
     const onCloseRef    = useRef(onClose)
     const previouslyFocused = useRef<HTMLElement | null>(null)
@@ -117,6 +130,7 @@ useEffect(() => {
                     : 'Formulario para crear un nuevo usuario en el sistema.'}
                 </p>
             </div>
+
             <button
                 type="button"
                 onClick={onClose}
@@ -166,16 +180,35 @@ useEffect(() => {
 
             <div>
                 <label htmlFor="user-username" className="mb-1 block text-sm font-medium text-foreground">
-                Usuario *
+                Correo electrónico *
                 </label>
                 <input
                 id="user-username"
-                type="text"
+                type="email"
                 value={formData.username}
                 onChange={e => onFormDataChange({ ...formData, username: e.target.value })}
+                autoComplete="email"
+                placeholder="usuario@alcaldia.local"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                 />
             </div>
+
+            {!isEditing && (
+                <div>
+                <label htmlFor="user-password" className="mb-1 block text-sm font-medium text-foreground">
+                    Contraseña temporal *
+                </label>
+                <input
+                    id="user-password"
+                    type="password"
+                    value={formData.password}
+                    onChange={e => onFormDataChange({ ...formData, password: e.target.value })}
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
+                />
+                </div>
+            )}
 
             <div>
                 <label htmlFor="user-role" className="mb-1 block text-sm font-medium text-foreground">
@@ -206,7 +239,7 @@ useEffect(() => {
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary"
                 >
                     <option value="">Seleccionar departamento</option>
-                    {departamentos.map(d => (
+                    {selectableDepartments.map(d => (
                     <option key={d.id} value={d.id}>{d.nombre}</option>
                     ))}
                 </select>
