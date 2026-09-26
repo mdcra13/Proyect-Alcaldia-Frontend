@@ -6,14 +6,16 @@ import {
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import { decodeText } from '@/lib/utils'
 import type { User, UserRole } from '@/lib/types'
 import UserFormModal, { type UserFormData } from './UserFormModal'
+import { toast } from 'sonner'
 
 const ITEMS_PER_PAGE = 10
 
 const ROLE_LABELS: Record<UserRole, string> = {
   secretaria:   'Secretaria',
-  departamento: 'Jefe de Departamento',
+  departamento: 'Departamento',
   alcalde:      'Alcalde',
   it:           'Operador IT',
 }
@@ -26,15 +28,17 @@ const ROLE_COLORS: Record<UserRole, string> = {
 }
 
 const initialFormData: UserFormData = {
-  nombre: '', apellido: '', username: '', role: '', departamentoId: '',
+  nombre: '', apellido: '', username: '', role: '', departamentoId: '', password: '',
 }
 
 export default function ITGestionUsuarios() {
   const { users, addUser, updateUser, toggleUserStatus } = useAuthStore()
+  const currentUser = useAuthStore(state => state.user)
   const departamentos = useDepartamentosStore(state => state.departamentos)
 
   const [searchQuery, setSearchQuery]   = useState('')
   const [filterRole, setFilterRole]     = useState<UserRole | 'todos'>('todos')
+  const [filterStatus, setFilterStatus] = useState<'todos' | 'active' | 'inactive'>('todos')
   const [currentPage, setCurrentPage]   = useState(1)
   const [showUserModal, setShowUserModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -53,8 +57,9 @@ export default function ITGestionUsuarios() {
       )
     }
     if (filterRole !== 'todos') results = results.filter(u => u.role === filterRole)
+    if (filterStatus !== 'todos') results = results.filter(u => u.status === filterStatus)
     return results.sort((a, b) => a.nombre.localeCompare(b.nombre))
-  }, [users, searchQuery, filterRole])
+  }, [users, searchQuery, filterRole, filterStatus])
 
   const totalPages      = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE))
   const safeCurrentPage = Math.min(currentPage, totalPages)
@@ -69,7 +74,7 @@ export default function ITGestionUsuarios() {
     inactivos: users.filter(u => u.status !== 'active').length,
   }), [users])
 
-  const getDepartamentoNombre = (id?: string) => {
+  const getDepartamentoNombre = (id?: string | null) => {
     if (!id) return '-'
     return departamentos.find(d => d.id === id)?.nombre ?? '-'
   }
@@ -87,6 +92,7 @@ export default function ITGestionUsuarios() {
       nombre: user.nombre, apellido: user.apellido,
       username: user.username, role: user.role,
       departamentoId: user.departamentoId || '',
+      password: '',
     })
     setFormError('')
     setIsEditing(true)
@@ -94,33 +100,63 @@ export default function ITGestionUsuarios() {
     setShowUserModal(true)
   }
 
-  const handleToggleStatus = (user: User) => toggleUserStatus(user.id)
+  const handleToggleStatus = async (user: User) => {
+    if (currentUser?.id === user.id && user.status === 'active') {
+      toast.error('Un administrador no puede desactivarse a sí mismo.')
+      return
+    }
+    try {
+      await toggleUserStatus(user.id)
+      toast.success('Estado del usuario actualizado')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el usuario')
+    }
+  }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.nombre.trim() || !formData.apellido.trim() || !formData.username.trim() || !formData.role) {
       setFormError('Completa todos los campos obligatorios.')
       return
     }
-    if (formData.role === 'departamento' && !formData.departamentoId) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.username.trim())) {
+      setFormError('Ingresa un correo electrónico válido.')
+      return
+    }
+    const requiereDepartamento = formData.role === 'departamento'
+    if (requiereDepartamento && !formData.departamentoId) {
       setFormError('Selecciona el departamento del usuario.')
       return
     }
-    const departamentoId = formData.role === 'departamento' ? formData.departamentoId : undefined
+    if (!isEditing && formData.password.length < 8) {
+      setFormError('La contraseña temporal debe tener al menos 8 caracteres.')
+      return
+    }
+    const departamentoId = requiereDepartamento ? formData.departamentoId : null
     if (isEditing && selectedUser) {
-      updateUser(selectedUser.id, {
+      const roleChanged = selectedUser.role !== formData.role
+      const roleId = !roleChanged ? selectedUser.roleId : undefined
+      await updateUser(selectedUser.id, {
         nombre: formData.nombre, apellido: formData.apellido,
-        username: formData.username, role: formData.role, departamentoId,
+        username: formData.username, role: formData.role, roleId, departamentoId,
       })
     } else {
-      addUser({
+      await addUser({
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role,
-        departamentoId, status: 'active',
+        departamentoId: departamentoId ?? undefined, status: 'active', password: formData.password,
       })
     }
     setShowUserModal(false)
     setFormData(initialFormData)
     setFormError('')
+  }
+
+  const handlePersistedSubmit = async () => {
+    try {
+      await handleSubmit()
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'No se pudo guardar el usuario.')
+    }
   }
 
   return (
@@ -192,7 +228,7 @@ export default function ITGestionUsuarios() {
               <input
                 id="users-search"
                 type="text"
-                placeholder="Buscar por nombre o usuario..."
+                placeholder="Buscar por nombre o correo..."
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1) }}
                 className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary"
@@ -212,6 +248,19 @@ export default function ITGestionUsuarios() {
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="status-filter" className="sr-only">Filtrar por estado</label>
+              <select
+                id="status-filter"
+                value={filterStatus}
+                onChange={e => { setFilterStatus(e.target.value as 'todos' | 'active' | 'inactive'); setCurrentPage(1) }}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:w-44"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -223,7 +272,7 @@ export default function ITGestionUsuarios() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Usuario</th>
-                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Username</th>
+                  <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground md:table-cell">Correo</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Rol</th>
                   <th scope="col" className="hidden p-4 text-left font-medium text-muted-foreground lg:table-cell">Departamento</th>
                   <th scope="col" className="p-4 text-left font-medium text-muted-foreground">Estado</th>
@@ -238,7 +287,10 @@ export default function ITGestionUsuarios() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedUsers.map(user => (
+                  paginatedUsers.map(user => {
+                    const isSelf = currentUser?.id === user.id
+                    const isSelfActive = isSelf && user.status === 'active'
+                    return (
                     <tr key={user.id} className="border-b transition-colors hover:bg-muted/30">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
@@ -265,7 +317,7 @@ export default function ITGestionUsuarios() {
                         </span>
                       </td>
                       <td className="hidden p-4 lg:table-cell">
-                        <span className="text-sm">{getDepartamentoNombre(user.departamentoId)}</span>
+                        <span className="text-sm">{decodeText(getDepartamentoNombre(user.departamentoId))}</span>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -281,8 +333,10 @@ export default function ITGestionUsuarios() {
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(user)}
-                            aria-label={user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`}
-                            className="icon-button hover:bg-secondary"
+                            disabled={isSelfActive}
+                            title={isSelfActive ? 'Un administrador no puede desactivarse a sí mismo' : (user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`)}
+                            aria-label={isSelfActive ? `No puedes desactivarte a ti mismo (${user.username})` : (user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`)}
+                            className={`icon-button hover:bg-secondary ${isSelfActive ? 'cursor-not-allowed opacity-40' : ''}`}
                           >
                             {user.status === 'active'
                               ? <UserX    className="h-4 w-4 text-destructive" aria-hidden="true" focusable="false" />
@@ -300,7 +354,8 @@ export default function ITGestionUsuarios() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -344,7 +399,7 @@ export default function ITGestionUsuarios() {
           formData={formData}
           formError={formError}
           onClose={() => setShowUserModal(false)}
-          onSubmit={handleSubmit}
+          onSubmit={handlePersistedSubmit}
           onFormDataChange={setFormData}
         />
       </div>

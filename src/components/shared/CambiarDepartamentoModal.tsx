@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { Building2, X } from 'lucide-react'
+import { toast } from 'sonner'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useAuthStore from '@/lib/stores/authStore'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import type { Solicitud } from '@/lib/types'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 
@@ -28,6 +30,7 @@ export function CambiarDepartamentoModal({
   const [selectedDepartamentoId, setSelectedDepartamentoId] = useState(solicitud.departamentoId ?? '')
   const [motivo, setMotivo] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
   const departamentosActivos = getDepartamentosActivos()
@@ -36,26 +39,32 @@ export function CambiarDepartamentoModal({
     if (!user || !selectedDepartamentoId || selectedDepartamentoId === solicitud.departamentoId) return
 
     setIsSubmitting(true)
-    // TODO: Replace with API call PATCH /api/v1/requests/:id/departamento
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    cambiarDepartamento(
-      solicitud.id,
-      selectedDepartamentoId,
-      user.id,
-      `${user.nombre} ${user.apellido}`,
-      motivo || undefined
-    )
-
-    setIsSubmitting(false)
-    setMotivo('')
-    onOpenChange(false)
-    onSuccess?.()
+    setErrorMessage(null)
+    try {
+      await cambiarDepartamento(
+        solicitud.id,
+        selectedDepartamentoId,
+        user.id,
+        `${user.nombre} ${user.apellido}`,
+        motivo || undefined
+      )
+      setMotivo('')
+      onOpenChange(false)
+      onSuccess?.()
+      toast.success('Departamento actualizado correctamente')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'No se pudo cambiar el departamento'
+      setErrorMessage(msg)
+      toast.error(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = () => {
     setSelectedDepartamentoId(solicitud.departamentoId ?? '')
     setMotivo('')
+    setErrorMessage(null)
     onOpenChange(false)
   }
 
@@ -98,11 +107,16 @@ export function CambiarDepartamentoModal({
         </div>
 
         <div className="grid gap-4 p-6">
+          {errorMessage && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+              {errorMessage}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">Departamento actual</label>
             <div className="modal-info-row">
               <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{solicitud.departamento?.nombre || 'Sin asignar'}</span>
+              <span className="font-medium">{normalizeDepartamentoNombre(solicitud.departamento?.nombre) || 'Sin asignar'}</span>
             </div>
           </div>
 

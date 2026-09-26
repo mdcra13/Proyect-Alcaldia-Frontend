@@ -64,13 +64,31 @@ export default function SolicitudFiltersPanel({
           <input
             id={`${idPrefix}-search`}
             type="text"
-            placeholder="Buscar por identificador, título, solicitante o identificación..."
+            placeholder="Buscar por código de seguimiento, título, solicitante o identificación..."
             value={searchQuery}
             onChange={event => updateFilter('q', event.target.value)}
             className="search-input text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           />
         </div>
 
+        <div className="relative lg:col-span-2">
+          <label htmlFor={`${idPrefix}-identificador`} className="sr-only">
+            Filtrar por código de seguimiento
+          </label>
+          <Search
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+            focusable="false"
+          />
+          <input
+            id={`${idPrefix}-identificador`}
+            type="search"
+            placeholder="Filtrar por código de seguimiento..."
+            value={identificadorQuery}
+            onChange={event => updateFilter('identificador', event.target.value)}
+            className="search-input text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          />
+        </div>
         <label htmlFor={`${idPrefix}-estado`} className="sr-only">
           Estado
         </label>

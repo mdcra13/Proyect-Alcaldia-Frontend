@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+﻿import { useCallback, useMemo, useState } from 'react'
 import { Download, Eye, History, X } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import AccessibleDialog from '@/components/shared/AccessibleDialog'
@@ -13,7 +13,9 @@ import { useFilteredSolicitudes } from '@/lib/hooks/useFilteredSolicitudes'
 import { usePaginatedList } from '@/lib/hooks/usePaginatedList'
 import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
-import { ESTADO_CONFIG, type Solicitud } from '@/lib/types'
+import { decodeText } from '@/lib/utils'
+import { backendApi, mapBackendHistory } from '@/lib/api/backend'
+import { ESTADO_CONFIG, type HistorialEntry, type Solicitud } from '@/lib/types'
 
 const ITEMS_PER_PAGE = 10
 
@@ -30,12 +32,12 @@ function escapeCSVCell(value: string | number | null | undefined) {
 }
 
 function exportSolicitudesCSV(solicitudes: Solicitud[]) {
-  const headers = ['Identificador', 'Identificador', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
+  const headers = ['Código de seguimiento', 'Identificador', 'Solicitante', 'Fecha límite', 'Fecha ingreso', 'Estado']
 
   const rows = solicitudes.map(solicitud => [
     solicitud.radicado,
     solicitud.titulo,
-    solicitud.solicitante,
+    decodeText(solicitud.solicitante),
     solicitud.fechaLimite,
     solicitud.fechaSolicitud,
     ESTADO_CONFIG[solicitud.estado]?.label ?? solicitud.estado,
@@ -79,6 +81,8 @@ export default function SeguimientoNotas() {
   const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [historialEntries, setHistorialEntries] = useState<HistorialEntry[]>([])
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
 
   const departamentoNombre = user?.departamento?.nombre ?? 'Mi Departamento'
 
@@ -89,7 +93,7 @@ export default function SeguimientoNotas() {
     return solicitudes.filter(
       solicitud => solicitud.departamentoId === user.departamentoId
     )
-  }, [solicitudes, user?.departamentoId])
+  }, [solicitudes, user])
 
   const filteredSolicitudes = useFilteredSolicitudes(
   notasDepartamento,
@@ -109,13 +113,29 @@ export default function SeguimientoNotas() {
 
   const handleOpenHistory = (solicitud: Solicitud) => {
     setSelectedSolicitud(solicitud)
+    setHistorialEntries(solicitud.historial)
     setShowHistoryModal(true)
+    setIsHistoryLoading(true)
+
+    void backendApi.requestHistory(solicitud.id)
+      .then(entries => {
+        const mappedEntries = mapBackendHistory(entries)
+        setHistorialEntries(mappedEntries.length > 0 ? mappedEntries : solicitud.historial)
+      })
+      .catch(() => {
+        setHistorialEntries(solicitud.historial)
+      })
+      .finally(() => {
+        setIsHistoryLoading(false)
+      })
   }
 
   const handleCloseModals = useCallback(() => {
     setSelectedSolicitud(null)
     setShowDetailModal(false)
     setShowHistoryModal(false)
+    setHistorialEntries([])
+    setIsHistoryLoading(false)
   }, [])
 
   const handleExportCSV = () => {
@@ -233,7 +253,7 @@ export default function SeguimientoNotas() {
           )}
         </section>
 
-        {/* Detalle — usa DocumentPreviewModal existente, sin acciones de aprobar/rechazar */}
+        {/* Detalle : usa DocumentPreviewModal existente, sin acciones de aprobar/rechazar */}
         {showDetailModal && selectedSolicitud && (
           <DocumentPreviewModal
             solicitud={selectedSolicitud}
@@ -270,7 +290,13 @@ export default function SeguimientoNotas() {
               </div>
 
               <div className="p-6">
-                <HistorialTimeline historial={selectedSolicitud.historial} />
+                {isHistoryLoading ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Cargando historial...
+                  </p>
+                ) : (
+                  <HistorialTimeline historial={historialEntries} />
+                )}
               </div>
           </AccessibleDialog>
         )}
@@ -279,3 +305,4 @@ export default function SeguimientoNotas() {
     </AppLayout>
   )
 }
+

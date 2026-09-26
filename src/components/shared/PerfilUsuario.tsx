@@ -4,6 +4,7 @@ import { CheckCircle, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import AppLayout from '@/components/layout/AppLayout'
 import useAuthStore from '@/lib/stores/authStore'
+import { normalizeDepartamentoNombre } from '@/lib/utils'
 import { ROLE_LABELS } from '@/lib/types'
 
 interface ProfileFormValues {
@@ -43,15 +44,18 @@ export default function PerfilUsuario() {
     })
   }, [reset, user])
 
-  const onSaveProfile = (data: ProfileFormValues) => {
+  const onSaveProfile = async (data: ProfileFormValues) => {
     if (!user) return
 
-    updateUser(user.id, {
-      nombre: data.nombre.trim(),
-      apellido: data.apellido.trim(),
-    })
-
-    toast.success('Cambios guardados correctamente')
+    try {
+      await updateUser(user.id, {
+        nombre: data.nombre.trim(),
+        apellido: data.apellido.trim(),
+      })
+      toast.success('Cambios guardados correctamente')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo actualizar el perfil')
+    }
   }
 
   if (!user) return null
@@ -161,7 +165,7 @@ export default function PerfilUsuario() {
                 </span>
                 <input
                   type="text"
-                  value={user.departamento?.nombre ?? '—'}
+                  value={normalizeDepartamentoNombre(user.departamento?.nombre) ?? '—'}
                   readOnly
                   className="w-full rounded-md border border-input bg-secondary px-3 py-2 text-muted-foreground"
                 />

@@ -1,6 +1,6 @@
-import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
-import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { useNavigate } from 'react-router'
 import { 
   Upload, 
   X, 
@@ -11,20 +11,24 @@ import {
   AlignLeft,
   CheckCircle,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
-import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
-import { mockDepartamentos } from '@/lib/stores/departamentosStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData, SolicitudPrioridad } from '@/lib/types'
-import { PRIORIDAD_LABELS } from '@/lib/types'
+import { PRIORIDAD_LABELS, MAX_FILE_SIZE_BYTES } from '@/lib/types'
+import { DocumentUploadError } from '@/lib/api/backend'
+import { getTodayPanama } from '@/lib/utils'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = MAX_FILE_SIZE_BYTES
 const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
+  'image/webp',
 ]
 
 export default function SubirDocumento() {
@@ -35,15 +39,74 @@ export default function SubirDocumento() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [newRadicado, setNewRadicado] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pendingCreatedRequest, setPendingCreatedRequest] = useState<{ id: string; trackingCode: string } | null>(null)
 
-  const user            = useAuthStore(state => state.user)
-  const addSolicitud    = useSolicitudesStore(state => state.addSolicitud)
-  const addNotification = useNotificationStore(state => state.addNotification)
+  const user                = useAuthStore(state => state.user)
+  const addSolicitud        = useSolicitudesStore(state => state.addSolicitud)
+  const retryUploadDocument = useSolicitudesStore(state => state.retryUploadDocument)
+  const categories          = useSolicitudesStore(state => state.categories)
+  const storeLoading        = useSolicitudesStore(state => state.isLoadingCategories)
+  const storeError          = useSolicitudesStore(state => state.categoriesError)
+  const fetchCategories     = useSolicitudesStore(state => state.fetchCategories)
+  const addNotification     = useNotificationStore(state => state.addNotification)
+  const departamentos       = useDepartamentosStore(state => state.departamentos)
+  const fetchDepartamentos  = useDepartamentosStore(state => state.fetchDepartamentos)
+
+  const [localError, setLocalError] = useState<string | null>(null)
+  const [isFetching, setIsFetching] = useState(false)
+
+  const handleRetryCategories = () => {
+    setIsFetching(true)
+    setLocalError(null)
+    void fetchCategories()
+      .then(() => {
+        setLocalError(null)
+      })
+      .catch((err: unknown) => {
+        setLocalError(err instanceof Error ? err.message : 'Error al cargar el catálogo de categorías')
+      })
+      .finally(() => {
+        setIsFetching(false)
+      })
+  }
+
+  useEffect(() => {
+    let active = true
+
+    if (categories.length === 0) {
+      fetchCategories()
+        .then(() => {
+          if (active) setLocalError(null)
+        })
+        .catch((err: unknown) => {
+          if (active) {
+            setLocalError(err instanceof Error ? err.message : 'Error al cargar el catálogo de categorías')
+          }
+        })
+    }
+
+    return () => {
+      active = false
+    }
+  }, [categories.length, fetchCategories])
+
+  useEffect(() => {
+    if (departamentos.length === 0) {
+      void fetchDepartamentos().catch(() => undefined)
+    }
+  }, [departamentos.length, fetchDepartamentos])
+
+  const categoriesError = localError || storeError
+  const loadingCategories = isFetching || storeLoading || (categories.length === 0 && !categoriesError)
+
+  const today = getTodayPanama()
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<SolicitudFormData>({
@@ -52,7 +115,7 @@ export default function SubirDocumento() {
       categoria:      '',
       departamentoId: '',
       // Fecha de solicitud por defecto = hoy
-      fechaSolicitud: new Date().toISOString().split('T')[0],
+      fechaSolicitud: getTodayPanama(),
       fechaLimite:    '',
       solicitante:    '',
       identificacion: '',
@@ -62,7 +125,7 @@ export default function SubirDocumento() {
     },
   })
 
-  const descripcion = watch('descripcion', '')
+  const descripcion = useWatch({ control, name: 'descripcion' }) ?? ''
 
   // ── File handlers ──────────────────────────────────────────────────────────
   const handleFileSelect = (
@@ -73,7 +136,7 @@ export default function SubirDocumento() {
     if (!selectedFile) return
 
     if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
-      setFileError('Solo se permiten archivos PDF, JPG o PNG')
+      setFileError('Solo se permiten archivos PDF, JPG, PNG o WebP')
       return
     }
     if (selectedFile.size > MAX_FILE_SIZE) {
@@ -97,40 +160,95 @@ export default function SubirDocumento() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const onSubmit = async (data: SolicitudFormData) => {
+    if (loadingCategories || categories.length === 0) return
     if (!file) {
       setFileError('Debe adjuntar un documento')
+      return
+    }
+    if (data.fechaSolicitud && data.fechaSolicitud > today) {
+      setSubmitError('La fecha de solicitud no puede ser posterior a hoy')
+      return
+    }
+    if (data.fechaLimite && data.fechaLimite < today) {
+      setSubmitError('La fecha límite no puede ser anterior a hoy')
       return
     }
     if (!data.categoria) return
 
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    setSubmitError(null)
 
     const fullName = user ? `${user.nombre} ${user.apellido}` : 'Usuario'
 
-    const solicitud = addSolicitud({
-      titulo:         data.titulo,
-      categoria:      data.categoria as SolicitudCategoria,
-      departamentoId: data.departamentoId || undefined,
-      fechaSolicitud: data.fechaSolicitud,
-      fechaLimite:    data.fechaLimite || '',
-      solicitante:    data.solicitante,
-      identificacion: data.identificacion,
-      descripcion:    data.descripcion,
-      prioridad:      data.prioridad as SolicitudPrioridad,
-      documento:      file.name,
-      subidoPor:      fullName,
-      subidoPorId:    user?.id ?? 'system',
-    })
+    if (pendingCreatedRequest) {
+      try {
+        const solicitud = await retryUploadDocument(
+          pendingCreatedRequest.id,
+          file,
+          fullName,
+        )
+        addNotification({
+          message: `Documento adjuntado exitosamente a la solicitud: ${solicitud.radicado}`,
+          type: 'success',
+        })
+        setNewRadicado(solicitud.radicado)
+        setShowSuccess(true)
+        setPendingCreatedRequest(null)
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : 'No se pudo subir el documento.'
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
 
-    addNotification({
-      message: `Nueva solicitud registrada: ${solicitud.radicado}`,
-      type:    'success',
-    })
+    try {
+      const solicitud = await addSolicitud({
+        titulo:         data.titulo,
+        categoria:      data.categoria as SolicitudCategoria,
+        categoriaId:    data.categoria,
+        departamentoId: data.departamentoId || undefined,
+        fechaSolicitud: data.fechaSolicitud,
+        fechaLimite:    data.fechaLimite || '',
+        solicitante:    data.solicitante,
+        identificacion: data.identificacion,
+        descripcion:    data.descripcion,
+        prioridad:      data.prioridad as SolicitudPrioridad,
+        documento:      file,
+        subidoPor:      fullName,
+        subidoPorId:    user?.id ?? 'system',
+      })
 
-    setNewRadicado(solicitud.radicado)
-    setShowSuccess(true)
-    setIsSubmitting(false)
+      addNotification({
+        message: `Nueva solicitud registrada: ${solicitud.radicado}`,
+        type: 'success',
+      })
+      setNewRadicado(solicitud.radicado)
+      setShowSuccess(true)
+      setPendingCreatedRequest(null)
+    } catch (error) {
+      if (error instanceof DocumentUploadError) {
+        setPendingCreatedRequest({
+          id: error.requestId,
+          trackingCode: error.trackingCode,
+        })
+        const message = `Solicitud creada con radicado ${error.trackingCode}, pero falló la subida del documento: ${error.message}. Puede reintentar la subida del archivo sin duplicar la solicitud.`
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      } else {
+        const message = error instanceof Error
+          ? error.message
+          : 'No se pudo registrar la solicitud.'
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleNewSolicitud = () => {
@@ -138,6 +256,7 @@ export default function SubirDocumento() {
     setFile(null)
     setShowSuccess(false)
     setNewRadicado(null)
+    setPendingCreatedRequest(null)
   }
 
   // ── Success screen ─────────────────────────────────────────────────────────
@@ -155,7 +274,7 @@ export default function SubirDocumento() {
             <p className="mb-4 text-muted-foreground">
               La solicitud ha sido registrada exitosamente con el número de radicado:
             </p>
-            <p className="mb-6 text-2xl font-bold text-primary">{newRadicado}</p>
+            <p className="mb-6 text-2xl font-bold text-primary">Código de seguimiento: {newRadicado}</p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleNewSolicitud}
@@ -191,8 +310,7 @@ export default function SubirDocumento() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-
-            {/* Identificador */}
+            {/* Título */}
             <div>
               <label htmlFor="titulo" className="form-label">
                 Identificador <span className="text-destructive">*</span>
@@ -214,20 +332,63 @@ export default function SubirDocumento() {
 
             {/* Categoría */}
             <div>
-              <label htmlFor="categoria" className="form-label">
-                Categoría <span className="text-destructive">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="categoria" className="form-label">
+                  Categoría <span className="text-destructive">*</span>
+                </label>
+                {loadingCategories && (
+                  <span className="text-xs text-muted-foreground animate-pulse">
+                    Cargando categorías...
+                  </span>
+                )}
+              </div>
+
+              {categoriesError && (
+                <div
+                  className="mb-2 flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-sm text-destructive"
+                  role="alert"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{categoriesError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetryCategories}
+                    className="ml-2 inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/20"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
               <select
                 id="categoria"
                 {...register('categoria', { required: 'La categoría es requerida' })}
-                className="form-input custom-select"
+                disabled={loadingCategories || categories.length === 0}
+                onChange={e => {
+                  const selectedId = e.target.value
+                  setValue('categoria', selectedId, { shouldValidate: true })
+                  const matchingCat = categories.find(c => c.id === selectedId)
+                  if (matchingCat?.departmentId) {
+                    setValue('departamentoId', matchingCat.departmentId, { shouldValidate: true })
+                  }
+                }}
+                className="form-input custom-select disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option value="">Seleccione una categoría</option>
-                {(Object.entries(CATEGORIES) as [SolicitudCategoria, typeof CATEGORIES[SolicitudCategoria]][]).map(
-                  ([key, value]) => (
-                    <option key={key} value={key}>{value.label}</option>
-                  ),
-                )}
+                <option value="">
+                  {loadingCategories
+                    ? 'Cargando categorías...'
+                    : categoriesError
+                      ? 'Error al cargar categorías'
+                      : 'Seleccione una categoría'}
+                </option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
               {errors.categoria && (
                 <p className="form-error">{errors.categoria.message}</p>
@@ -245,7 +406,7 @@ export default function SubirDocumento() {
                 className="form-input custom-select"
               >
                 <option value="">Seleccione un departamento</option>
-                {mockDepartamentos.map(dep => (
+                {departamentos.filter(dep => dep.activo !== false).map(dep => (
                   <option key={dep.id} value={dep.id}>{dep.nombre}</option>
                 ))}
               </select>
@@ -323,7 +484,11 @@ export default function SubirDocumento() {
                 <input
                   id="fechaSolicitud"
                   type="date"
-                  {...register('fechaSolicitud', { required: 'La fecha de solicitud es requerida' })}
+                  {...register('fechaSolicitud', {
+                    required: 'La fecha de solicitud es requerida',
+                    validate: val => !val || val <= today || 'La fecha de solicitud no puede ser posterior a hoy',
+                  })}
+                  max={today}
                   className="form-input pl-10"
                 />
               </div>
@@ -343,10 +508,16 @@ export default function SubirDocumento() {
                 <input
                   id="fechaLimite"
                   type="date"
-                  {...register('fechaLimite')}
+                  {...register('fechaLimite', {
+                    validate: val => !val || val >= today || 'La fecha límite no puede ser anterior a hoy',
+                  })}
+                  min={today}
                   className="form-input pl-10"
                 />
               </div>
+              {errors.fechaLimite && (
+                <p className="form-error">{errors.fechaLimite.message}</p>
+              )}
             </div>
 
             {/* Descripción */}
@@ -379,7 +550,7 @@ export default function SubirDocumento() {
                 id="documento"
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
                 onChange={handleFileSelect}
                 className="hidden"
               />
@@ -452,7 +623,27 @@ export default function SubirDocumento() {
               </div>
             </div>
 
+            {pendingCreatedRequest && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+                <div className="flex items-center gap-2 font-medium">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <span>Solicitud creada pendiente de adjuntar documento</span>
+                </div>
+                <p className="mt-1 text-sm">
+                  Número de radicado: <strong>{pendingCreatedRequest.trackingCode}</strong>.
+                  La solicitud ya fue registrada. Adjunte el documento requerido y haga clic en &ldquo;Reintentar subida de documento&rdquo; para completar el proceso sin duplicar la solicitud.
+                </p>
+              </div>
+            )}
+
             {/* Botones */}
+            {submitError && (
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-destructive">
+                <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
+                <p className="text-sm">{submitError}</p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
@@ -463,7 +654,7 @@ export default function SubirDocumento() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || loadingCategories || categories.length === 0}
                 className="btn-primary flex-1 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? (
@@ -480,10 +671,10 @@ export default function SubirDocumento() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    Registrando...
+                    {pendingCreatedRequest ? 'Subiendo documento...' : 'Registrando...'}
                   </span>
                 ) : (
-                  'Registrar solicitud'
+                  pendingCreatedRequest ? 'Reintentar subida de documento' : 'Registrar solicitud'
                 )}
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import {
   Building2,
   ClipboardList,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
+import { decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import type { UserRole } from '@/lib/types'
 import { ROLE_LABELS } from '@/lib/types'
 
@@ -46,6 +47,7 @@ const navLinksByRole: Record<UserRole, NavLink[]> = {
     { path: '/it', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/it/usuarios', label: 'Usuarios', icon: Users },
     { path: '/it/departamentos', label: 'Departamentos', icon: Building2 },
+    { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
 }
 
@@ -119,9 +121,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <span className="text-sm font-medium">{initials || 'U'}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{fullName || 'Usuario'}</p>
+              <p className="truncate font-medium">{decodeText(fullName) || 'Usuario'}</p>
               <p className="text-sm text-white/70">
-                {(user as any)?.departamento?.nombre ?? roleLabel}
+                {normalizeDepartamentoNombre(user?.departamento?.nombre) ?? roleLabel}
               </p>
             </div>
           </div>

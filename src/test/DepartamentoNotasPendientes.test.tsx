@@ -1,7 +1,7 @@
 import 'vitest-axe/extend-expect'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { axe } from 'vitest-axe'
 import NotasPendientes from '@/components/departamento/NotasPendientes'
 import useAuthStore from '@/lib/stores/authStore'

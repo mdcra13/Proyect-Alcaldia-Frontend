@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest'
-import { vi } from 'vitest'
-import 'vitest-axe/extend-expect'
+import { expect, vi } from 'vitest'
+import { toHaveNoViolations } from 'vitest-axe/matchers'
+
+expect.extend({ toHaveNoViolations })
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -42,3 +44,10 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   writable: true,
   value: vi.fn(),
 })
+
+if (typeof window.URL.createObjectURL !== 'function') {
+  window.URL.createObjectURL = vi.fn((blob: Blob) => `blob:mock-url-${blob.size || 1}`)
+}
+if (typeof window.URL.revokeObjectURL !== 'function') {
+  window.URL.revokeObjectURL = vi.fn()
+}

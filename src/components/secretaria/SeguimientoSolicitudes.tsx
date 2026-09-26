@@ -16,13 +16,16 @@ import EstadoBadge from '@/components/shared/EstadoBadge'
 import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
-import { filterSolicitudes } from '@/lib/utils'
+import { filterSolicitudes, decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
+import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
+import { backendApi, mapBackendHistory } from '@/lib/api/backend'
 import {
   ESTADO_CONFIG,
   PRIORIDAD_LABELS,
+  type HistorialEntry,
   type Solicitud,
 } from '@/lib/types'
 
@@ -48,12 +51,38 @@ export default function SeguimientoSolicitudes() {
   const [viewSolicitud, setViewSolicitud] = useState<Solicitud | null>(null)
   const [changeDeptSolicitud, setChangeDeptSolicitud] = useState<Solicitud | null>(null)
   const [historialSolicitud, setHistorialSolicitud] = useState<Solicitud | null>(null)
+  const [historialEntries, setHistorialEntries] = useState<HistorialEntry[]>([])
+  const [isHistorialLoading, setIsHistorialLoading] = useState(false)
   const historialDialogRef = useRef<HTMLDivElement>(null)
 
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
   const departamentos = useDepartamentosStore(state => state.departamentos)
+  const user = useAuthStore(state => state.user)
+  const isItAdmin = user?.role === 'it'
 
-  const closeHistorial = () => setHistorialSolicitud(null)
+  const closeHistorial = () => {
+    setHistorialSolicitud(null)
+    setHistorialEntries([])
+    setIsHistorialLoading(false)
+  }
+
+  const openHistorial = (solicitud: Solicitud) => {
+    setHistorialSolicitud(solicitud)
+    setHistorialEntries(solicitud.historial)
+    setIsHistorialLoading(true)
+
+    void backendApi.requestHistory(solicitud.id)
+      .then(entries => {
+        const mappedEntries = mapBackendHistory(entries)
+        setHistorialEntries(mappedEntries.length > 0 ? mappedEntries : solicitud.historial)
+      })
+      .catch(() => {
+        setHistorialEntries(solicitud.historial)
+      })
+      .finally(() => {
+        setIsHistorialLoading(false)
+      })
+  }
 
   useModalAccessibility(Boolean(historialSolicitud), historialDialogRef, closeHistorial)
 
@@ -97,7 +126,7 @@ export default function SeguimientoSolicitudes() {
 
   const handleExport = () => {
     const headers = [
-      'Identificador',
+      'Código de seguimiento',
       'Solicitante',
       'Identificación',
       'Categoría',
@@ -110,10 +139,10 @@ export default function SeguimientoSolicitudes() {
 
     const rows = filteredSolicitudes.map(solicitud => [
       solicitud.radicado,
-      solicitud.solicitante,
-      solicitud.identificacion,
-      CATEGORIES[solicitud.categoria]?.label ?? solicitud.categoria,
-      solicitud.departamento?.nombre ?? getDepartamentoNombre(solicitud.departamentoId),
+      decodeText(solicitud.solicitante),
+      decodeText(solicitud.identificacion),
+      CATEGORIES[solicitud.categoria]?.label ?? decodeText(solicitud.categoria),
+      normalizeDepartamentoNombre(solicitud.departamento?.nombre) ?? normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId)),
       PRIORIDAD_LABELS[solicitud.prioridad] ?? solicitud.prioridad,
       solicitud.fechaSolicitud,
       solicitud.fechaLimite,
@@ -181,7 +210,7 @@ export default function SeguimientoSolicitudes() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="table-th text-left"># Identificador</th>
+                    <th className="table-th text-left"># Código de seguimiento</th>
                     <th className="table-th text-left">Solicitante</th>
                     <th className="table-th text-left">Departamento</th>
                     <th className="table-th text-left">Prioridad</th>
@@ -205,16 +234,16 @@ export default function SeguimientoSolicitudes() {
                       </td>
 
                       <td className="table-td">
-                        <p className="font-medium">{solicitud.solicitante}</p>
+                        <p className="font-medium">{decodeText(solicitud.solicitante)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {solicitud.identificacion}
+                          {decodeText(solicitud.identificacion)}
                         </p>
                       </td>
 
                       <td className="table-td">
-                        <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-                          {solicitud.departamento?.nombre ??
-                            getDepartamentoNombre(solicitud.departamentoId)}
+                        <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
+                          {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ??
+                            normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId))}
                         </span>
                       </td>
 
@@ -246,7 +275,7 @@ export default function SeguimientoSolicitudes() {
 
                           <button
                             type="button"
-                            onClick={() => setHistorialSolicitud(solicitud)}
+                            onClick={() => openHistorial(solicitud)}
                             className="icon-button hover:bg-secondary"
                             title="Ver historial"
                             aria-label={`Ver historial de ${solicitud.radicado}`}
@@ -254,15 +283,17 @@ export default function SeguimientoSolicitudes() {
                             <History className="h-4 w-4" />
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => setChangeDeptSolicitud(solicitud)}
-                            className="icon-button hover:bg-secondary"
-                            title="Cambiar departamento"
-                            aria-label={`Cambiar departamento de ${solicitud.radicado}`}
-                          >
-                            <ArrowRightLeft className="h-4 w-4" />
-                          </button>
+                          {!isItAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setChangeDeptSolicitud(solicitud)}
+                              className="icon-button hover:bg-secondary"
+                              title="Cambiar departamento"
+                              aria-label={`Cambiar departamento de ${solicitud.radicado}`}
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -328,20 +359,20 @@ export default function SeguimientoSolicitudes() {
                   </div>
 
                   <p className="mb-1 font-medium text-foreground">
-                    {solicitud.solicitante}
+                    {decodeText(solicitud.solicitante)}
                   </p>
 
                   <p className="mb-3 text-sm text-muted-foreground">
-                    {solicitud.identificacion}
+                    {decodeText(solicitud.identificacion)}
                   </p>
 
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
-                      {solicitud.departamento?.nombre ??
-                        getDepartamentoNombre(solicitud.departamentoId)}
+                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
+                      {normalizeDepartamentoNombre(solicitud.departamento?.nombre) ??
+                        normalizeDepartamentoNombre(getDepartamentoNombre(solicitud.departamentoId))}
                     </span>
 
-                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground">
+                    <span className="inline-flex rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground whitespace-nowrap">
                       {PRIORIDAD_LABELS[solicitud.prioridad]}
                     </span>
 
@@ -360,21 +391,23 @@ export default function SeguimientoSolicitudes() {
 
                     <button
                       type="button"
-                      onClick={() => setHistorialSolicitud(solicitud)}
+                      onClick={() => openHistorial(solicitud)}
                       className="mobile-card-btn border border-border bg-card text-foreground"
                       aria-label={`Ver historial de ${solicitud.radicado}`}
                     >
                       <History className="h-4 w-4" />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setChangeDeptSolicitud(solicitud)}
-                      className="mobile-card-btn border border-border bg-card text-foreground"
-                      aria-label={`Cambiar departamento de ${solicitud.radicado}`}
-                    >
-                      <ArrowRightLeft className="h-4 w-4" />
-                    </button>
+                    {!isItAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setChangeDeptSolicitud(solicitud)}
+                        className="mobile-card-btn border border-border bg-card text-foreground"
+                        aria-label={`Cambiar departamento de ${solicitud.radicado}`}
+                      >
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -466,7 +499,13 @@ export default function SeguimientoSolicitudes() {
               </div>
 
               <div className="p-6">
-                <HistorialTimeline historial={historialSolicitud.historial} />
+                {isHistorialLoading ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Cargando historial...
+                  </p>
+                ) : (
+                  <HistorialTimeline historial={historialEntries} />
+                )}
               </div>
 
               <div className="modal-footer">

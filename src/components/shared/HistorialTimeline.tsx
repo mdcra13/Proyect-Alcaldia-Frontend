@@ -1,4 +1,4 @@
-import type { HistorialEntry } from '@/lib/types'
+﻿import type { HistorialEntry } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import {
   Building2,
@@ -76,6 +76,11 @@ const accionConfig: Record<string, { icon: LucideIcon; color: string; label: str
     color: 'text-sky-700 bg-sky-100',
     label: 'Vista',
   },
+  'Documento cargado': {
+    icon: FileText,
+    color: 'text-indigo-700 bg-indigo-100',
+    label: 'Nueva versión del documento',
+  },
 
   recibido: {
     icon: FileText,
@@ -132,6 +137,11 @@ const accionConfig: Record<string, { icon: LucideIcon; color: string; label: str
     color: 'text-purple-600 bg-purple-100',
     label: 'Cambio de estado',
   },
+  'Observación interna': {
+    icon: FileText,
+    color: 'text-slate-600 bg-slate-100',
+    label: 'Observación interna',
+  },
   'Aprobación': {
     icon: CheckCircle,
     color: 'text-green-600 bg-green-100',
@@ -161,7 +171,7 @@ function formatDate(dateStr: string): string {
 
 export function HistorialTimeline({ historial, className }: HistorialTimelineProps) {
   const sortedHistorial = [...historial].sort(
-    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
   )
 
   if (sortedHistorial.length === 0) {
@@ -220,3 +230,4 @@ export function HistorialTimeline({ historial, className }: HistorialTimelinePro
 }
 
 export default HistorialTimeline
+
