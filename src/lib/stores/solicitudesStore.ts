@@ -6,6 +6,7 @@ import {
   mapBackendRequest,
   mapBackendHistory,
   mapBackendDocuments,
+  DocumentUploadError,
 } from '@/lib/api/backend'
 import type {
   Solicitud,
@@ -175,6 +176,7 @@ interface SolicitudesState {
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => Promise<void>
   addSolicitud: (solicitud: NewSolicitudData) => Promise<Solicitud>
+  retryUploadDocument: (requestId: string, file: File, subidoPor?: string) => Promise<Solicitud>
   registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
@@ -390,7 +392,15 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
       fechaLimite: solicitud.fechaLimite,
     })
 
-    await backendApi.uploadRequestDocument(created.id, solicitud.documento)
+    try {
+      await backendApi.uploadRequestDocument(created.id, solicitud.documento)
+    } catch (uploadError) {
+      throw new DocumentUploadError(
+        uploadError instanceof Error ? uploadError.message : 'Error al subir el documento',
+        created.id,
+        created.trackingCode
+      )
+    }
 
     const [details, departments, history] = await Promise.all([
       backendApi.requestDetails(created.id),
@@ -413,6 +423,36 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
       : persisted.historial
 
     set(state => ({ solicitudes: [persisted, ...state.solicitudes] }))
+    return persisted
+  },
+  retryUploadDocument: async (requestId: string, file: File, subidoPor = 'Usuario'): Promise<Solicitud> => {
+    await backendApi.uploadRequestDocument(requestId, file)
+    const [details, departments, history] = await Promise.all([
+      backendApi.requestDetails(requestId),
+      backendApi.departments(),
+      backendApi.requestHistory(requestId),
+    ])
+    const persisted = mapBackendRequest(
+      details,
+      departments.map(mapBackendDepartment)
+    )
+    persisted.historial = history.length
+      ? history.map(entry => ({
+          id: entry.id,
+          fecha: entry.createdAt,
+          accion: entry.eventType,
+          descripcion: entry.observation || 'Documento adjuntado',
+          usuario: subidoPor,
+          usuarioId: entry.userId,
+        }))
+      : persisted.historial
+
+    set(state => ({
+      solicitudes: [
+        persisted,
+        ...state.solicitudes.filter(item => item.id !== requestId),
+      ],
+    }))
     return persisted
   },
 

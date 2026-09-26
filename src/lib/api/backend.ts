@@ -28,6 +28,19 @@ export class ApiError extends Error {
   }
 }
 
+export class DocumentUploadError extends Error {
+  requestId: string
+  trackingCode: string
+
+  constructor(message: string, requestId: string, trackingCode: string) {
+    super(message)
+    this.name = 'DocumentUploadError'
+    this.requestId = requestId
+    this.trackingCode = trackingCode
+  }
+
+}
+
 interface RequestOptions extends RequestInit {
   auth?: boolean
 }
@@ -48,7 +61,10 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
   const body = text ? JSON.parse(text) : null
 
   if (!response.ok) {
-    throw new ApiError(body?.message ?? 'No se pudo completar la solicitud.', response.status)
+    const errorMsg = Array.isArray(body?.message)
+      ? body.message.join('. ')
+      : (body?.message ?? 'No se pudo completar la solicitud.')
+    throw new ApiError(errorMsg, response.status)
   }
 
   return body as T
@@ -58,6 +74,10 @@ function setTokens(tokens: { access_token: string; refresh_token: string }) {
   accessToken = tokens.access_token
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token)
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token)
+}
+
+export function getAccessToken(): string {
+  return accessToken || (typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) || '' : '')
 }
 
 export function clearTokens() {
@@ -258,8 +278,13 @@ function normalize(value?: string | null) {
   return value?.trim().toLowerCase() ?? ''
 }
 
-function mapRole(roleName?: string): UserRole {
-  return ROLE_MAP[normalize(decodeText(roleName))] ?? 'secretaria'
+export function mapRole(roleName?: string): UserRole {
+  const normalized = normalize(decodeText(roleName))
+  const mapped = ROLE_MAP[normalized]
+  if (!mapped) {
+    throw new ApiError(`Rol desconocido: "${roleName ?? ''}".`, 403)
+  }
+  return mapped
 }
 
 function mapStatus(statusName?: string): SolicitudEstado {
@@ -341,6 +366,8 @@ export function mapBackendUser(user: BackendUser): User {
     apellido: decodeText(user.lastName),
     username: user.email,
     role: mapRole(user.role?.name),
+    roleId: user.role?.id,
+    rawRoleName: user.role?.name,
     departamentoId: user.departmentId,
     departamento: user.department
       ? {
@@ -472,7 +499,15 @@ export const backendApi = {
     departamentoId?: string
   }) {
     const roles = await this.roles()
-    const role = roles.find(item => mapRole(item.name) === input.role)
+    let role: BackendRole | undefined
+    if (input.role === 'departamento') {
+      role = roles.find(item => {
+        const norm = normalize(item.name)
+        return norm === 'officer' || norm === 'revisor' || norm === 'funcionario'
+      }) ?? roles.find(item => mapRole(item.name) === 'departamento')
+    } else {
+      role = roles.find(item => mapRole(item.name) === input.role)
+    }
     if (!role) throw new ApiError(`No existe el rol ${input.role} en backend.`, 400)
 
     return apiRequest<BackendUser>('/users', {
@@ -493,13 +528,25 @@ export const backendApi = {
     apellido?: string
     email?: string
     role?: UserRole
-    departamentoId?: string
+    roleId?: string
+    departamentoId?: string | null
     isActive?: boolean
     password?: string
   }) {
-    const roleId = input.role
-      ? (await this.roles()).find(item => mapRole(item.name) === input.role)?.id
-      : undefined
+    let roleId = input.roleId
+    if (!roleId && input.role) {
+      const roles = await this.roles()
+      if (input.role === 'departamento') {
+        const officerRole = roles.find(item => {
+          const norm = normalize(item.name)
+          return norm === 'officer' || norm === 'revisor' || norm === 'funcionario'
+        })
+        roleId = officerRole?.id ?? roles.find(item => mapRole(item.name) === 'departamento')?.id
+      } else {
+        roleId = roles.find(item => mapRole(item.name) === input.role)?.id
+      }
+    }
+
 
     return apiRequest<BackendUser>(`/users/${id}`, {
       method: 'PATCH',
@@ -508,7 +555,7 @@ export const backendApi = {
         lastName: input.apellido,
         email: input.email,
         roleId,
-        departmentId: input.departamentoId || undefined,
+        departmentId: input.departamentoId === '' ? null : (input.departamentoId !== undefined ? input.departamentoId : undefined),
         isActive: input.isActive,
         password: input.password,
       }),
@@ -582,14 +629,17 @@ export const backendApi = {
       this.departments(),
     ])
     const category =
-      categories.find(item => mapCategory(item.name) === input.categoria) ?? categories[0]
+      categories.find(item => mapCategory(item.name) === input.categoria)
+    if (!category) {
+      throw new ApiError(`No se encontró una categoría válida para "${input.categoria}".`, 400)
+    }
     const department =
       departments.find(item => item.id === input.departamentoId) ??
-      departments.find(item => item.id === category?.departmentId) ??
-      departments[0]
+      departments.find(item => item.id === category.departmentId)
 
-    if (!category || !department) {
-      throw new ApiError('No hay categorias o departamentos disponibles en backend.', 400)
+
+    if (!department) {
+      throw new ApiError('No se encontró un departamento válido para la solicitud.', 400)
     }
 
     const created = await apiRequest<{ id: string }>('/requests', {
@@ -641,10 +691,14 @@ export const backendApi = {
     })
   },
 
-  changeDepartment(id: string, departmentId: string, observation?: string) {
-    return apiRequest<BackendRequestDetails>(`/requests/${id}/department`, {
+  async changeDepartment(id: string, departmentId: string, observation?: string) {
+    const updated = await apiRequest<BackendRequestDetails>(`/requests/${id}/department`, {
       method: 'PATCH',
       body: JSON.stringify({ departmentId, observation }),
     })
+    if (!updated || !updated.id) {
+      throw new ApiError('No se pudo confirmar la actualización del departamento en el servidor.', 500)
+    }
+    return updated
   },
 }

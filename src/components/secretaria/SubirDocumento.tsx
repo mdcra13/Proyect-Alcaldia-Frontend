@@ -1,4 +1,4 @@
-﻿import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
+import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { 
@@ -18,9 +18,10 @@ import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData, SolicitudPrioridad } from '@/lib/types'
-import { PRIORIDAD_LABELS } from '@/lib/types'
+import { PRIORIDAD_LABELS, MAX_FILE_SIZE_BYTES } from '@/lib/types'
+import { DocumentUploadError } from '@/lib/api/backend'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = MAX_FILE_SIZE_BYTES
 const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'image/jpeg',
@@ -37,11 +38,15 @@ export default function SubirDocumento() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [newRadicado, setNewRadicado] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [pendingCreatedRequest, setPendingCreatedRequest] = useState<{ id: string; trackingCode: string } | null>(null)
 
-  const user            = useAuthStore(state => state.user)
-  const addSolicitud    = useSolicitudesStore(state => state.addSolicitud)
-  const addNotification = useNotificationStore(state => state.addNotification)
-  const departamentos   = useDepartamentosStore(state => state.departamentos)
+  const user                = useAuthStore(state => state.user)
+  const addSolicitud        = useSolicitudesStore(state => state.addSolicitud)
+  const retryUploadDocument = useSolicitudesStore(state => state.retryUploadDocument)
+  const addNotification     = useNotificationStore(state => state.addNotification)
+  const departamentos       = useDepartamentosStore(state => state.departamentos)
+
+  const today = new Date().toISOString().split('T')[0]
 
   const {
     register,
@@ -104,12 +109,46 @@ export default function SubirDocumento() {
       setFileError('Debe adjuntar un documento')
       return
     }
+    if (data.fechaSolicitud && data.fechaSolicitud > today) {
+      setSubmitError('La fecha de solicitud no puede ser posterior a hoy')
+      return
+    }
+    if (data.fechaLimite && data.fechaLimite < today) {
+      setSubmitError('La fecha límite no puede ser anterior a hoy')
+      return
+    }
     if (!data.categoria) return
 
     setIsSubmitting(true)
     setSubmitError(null)
 
     const fullName = user ? `${user.nombre} ${user.apellido}` : 'Usuario'
+
+    if (pendingCreatedRequest) {
+      try {
+        const solicitud = await retryUploadDocument(
+          pendingCreatedRequest.id,
+          file,
+          fullName,
+        )
+        addNotification({
+          message: `Documento adjuntado exitosamente a la solicitud: ${solicitud.radicado}`,
+          type: 'success',
+        })
+        setNewRadicado(solicitud.radicado)
+        setShowSuccess(true)
+        setPendingCreatedRequest(null)
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : 'No se pudo subir el documento.'
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
 
     try {
       const solicitud = await addSolicitud({
@@ -133,12 +172,23 @@ export default function SubirDocumento() {
       })
       setNewRadicado(solicitud.radicado)
       setShowSuccess(true)
+      setPendingCreatedRequest(null)
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : 'No se pudo registrar la solicitud.'
-      setSubmitError(message)
-      addNotification({ message, type: 'error' })
+      if (error instanceof DocumentUploadError) {
+        setPendingCreatedRequest({
+          id: error.requestId,
+          trackingCode: error.trackingCode,
+        })
+        const message = `Solicitud creada con radicado ${error.trackingCode}, pero falló la subida del documento: ${error.message}. Puede reintentar la subida del archivo sin duplicar la solicitud.`
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      } else {
+        const message = error instanceof Error
+          ? error.message
+          : 'No se pudo registrar la solicitud.'
+        setSubmitError(message)
+        addNotification({ message, type: 'error' })
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -149,6 +199,7 @@ export default function SubirDocumento() {
     setFile(null)
     setShowSuccess(false)
     setNewRadicado(null)
+    setPendingCreatedRequest(null)
   }
 
   // ── Success screen ─────────────────────────────────────────────────────────
@@ -333,7 +384,11 @@ export default function SubirDocumento() {
                 <input
                   id="fechaSolicitud"
                   type="date"
-                  {...register('fechaSolicitud', { required: 'La fecha de solicitud es requerida' })}
+                  {...register('fechaSolicitud', {
+                    required: 'La fecha de solicitud es requerida',
+                    validate: val => !val || val <= today || 'La fecha de solicitud no puede ser posterior a hoy',
+                  })}
+                  max={today}
                   className="form-input pl-10"
                 />
               </div>
@@ -353,10 +408,16 @@ export default function SubirDocumento() {
                 <input
                   id="fechaLimite"
                   type="date"
-                  {...register('fechaLimite')}
+                  {...register('fechaLimite', {
+                    validate: val => !val || val >= today || 'La fecha límite no puede ser anterior a hoy',
+                  })}
+                  min={today}
                   className="form-input pl-10"
                 />
               </div>
+              {errors.fechaLimite && (
+                <p className="form-error">{errors.fechaLimite.message}</p>
+              )}
             </div>
 
             {/* Descripción */}
@@ -462,6 +523,19 @@ export default function SubirDocumento() {
               </div>
             </div>
 
+            {pendingCreatedRequest && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+                <div className="flex items-center gap-2 font-medium">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <span>Solicitud creada pendiente de adjuntar documento</span>
+                </div>
+                <p className="mt-1 text-sm">
+                  Número de radicado: <strong>{pendingCreatedRequest.trackingCode}</strong>.
+                  La solicitud ya fue registrada. Adjunte el documento requerido y haga clic en &ldquo;Reintentar subida de documento&rdquo; para completar el proceso sin duplicar la solicitud.
+                </p>
+              </div>
+            )}
+
             {/* Botones */}
             {submitError && (
               <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-destructive">
@@ -497,10 +571,10 @@ export default function SubirDocumento() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
-                    Registrando...
+                    {pendingCreatedRequest ? 'Subiendo documento...' : 'Registrando...'}
                   </span>
                 ) : (
-                  'Registrar solicitud'
+                  pendingCreatedRequest ? 'Reintentar subida de documento' : 'Registrar solicitud'
                 )}
               </button>
             </div>

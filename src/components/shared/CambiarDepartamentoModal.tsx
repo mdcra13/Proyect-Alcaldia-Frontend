@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Building2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
@@ -30,6 +30,7 @@ export function CambiarDepartamentoModal({
   const [selectedDepartamentoId, setSelectedDepartamentoId] = useState(solicitud.departamentoId ?? '')
   const [motivo, setMotivo] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
   const departamentosActivos = getDepartamentosActivos()
@@ -38,6 +39,7 @@ export function CambiarDepartamentoModal({
     if (!user || !selectedDepartamentoId || selectedDepartamentoId === solicitud.departamentoId) return
 
     setIsSubmitting(true)
+    setErrorMessage(null)
     try {
       await cambiarDepartamento(
         solicitud.id,
@@ -51,7 +53,9 @@ export function CambiarDepartamentoModal({
       onSuccess?.()
       toast.success('Departamento actualizado correctamente')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo cambiar el departamento')
+      const msg = error instanceof Error ? error.message : 'No se pudo cambiar el departamento'
+      setErrorMessage(msg)
+      toast.error(msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -60,6 +64,7 @@ export function CambiarDepartamentoModal({
   const handleClose = () => {
     setSelectedDepartamentoId(solicitud.departamentoId ?? '')
     setMotivo('')
+    setErrorMessage(null)
     onOpenChange(false)
   }
 
@@ -102,6 +107,11 @@ export function CambiarDepartamentoModal({
         </div>
 
         <div className="grid gap-4 p-6">
+          {errorMessage && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+              {errorMessage}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">Departamento actual</label>
             <div className="modal-info-row">

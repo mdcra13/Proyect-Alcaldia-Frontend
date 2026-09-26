@@ -10,12 +10,16 @@ export interface Departamento {
 export type UserRole = 'secretaria' | 'departamento' | 'alcalde' | 'it'
 export type UserStatus = 'active' | 'inactive'
 
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+
 export interface User {
   id: string
   nombre: string
   apellido: string
   username: string
   role: UserRole
+  roleId?: string
+  rawRoleName?: string
   departamentoId?: string
   departamento?: Departamento
   status: UserStatus

@@ -33,10 +33,12 @@ const initialFormData: UserFormData = {
 
 export default function ITGestionUsuarios() {
   const { users, addUser, updateUser, toggleUserStatus } = useAuthStore()
+  const currentUser = useAuthStore(state => state.user)
   const departamentos = useDepartamentosStore(state => state.departamentos)
 
   const [searchQuery, setSearchQuery]   = useState('')
   const [filterRole, setFilterRole]     = useState<UserRole | 'todos'>('todos')
+  const [filterStatus, setFilterStatus] = useState<'todos' | 'active' | 'inactive'>('todos')
   const [currentPage, setCurrentPage]   = useState(1)
   const [showUserModal, setShowUserModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -55,8 +57,9 @@ export default function ITGestionUsuarios() {
       )
     }
     if (filterRole !== 'todos') results = results.filter(u => u.role === filterRole)
+    if (filterStatus !== 'todos') results = results.filter(u => u.status === filterStatus)
     return results.sort((a, b) => a.nombre.localeCompare(b.nombre))
-  }, [users, searchQuery, filterRole])
+  }, [users, searchQuery, filterRole, filterStatus])
 
   const totalPages      = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE))
   const safeCurrentPage = Math.min(currentPage, totalPages)
@@ -71,7 +74,7 @@ export default function ITGestionUsuarios() {
     inactivos: users.filter(u => u.status !== 'active').length,
   }), [users])
 
-  const getDepartamentoNombre = (id?: string) => {
+  const getDepartamentoNombre = (id?: string | null) => {
     if (!id) return '-'
     return departamentos.find(d => d.id === id)?.nombre ?? '-'
   }
@@ -98,6 +101,10 @@ export default function ITGestionUsuarios() {
   }
 
   const handleToggleStatus = async (user: User) => {
+    if (currentUser?.id === user.id && user.status === 'active') {
+      toast.error('Un administrador no puede desactivarse a sí mismo.')
+      return
+    }
     try {
       await toggleUserStatus(user.id)
       toast.success('Estado del usuario actualizado')
@@ -124,17 +131,19 @@ export default function ITGestionUsuarios() {
       setFormError('La contraseña temporal debe tener al menos 8 caracteres.')
       return
     }
-    const departamentoId = requiereDepartamento ? formData.departamentoId : undefined
+    const departamentoId = requiereDepartamento ? formData.departamentoId : null
     if (isEditing && selectedUser) {
+      const roleChanged = selectedUser.role !== formData.role
+      const roleId = !roleChanged ? selectedUser.roleId : undefined
       await updateUser(selectedUser.id, {
         nombre: formData.nombre, apellido: formData.apellido,
-        username: formData.username, role: formData.role, departamentoId,
+        username: formData.username, role: formData.role, roleId, departamentoId,
       })
     } else {
       await addUser({
         nombre: formData.nombre, apellido: formData.apellido,
         username: formData.username, role: formData.role,
-        departamentoId, status: 'active', password: formData.password,
+        departamentoId: departamentoId ?? undefined, status: 'active', password: formData.password,
       })
     }
     setShowUserModal(false)
@@ -239,6 +248,19 @@ export default function ITGestionUsuarios() {
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="status-filter" className="sr-only">Filtrar por estado</label>
+              <select
+                id="status-filter"
+                value={filterStatus}
+                onChange={e => { setFilterStatus(e.target.value as 'todos' | 'active' | 'inactive'); setCurrentPage(1) }}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:w-44"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -265,7 +287,10 @@ export default function ITGestionUsuarios() {
                     </td>
                   </tr>
                 ) : (
-                  paginatedUsers.map(user => (
+                  paginatedUsers.map(user => {
+                    const isSelf = currentUser?.id === user.id
+                    const isSelfActive = isSelf && user.status === 'active'
+                    return (
                     <tr key={user.id} className="border-b transition-colors hover:bg-muted/30">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
@@ -308,8 +333,10 @@ export default function ITGestionUsuarios() {
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(user)}
-                            aria-label={user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`}
-                            className="icon-button hover:bg-secondary"
+                            disabled={isSelfActive}
+                            title={isSelfActive ? 'Un administrador no puede desactivarse a sí mismo' : (user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`)}
+                            aria-label={isSelfActive ? `No puedes desactivarte a ti mismo (${user.username})` : (user.status === 'active' ? `Desactivar ${user.username}` : `Activar ${user.username}`)}
+                            className={`icon-button hover:bg-secondary ${isSelfActive ? 'cursor-not-allowed opacity-40' : ''}`}
                           >
                             {user.status === 'active'
                               ? <UserX    className="h-4 w-4 text-destructive" aria-hidden="true" focusable="false" />
@@ -327,7 +354,8 @@ export default function ITGestionUsuarios() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
             </table>

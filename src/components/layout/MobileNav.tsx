@@ -44,6 +44,7 @@ const navLinksByRole: Record<UserRole, MobileNavLink[]> = {
     createDashboardLink('/it'),
     { path: '/it/usuarios', label: 'Usuarios', icon: Users },
     { path: '/it/departamentos', label: 'Deptos.', icon: Building2 },
+    { path: '/secretaria/seguimiento', label: 'Seguimiento', icon: FileSearch },
   ],
 }
 
