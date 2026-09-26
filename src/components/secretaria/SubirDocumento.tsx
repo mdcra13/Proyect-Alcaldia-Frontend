@@ -11,9 +11,10 @@ import {
   AlignLeft,
   CheckCircle,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
-import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
@@ -45,19 +46,59 @@ export default function SubirDocumento() {
   const addSolicitud        = useSolicitudesStore(state => state.addSolicitud)
   const retryUploadDocument = useSolicitudesStore(state => state.retryUploadDocument)
   const categories          = useSolicitudesStore(state => state.categories)
+  const storeLoading        = useSolicitudesStore(state => state.isLoadingCategories)
+  const storeError          = useSolicitudesStore(state => state.categoriesError)
   const fetchCategories     = useSolicitudesStore(state => state.fetchCategories)
   const addNotification     = useNotificationStore(state => state.addNotification)
   const departamentos       = useDepartamentosStore(state => state.departamentos)
   const fetchDepartamentos  = useDepartamentosStore(state => state.fetchDepartamentos)
 
+  const [localError, setLocalError] = useState<string | null>(null)
+  const [isFetching, setIsFetching] = useState(false)
+
+  const handleRetryCategories = () => {
+    setIsFetching(true)
+    setLocalError(null)
+    void fetchCategories()
+      .then(() => {
+        setLocalError(null)
+      })
+      .catch((err: unknown) => {
+        setLocalError(err instanceof Error ? err.message : 'Error al cargar el catálogo de categorías')
+      })
+      .finally(() => {
+        setIsFetching(false)
+      })
+  }
+
   useEffect(() => {
+    let active = true
+
     if (categories.length === 0) {
-      void fetchCategories().catch(() => undefined)
+      fetchCategories()
+        .then(() => {
+          if (active) setLocalError(null)
+        })
+        .catch((err: unknown) => {
+          if (active) {
+            setLocalError(err instanceof Error ? err.message : 'Error al cargar el catálogo de categorías')
+          }
+        })
     }
+
+    return () => {
+      active = false
+    }
+  }, [categories.length, fetchCategories])
+
+  useEffect(() => {
     if (departamentos.length === 0) {
       void fetchDepartamentos().catch(() => undefined)
     }
-  }, [categories.length, departamentos.length, fetchCategories, fetchDepartamentos])
+  }, [departamentos.length, fetchDepartamentos])
+
+  const categoriesError = localError || storeError
+  const loadingCategories = isFetching || storeLoading || (categories.length === 0 && !categoriesError)
 
   const today = getTodayPanama()
 
@@ -119,6 +160,7 @@ export default function SubirDocumento() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const onSubmit = async (data: SolicitudFormData) => {
+    if (loadingCategories || categories.length === 0) return
     if (!file) {
       setFileError('Debe adjuntar un documento')
       return
@@ -290,12 +332,41 @@ export default function SubirDocumento() {
 
             {/* Categoría */}
             <div>
-              <label htmlFor="categoria" className="form-label">
-                Categoría <span className="text-destructive">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="categoria" className="form-label">
+                  Categoría <span className="text-destructive">*</span>
+                </label>
+                {loadingCategories && (
+                  <span className="text-xs text-muted-foreground animate-pulse">
+                    Cargando categorías...
+                  </span>
+                )}
+              </div>
+
+              {categoriesError && (
+                <div
+                  className="mb-2 flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-sm text-destructive"
+                  role="alert"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{categoriesError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetryCategories}
+                    className="ml-2 inline-flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/20"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
               <select
                 id="categoria"
                 {...register('categoria', { required: 'La categoría es requerida' })}
+                disabled={loadingCategories || categories.length === 0}
                 onChange={e => {
                   const selectedId = e.target.value
                   setValue('categoria', selectedId, { shouldValidate: true })
@@ -304,22 +375,20 @@ export default function SubirDocumento() {
                     setValue('departamentoId', matchingCat.departmentId, { shouldValidate: true })
                   }
                 }}
-                className="form-input custom-select"
+                className="form-input custom-select disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option value="">Seleccione una categoría</option>
-                {categories.length > 0 ? (
-                  categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))
-                ) : (
-                  (Object.entries(CATEGORIES) as [SolicitudCategoria, typeof CATEGORIES[SolicitudCategoria]][]).map(
-                    ([key, value]) => (
-                      <option key={key} value={key}>{value.label}</option>
-                    ),
-                  )
-                )}
+                <option value="">
+                  {loadingCategories
+                    ? 'Cargando categorías...'
+                    : categoriesError
+                      ? 'Error al cargar categorías'
+                      : 'Seleccione una categoría'}
+                </option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
               {errors.categoria && (
                 <p className="form-error">{errors.categoria.message}</p>
@@ -585,7 +654,7 @@ export default function SubirDocumento() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || loadingCategories || categories.length === 0}
                 className="btn-primary flex-1 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? (

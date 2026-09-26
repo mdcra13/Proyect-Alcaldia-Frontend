@@ -184,6 +184,8 @@ interface SolicitudesState {
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
   categories: BackendCategory[]
+  isLoadingCategories: boolean
+  categoriesError: string | null
   fetchCategories: () => Promise<BackendCategory[]>
   CATEGORIES: CategoriesMap
 }
@@ -191,15 +193,20 @@ interface SolicitudesState {
 const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
   solicitudes: [],
   categories: [],
+  isLoadingCategories: false,
+  categoriesError: null,
 
   fetchCategories: async () => {
+    set({ isLoadingCategories: true, categoriesError: null })
     try {
       const categories = await backendApi.categories()
       const active = categories.filter(c => c.isActive !== false && c.is_active !== false)
-      set({ categories: active })
+      set({ categories: active, isLoadingCategories: false, categoriesError: null })
       return active
-    } catch {
-      return get().categories
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al cargar el catálogo de categorías'
+      set({ categories: [], isLoadingCategories: false, categoriesError: message })
+      throw error
     }
   },
 

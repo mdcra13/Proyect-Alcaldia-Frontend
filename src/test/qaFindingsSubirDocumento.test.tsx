@@ -37,6 +37,9 @@ describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
     })
     useSolicitudesStore.setState({
       solicitudes: [],
+      categories: [
+        { id: 'salud', name: 'Salud', departmentId: 'dep-1', isActive: true },
+      ],
     })
   })
 
@@ -245,5 +248,121 @@ describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
       expect(screen.getByText(/Solicitud Registrada/i)).toBeInTheDocument()
       expect(screen.getByText(/Código de seguimiento: RAD-2026-100/i)).toBeInTheDocument()
     })
+  })
+
+  it('disables category select and submit button without fallback during slow category load, then enables upon resolution', async () => {
+    // Start with empty categories
+    useSolicitudesStore.setState({
+      categories: [],
+      solicitudes: [],
+    })
+
+    type ResolvableCategory = { id: string; name: string; departmentId: string; isActive: boolean }
+    let resolveCategories!: (value: ResolvableCategory[]) => void
+    const categoriesPromise = new Promise<ResolvableCategory[]>(resolve => {
+      resolveCategories = resolve
+    })
+
+    const mockFetchCategories = vi.fn().mockImplementation(() => categoriesPromise)
+    useSolicitudesStore.setState({
+      fetchCategories: mockFetchCategories,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // While loading:
+    // 1. Category select is disabled
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    expect(categorySelect).toBeDisabled()
+
+    // 2. Submit button is disabled
+    const submitBtn = screen.getByRole('button', { name: /registrar solicitud/i })
+    expect(submitBtn).toBeDisabled()
+
+    // 3. NO old fallback categories exist (Salud, Educación, Familiar)
+    expect(screen.queryByRole('option', { name: 'Educación' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Familiar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Comunidad' })).not.toBeInTheDocument()
+
+    // 4. Loading indicator or placeholder is shown
+    expect(screen.getAllByText(/cargando categorías/i).length).toBeGreaterThan(0)
+
+    // Now resolve the promise with real categories
+    const realCategories = [
+      { id: 'cat-salud-real', name: 'Salud Pública', departmentId: 'dep-1', isActive: true },
+      { id: 'cat-obras-real', name: 'Obras Públicas', departmentId: 'dep-1', isActive: true },
+    ]
+    useSolicitudesStore.setState({ categories: realCategories })
+    resolveCategories(realCategories)
+
+    // After resolution:
+    await waitFor(() => {
+      expect(categorySelect).not.toBeDisabled()
+    })
+    expect(submitBtn).not.toBeDisabled()
+    expect(screen.getByRole('option', { name: 'Salud Pública' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Obras Públicas' })).toBeInTheDocument()
+  })
+
+  it('shows error and retry option when category catalog fails, keeps select and submit disabled, and reloads on retry', async () => {
+    useSolicitudesStore.setState({
+      categories: [],
+      solicitudes: [],
+    })
+
+    let fail = true
+    const mockFetchCategories = vi.fn().mockImplementation(async () => {
+      if (fail) {
+        throw new Error('Error 500: Falla en catálogo de categorías')
+      }
+      const loaded = [
+        { id: 'cat-edu-real', name: 'Educación y Cultura', departmentId: 'dep-1', isActive: true },
+      ]
+      useSolicitudesStore.setState({ categories: loaded })
+      return loaded
+    })
+
+    useSolicitudesStore.setState({
+      fetchCategories: mockFetchCategories,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // Wait for failure error message to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Error 500: Falla en catálogo de categorías/i)).toBeInTheDocument()
+    })
+
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    const submitBtn = screen.getByRole('button', { name: /registrar solicitud/i })
+
+    // Still disabled and no old fallback categories
+    expect(categorySelect).toBeDisabled()
+    expect(submitBtn).toBeDisabled()
+    expect(screen.queryByRole('option', { name: 'Familiar' })).not.toBeInTheDocument()
+
+    // Retry button is available
+    const retryBtn = screen.getByRole('button', { name: /reintentar/i })
+    expect(retryBtn).toBeInTheDocument()
+
+    // Make next attempt succeed and click retry
+    fail = false
+    fireEvent.click(retryBtn)
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Educación y Cultura' })).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText(/Falla en catálogo/i)).not.toBeInTheDocument()
+    expect(categorySelect).not.toBeDisabled()
+    expect(submitBtn).not.toBeDisabled()
   })
 })

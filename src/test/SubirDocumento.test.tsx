@@ -33,6 +33,9 @@ describe('SubirDocumento', () => {
 
     useSolicitudesStore.setState({
       solicitudes: [],
+      categories: [
+        { id: 'cat-test', name: 'Salud', departmentId: 'dep-1', isActive: true },
+      ],
     })
   })
 
