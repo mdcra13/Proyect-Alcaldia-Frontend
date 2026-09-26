@@ -22,6 +22,7 @@ import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import { decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
+import { backendApi } from '@/lib/api/backend'
 
 interface DocumentPreviewModalProps {
   solicitud: Solicitud
@@ -105,8 +106,55 @@ export default function DocumentPreviewModal({
     }
   }, [initialSolicitud.id, loadSolicitudDetails, open])
 
+  const [blobState, setBlobState] = useState<{
+    docId: string | null
+    url: string | null
+    error: string | null
+  }>({ docId: null, url: null, error: null })
+
+  const shouldFetchBlob = Boolean(
+    open && user?.role !== 'it' && solicitud.id && selectedDocument?.id
+  )
+  const blobLoading = Boolean(
+    shouldFetchBlob && blobState.docId !== selectedDocument?.id && !blobState.error
+  )
+  const blobUrl = blobState.docId === selectedDocument?.id ? blobState.url : null
+  const blobError = blobState.docId === selectedDocument?.id ? blobState.error : null
+
   useEffect(() => {
-    if (!open || !user) return
+    if (!open || user?.role === 'it' || !solicitud.id || !selectedDocument?.id) {
+      return
+    }
+
+    const docId = selectedDocument.id
+    let active = true
+    let currentBlobUrl: string | null = null
+
+    void backendApi.getDocumentBlob(solicitud.id, docId)
+      .then(blob => {
+        if (!active) return
+        currentBlobUrl = URL.createObjectURL(blob)
+        setBlobState({ docId, url: currentBlobUrl, error: null })
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        setBlobState({
+          docId,
+          url: null,
+          error: err instanceof Error ? err.message : 'Error al cargar el documento',
+        })
+      })
+
+    return () => {
+      active = false
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl)
+      }
+    }
+  }, [open, user?.role, solicitud.id, selectedDocument?.id])
+
+  useEffect(() => {
+    if (!open || !user || user.role === 'it') return
 
     registrarVista(
       solicitud.id,
@@ -251,9 +299,9 @@ export default function DocumentPreviewModal({
                   </div>
                   {displayedDocumentName && user?.role !== 'it' && (
                     <a  
-                      href={displayedDocumentUrl ?? '#'}
+                      href={blobUrl || (displayedDocumentUrl ?? '#')}
                       download={displayedDocumentName}
-                      onClick={e => { if (!displayedDocumentUrl) e.preventDefault() }}
+                      onClick={e => { if (!blobUrl && !displayedDocumentUrl) e.preventDefault() }}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
                       aria-label={`Descargar ${displayedDocumentName}`}
                     >
@@ -271,16 +319,27 @@ export default function DocumentPreviewModal({
                         La visualización y descarga de documentos adjuntos no está disponible para el rol Administrador IT.
                       </p>
                     </div>
-                  ) : displayedDocumentUrl && isImageDocument ? (
+                  ) : blobLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                      <p className="text-sm text-muted-foreground">Cargando documento...</p>
+                    </div>
+                  ) : blobError ? (
+                    <div className="text-center py-16">
+                      <FileText className="mx-auto mb-3 h-12 w-12 text-destructive" aria-hidden="true" focusable="false" />
+                      <p className="font-medium text-destructive">No se pudo cargar el documento</p>
+                      <p className="text-sm text-muted-foreground">{blobError}</p>
+                    </div>
+                  ) : (blobUrl || displayedDocumentUrl) && isImageDocument ? (
                     <img
-                      src={displayedDocumentUrl}
+                      src={blobUrl || displayedDocumentUrl}
                       alt={`Vista previa de ${displayedDocumentName ?? 'la imagen adjunta'}`}
                       className="max-h-[65vh] w-full rounded-md object-contain"
                     />
-                  ) : displayedDocumentUrl ? (
+                  ) : (blobUrl || displayedDocumentUrl) ? (
                     <embed
-                      src={displayedDocumentUrl}
-                      type="application/pdf"
+                      src={blobUrl || displayedDocumentUrl}
+                      type={selectedDocument?.tipo || 'application/pdf'}
                       className="h-full w-full min-h-[300px] rounded-md"
                       aria-label="Vista previa del documento PDF"
                     />

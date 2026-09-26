@@ -81,9 +81,13 @@ describe('QA Findings: Reenviar a Alcaldía & Seguimiento IT & Cambiar Departame
       </BrowserRouter>
     )
 
-    // Open approve/reenviar modal
-    const approveBtn = screen.getByRole('button', { name: /aprobar #rad-correccion-01/i })
-    fireEvent.click(approveBtn)
+    // Open detail modal first
+    const detailBtn = screen.getByRole('button', { name: 'Ver detalle de #RAD-CORRECCION-01' })
+    fireEvent.click(detailBtn)
+
+    // In DocumentPreviewModal, click approve/reenviar button
+    const actionBtn = screen.getByRole('button', { name: 'Reenviar a Alcaldía' })
+    fireEvent.click(actionBtn)
 
     // Modal title should indicate corrections
     expect(screen.getByRole('heading', { name: 'Reenviar solicitud corregida' })).toBeInTheDocument()
@@ -116,14 +120,14 @@ describe('QA Findings: Reenviar a Alcaldía & Seguimiento IT & Cambiar Departame
       </BrowserRouter>
     )
 
-    // List item is visible
-    expect(screen.getByText('#RAD-CORRECCION-01')).toBeInTheDocument()
+    // List item is visible (check table and card instances)
+    expect(screen.getAllByText('#RAD-CORRECCION-01').length).toBeGreaterThan(0)
 
     // Detail button is present
-    expect(screen.getByRole('button', { name: 'Ver detalle de #RAD-CORRECCION-01' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Ver detalle de #RAD-CORRECCION-01' }).length).toBeGreaterThan(0)
 
     // History button is present
-    expect(screen.getByRole('button', { name: 'Ver historial de #RAD-CORRECCION-01' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Ver historial de #RAD-CORRECCION-01' }).length).toBeGreaterThan(0)
 
     // Change department button must NOT be present for IT
     expect(screen.queryByRole('button', { name: /cambiar departamento de/i })).not.toBeInTheDocument()
@@ -146,7 +150,7 @@ describe('QA Findings: Reenviar a Alcaldía & Seguimiento IT & Cambiar Departame
     )
 
     // Select another department
-    const select = screen.getByLabelText(/departamento/i)
+    const select = screen.getByLabelText('Nuevo departamento')
     fireEvent.change(select, { target: { value: 'dep-2' } })
 
     // Click confirm

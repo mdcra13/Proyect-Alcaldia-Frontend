@@ -1,3 +1,4 @@
+import useAuthStore from '@/lib/stores/authStore'
 
 import { create } from 'zustand'
 import {
@@ -457,6 +458,10 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
   },
 
   registrarVista: (id, userId, userName) => {
+    const currentUser = useAuthStore.getState().user
+    if (currentUser?.role === 'it') {
+      return get().getSolicitudById(id)
+    }
     const solicitud = get().getSolicitudById(id)
     if (!solicitud) return undefined
 

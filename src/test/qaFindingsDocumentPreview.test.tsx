@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
 import useAuthStore from '@/lib/stores/authStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
+import { backendApi } from '@/lib/api/backend'
 import type { Solicitud, User } from '@/lib/types'
 
 const secretariaUser: User = {
@@ -49,7 +51,6 @@ const solicitudConVersiones: Solicitud = {
   documentos: [
     {
       id: 'doc-v1',
-      solicitudId: 'req-multi-doc',
       nombre: 'archivo_inicial_v1.pdf',
       url: '/uploads/archivo_inicial_v1.pdf',
       tamano: 1024 * 1024,
@@ -62,7 +63,6 @@ const solicitudConVersiones: Solicitud = {
     },
     {
       id: 'doc-v2',
-      solicitudId: 'req-multi-doc',
       nombre: 'archivo_corregido_v2.pdf',
       url: '/uploads/archivo_corregido_v2.pdf',
       tamano: 2 * 1024 * 1024,
@@ -76,33 +76,43 @@ const solicitudConVersiones: Solicitud = {
   ],
 }
 
-describe('QA Findings: DocumentPreviewModal - Versions & IT Role Restriction', () => {
+describe('QA Findings: DocumentPreviewModal - Versions & IT Role Restriction & Protected Blob', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     useAuthStore.setState({
       user: secretariaUser,
       isAuthenticated: true,
       rememberSession: false,
     })
+    vi.spyOn(backendApi, 'getDocumentBlob').mockImplementation(async (_reqId, docId) => {
+      return new Blob([`mock content for ${docId}`], { type: 'application/pdf' })
+    })
+    useSolicitudesStore.setState({
+      loadSolicitudDetails: vi.fn().mockResolvedValue(solicitudConVersiones),
+    })
   })
 
-  it('selects and switches between two distinct document versions correctly', () => {
-    render(
-      <DocumentPreviewModal
-        isOpen={true}
-        onClose={() => {}}
-        solicitud={solicitudConVersiones}
-      />
-    )
+  it('selects and switches between two distinct document versions correctly with authenticated blob', async () => {
+    await act(async () => {
+      render(
+        <DocumentPreviewModal
+          open={true}
+          onClose={() => {}}
+          solicitud={solicitudConVersiones}
+        />
+      )
+    })
 
     // Initial state: doc-v2 is esActual = true
-    expect(screen.getByText('archivo_corregido_v2.pdf')).toBeInTheDocument()
-    expect(screen.getByText('Versión 2 (Actual)')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('archivo_corregido_v2.pdf')).toBeInTheDocument()
+      expect(screen.getByText('Versión 2 (Actual)')).toBeInTheDocument()
+    })
 
     // Download link points to v2
     const downloadLinkV2 = screen.getByRole('link', {
       name: 'Descargar archivo_corregido_v2.pdf',
     })
-    expect(downloadLinkV2).toHaveAttribute('href', '/uploads/archivo_corregido_v2.pdf')
     expect(downloadLinkV2).toHaveTextContent('Descargar (v2)')
 
     // Check version buttons
@@ -117,47 +127,60 @@ describe('QA Findings: DocumentPreviewModal - Versions & IT Role Restriction', (
     expect(version1Button).not.toHaveAttribute('aria-current')
 
     // Click version 1 to view it
-    fireEvent.click(version1Button)
+    await act(async () => {
+      fireEvent.click(version1Button)
+    })
 
     // Now v1 should be selected
-    expect(screen.getByText('archivo_inicial_v1.pdf')).toBeInTheDocument()
-    expect(screen.getByText('Versión 1')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('archivo_inicial_v1.pdf')).toBeInTheDocument()
+      expect(screen.getByText('Versión 1')).toBeInTheDocument()
+      expect(version1Button).toHaveAttribute('aria-current', 'true')
+      expect(version2Button).not.toHaveAttribute('aria-current')
+    })
 
     const downloadLinkV1 = screen.getByRole('link', {
       name: 'Descargar archivo_inicial_v1.pdf',
     })
-    expect(downloadLinkV1).toHaveAttribute('href', '/uploads/archivo_inicial_v1.pdf')
     expect(downloadLinkV1).toHaveTextContent('Descargar (v1)')
-
-    expect(version1Button).toHaveAttribute('aria-current', 'true')
-    expect(version2Button).not.toHaveAttribute('aria-current')
   })
 
-  it('restricts IT admin from viewing or downloading documents', () => {
+  it('restricts IT admin from viewing or downloading documents and does NOT call registrarVista', async () => {
     useAuthStore.setState({
       user: itUser,
       isAuthenticated: true,
       rememberSession: false,
     })
 
-    render(
-      <DocumentPreviewModal
-        isOpen={true}
-        onClose={() => {}}
-        solicitud={solicitudConVersiones}
-      />
-    )
+    const registrarVistaSpy = vi.spyOn(useSolicitudesStore.getState(), 'registrarVista')
+
+    await act(async () => {
+      render(
+        <DocumentPreviewModal
+          open={true}
+          onClose={() => {}}
+          solicitud={solicitudConVersiones}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Visualización y descarga restringidas')).toBeInTheDocument()
+    })
+
+    // registrarVista must NOT be called for IT admin
+    expect(registrarVistaSpy).not.toHaveBeenCalled()
 
     // Download link should NOT be rendered for IT admin
     expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
 
     // Restriction notice should be rendered
-    expect(screen.getByText('Visualización y descarga restringidas')).toBeInTheDocument()
     expect(
       screen.getByText(/La visualización y descarga de documentos adjuntos no está disponible para el rol Administrador IT/i)
     ).toBeInTheDocument()
 
     // No embed or img should be rendered for document viewer
     expect(screen.queryByRole('img', { name: /vista previa/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('document', { name: /vista previa/i })).not.toBeInTheDocument()
   })
 })

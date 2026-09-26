@@ -6,6 +6,7 @@ import useAuthStore from '@/lib/stores/authStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import { DocumentUploadError } from '@/lib/api/backend'
+import { getTodayPanama } from '@/lib/utils'
 import type { Solicitud } from '@/lib/types'
 
 const secretariaUser = {
@@ -20,7 +21,7 @@ const secretariaUser = {
 }
 
 describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayPanama()
 
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -116,7 +117,7 @@ describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
 
     // Expect radicado to be displayed
     await waitFor(() => {
-      expect(screen.getByText(/RAD-2026-999/)).toBeInTheDocument()
+      expect(screen.getAllByText(/RAD-2026-999/).length).toBeGreaterThan(0)
     })
     expect(screen.getByText(/Solicitud creada pendiente de adjuntar documento/i)).toBeInTheDocument()
 

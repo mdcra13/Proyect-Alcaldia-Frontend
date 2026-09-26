@@ -20,6 +20,7 @@ import useNotificationStore from '@/lib/stores/notificationStore'
 import type { SolicitudCategoria, SolicitudFormData, SolicitudPrioridad } from '@/lib/types'
 import { PRIORIDAD_LABELS, MAX_FILE_SIZE_BYTES } from '@/lib/types'
 import { DocumentUploadError } from '@/lib/api/backend'
+import { getTodayPanama } from '@/lib/utils'
 
 const MAX_FILE_SIZE = MAX_FILE_SIZE_BYTES
 const ALLOWED_FILE_TYPES = [
@@ -46,7 +47,7 @@ export default function SubirDocumento() {
   const addNotification     = useNotificationStore(state => state.addNotification)
   const departamentos       = useDepartamentosStore(state => state.departamentos)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayPanama()
 
   const {
     register,
@@ -60,7 +61,7 @@ export default function SubirDocumento() {
       categoria:      '',
       departamentoId: '',
       // Fecha de solicitud por defecto = hoy
-      fechaSolicitud: new Date().toISOString().split('T')[0],
+      fechaSolicitud: getTodayPanama(),
       fechaLimite:    '',
       solicitante:    '',
       identificacion: '',

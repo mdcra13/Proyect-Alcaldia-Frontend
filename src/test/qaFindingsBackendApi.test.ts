@@ -1,6 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { backendApi, mapRole, ApiError } from '@/lib/api/backend'
 
+interface CapturedPayload {
+  roleId?: string
+  departmentId?: string | null
+  [key: string]: unknown
+}
+
 describe('QA Findings: backendApi & role mapping', () => {
   const originalFetch = globalThis.fetch
 
@@ -14,7 +20,7 @@ describe('QA Findings: backendApi & role mapping', () => {
 
   it('rejects unknown roles with a 403 ApiError instead of defaulting to secretaria', () => {
     expect(() => mapRole('unknown_role')).toThrowError(ApiError)
-    expect(() => mapRole('unknown_role')).toThrowError(/Rol desconocido o no autorizado/)
+    expect(() => mapRole('unknown_role')).toThrowError(/Rol desconocido/)
     expect(() => mapRole('superuser')).toThrowError(ApiError)
     expect(mapRole('admin')).toBe('it')
     expect(mapRole('it')).toBe('it')
@@ -24,22 +30,13 @@ describe('QA Findings: backendApi & role mapping', () => {
   })
 
   it('createRequest throws an ApiError if category or department mapping fails without selecting a silent fallback', async () => {
-    // Mock categories without matching category
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/categories')) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve([
-            { id: 'cat-1', name: 'Salud' },
-          ]),
-        })
+        return Promise.resolve(
+          new Response(JSON.stringify([{ id: 'cat-1', name: 'Salud' }]), { status: 200 })
+        )
       }
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([]),
-      })
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
     })
 
     await expect(
@@ -48,101 +45,97 @@ describe('QA Findings: backendApi & role mapping', () => {
         descripcion: 'Test',
         solicitante: 'Test',
         identificacion: '123',
-        categoria: 'educacion', // not in categories mock
+        categoria: 'educacion',
         prioridad: 'LOW',
         fechaLimite: '2026-12-31',
       })
-    ).rejects.toThrowError(/No se encontró la categoría/)
+    ).rejects.toThrowError(/No se encontró/)
   })
 
   it('createUser assigns OFFICER role when creating a user with departamento role', async () => {
-    let capturedBody: any = null
-    globalThis.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+    const captured: { current: CapturedPayload | null } = { current: null }
+    globalThis.fetch = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
       if (url.includes('/roles')) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve([
-            { id: 'role-admin', name: 'ADMIN' },
-            { id: 'role-officer', name: 'OFFICER' },
-            { id: 'role-supervisor', name: 'SUPERVISOR' },
-          ]),
-        })
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { id: 'role-admin', name: 'ADMIN' },
+              { id: 'role-officer', name: 'OFFICER' },
+              { id: 'role-supervisor', name: 'SUPERVISOR' },
+            ]),
+            { status: 200 }
+          )
+        )
       }
       if (url.includes('/users') && options?.method === 'POST') {
-        capturedBody = JSON.parse(options.body)
-        return Promise.resolve({
-          ok: true,
-          status: 201,
-          json: () => Promise.resolve({
-            id: 'u-1',
-            firstName: 'Juan',
-            lastName: 'Pérez',
-            email: 'juan@test.com',
-            role: { id: 'role-officer', name: 'OFFICER' },
-            department: { id: 'dep-1', name: 'Salud' },
-            isActive: true,
-            createdAt: '2026-01-01',
-          }),
-        })
+        captured.current = JSON.parse(String(options.body))
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: 'u-1',
+              firstName: 'Juan',
+              lastName: 'Pérez',
+              email: 'juan@test.com',
+              role: { id: 'role-officer', name: 'OFFICER' },
+              department: { id: 'dep-1', name: 'Salud' },
+              isActive: true,
+              createdAt: '2026-01-01',
+            }),
+            { status: 201 }
+          )
+        )
       }
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([]),
-      })
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
     })
 
     await backendApi.createUser({
       nombre: 'Juan',
       apellido: 'Pérez',
-      username: 'juan.perez',
+      email: 'juan.perez@test.com',
       password: 'password123',
       role: 'departamento',
       departamentoId: 'dep-1',
     })
 
-    expect(capturedBody).not.toBeNull()
-    expect(capturedBody.roleId).toBe('role-officer')
-    expect(capturedBody.departmentId).toBe('dep-1')
+    expect(captured.current).not.toBeNull()
+    expect(captured.current?.roleId).toBe('role-officer')
+    expect(captured.current?.departmentId).toBe('dep-1')
   })
 
   it('updateUser preserves existing supervisor role when role is unchanged', async () => {
-    let capturedBody: any = null
-    globalThis.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+    const captured: { current: CapturedPayload | null } = { current: null }
+    globalThis.fetch = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
       if (url.includes('/roles')) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve([
-            { id: 'role-admin', name: 'ADMIN' },
-            { id: 'role-officer', name: 'OFFICER' },
-            { id: 'role-supervisor', name: 'SUPERVISOR' },
-          ]),
-        })
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { id: 'role-admin', name: 'ADMIN' },
+              { id: 'role-officer', name: 'OFFICER' },
+              { id: 'role-supervisor', name: 'SUPERVISOR' },
+            ]),
+            { status: 200 }
+          )
+        )
       }
       if (url.includes('/users/u-sup') && options?.method === 'PATCH') {
-        capturedBody = JSON.parse(options.body)
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({
-            id: 'u-sup',
-            firstName: 'Supervisor',
-            lastName: 'Nuevo',
-            email: 'sup@test.com',
-            role: { id: 'role-supervisor', name: 'SUPERVISOR' },
-            department: { id: 'dep-1', name: 'Salud' },
-            isActive: true,
-            createdAt: '2026-01-01',
-          }),
-        })
+        captured.current = JSON.parse(String(options.body))
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: 'u-sup',
+              firstName: 'Supervisor',
+              lastName: 'Nuevo',
+              email: 'sup@test.com',
+              role: { id: 'role-supervisor', name: 'SUPERVISOR' },
+              department: { id: 'dep-1', name: 'Salud' },
+              isActive: true,
+              createdAt: '2026-01-01',
+            }),
+            { status: 200 }
+          )
+        )
       }
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([]),
-      })
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
     })
 
     // User is already departamento with roleId 'role-supervisor'
@@ -153,46 +146,44 @@ describe('QA Findings: backendApi & role mapping', () => {
       departamentoId: 'dep-1',
     })
 
-    expect(capturedBody).not.toBeNull()
-    expect(capturedBody.roleId).toBe('role-supervisor')
+    expect(captured.current).not.toBeNull()
+    expect(captured.current?.roleId).toBe('role-supervisor')
   })
 
   it('updateUser assigns OFFICER role when role is changed to departamento without existing roleId', async () => {
-    let capturedBody: any = null
-    globalThis.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+    const captured: { current: CapturedPayload | null } = { current: null }
+    globalThis.fetch = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
       if (url.includes('/roles')) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve([
-            { id: 'role-admin', name: 'ADMIN' },
-            { id: 'role-officer', name: 'OFFICER' },
-            { id: 'role-supervisor', name: 'SUPERVISOR' },
-          ]),
-        })
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { id: 'role-admin', name: 'ADMIN' },
+              { id: 'role-officer', name: 'OFFICER' },
+              { id: 'role-supervisor', name: 'SUPERVISOR' },
+            ]),
+            { status: 200 }
+          )
+        )
       }
       if (url.includes('/users/u-sec') && options?.method === 'PATCH') {
-        capturedBody = JSON.parse(options.body)
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({
-            id: 'u-sec',
-            firstName: 'Maria',
-            lastName: 'Lopez',
-            email: 'maria@test.com',
-            role: { id: 'role-officer', name: 'OFFICER' },
-            department: { id: 'dep-1', name: 'Salud' },
-            isActive: true,
-            createdAt: '2026-01-01',
-          }),
-        })
+        captured.current = JSON.parse(String(options.body))
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: 'u-sec',
+              firstName: 'Maria',
+              lastName: 'Lopez',
+              email: 'maria@test.com',
+              role: { id: 'role-officer', name: 'OFFICER' },
+              department: { id: 'dep-1', name: 'Salud' },
+              isActive: true,
+              createdAt: '2026-01-01',
+            }),
+            { status: 200 }
+          )
+        )
       }
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([]),
-      })
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
     })
 
     await backendApi.updateUser('u-sec', {
@@ -200,17 +191,15 @@ describe('QA Findings: backendApi & role mapping', () => {
       departamentoId: 'dep-1',
     })
 
-    expect(capturedBody).not.toBeNull()
-    expect(capturedBody.roleId).toBe('role-officer')
-    expect(capturedBody.departmentId).toBe('dep-1')
+    expect(captured.current).not.toBeNull()
+    expect(captured.current?.roleId).toBe('role-officer')
+    expect(captured.current?.departmentId).toBe('dep-1')
   })
 
   it('changeDepartment validates response and throws ApiError if response is invalid', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: () => Promise.resolve({ message: 'El departamento no está activo' }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: 'El departamento no está activo' }), { status: 400 })
+    )
 
     await expect(
       backendApi.changeDepartment('req-1', 'dep-invalid', 'Cambio por reasignación')

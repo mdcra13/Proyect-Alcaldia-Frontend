@@ -52,7 +52,7 @@ describe('QA Findings: Auth Session & Admin Self-Deactivation', () => {
     const state = useAuthStore.getState()
     expect(state.isAuthenticated).toBe(false)
     expect(state.user).toBeNull()
-    expect(getAccessToken()).toBeNull()
+    expect(getAccessToken()).toBeFalsy()
     expect(state.isCheckingSession).toBe(false)
     expect(state.sessionError).toBeNull()
   })

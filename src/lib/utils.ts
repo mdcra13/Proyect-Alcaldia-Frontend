@@ -171,3 +171,7 @@ export function exportToCSV(solicitudes: Solicitud[], filename = 'solicitudes.cs
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
+export function getTodayPanama(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(date)
+}

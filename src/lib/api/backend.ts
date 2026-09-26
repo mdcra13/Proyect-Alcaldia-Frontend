@@ -45,6 +45,34 @@ interface RequestOptions extends RequestInit {
   auth?: boolean
 }
 
+async function apiBlobRequest(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const { auth = true, headers, ...init } = options
+  const token = getAccessToken()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+  })
+
+  if (!response.ok) {
+    let errorMsg = 'No se pudo obtener el documento.'
+    try {
+      const text = await response.text()
+      const body = text ? JSON.parse(text) : null
+      errorMsg = Array.isArray(body?.message)
+        ? body.message.join('. ')
+        : (body?.message ?? errorMsg)
+    } catch {
+      // ignore
+    }
+    throw new ApiError(errorMsg, response.status)
+  }
+
+  return response.blob()
+}
+
 async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { auth = true, headers, ...init } = options
   const hasFormData = init.body instanceof FormData
@@ -70,10 +98,21 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
   return body as T
 }
 
-function setTokens(tokens: { access_token: string; refresh_token: string }) {
-  accessToken = tokens.access_token
-  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token)
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token)
+export function setTokens(
+  tokensOrAccess: string | { access_token: string; refresh_token: string },
+  refreshToken?: string
+) {
+  if (typeof tokensOrAccess === 'string') {
+    accessToken = tokensOrAccess
+    localStorage.setItem(ACCESS_TOKEN_KEY, tokensOrAccess)
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+    }
+  } else {
+    accessToken = tokensOrAccess.access_token
+    localStorage.setItem(ACCESS_TOKEN_KEY, tokensOrAccess.access_token)
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokensOrAccess.refresh_token)
+  }
 }
 
 export function getAccessToken(): string {
@@ -208,7 +247,10 @@ const ROLE_MAP: Record<string, UserRole> = {
   receptionist: 'secretaria',
   recepcionista: 'secretaria',
   secretary: 'secretaria',
+  secretaria: 'secretaria',
   officer: 'departamento',
+  funcionario: 'departamento',
+  departamento: 'departamento',
   revisor: 'departamento',
   department_staff: 'departamento',
   supervisor: 'departamento',
@@ -216,6 +258,8 @@ const ROLE_MAP: Record<string, UserRole> = {
   alcalde: 'alcalde',
   mayor_office: 'alcalde',
   admin: 'it',
+  administrador: 'it',
+  it: 'it',
 }
 
 const STATUS_MAP: Record<string, SolicitudEstado> = {
@@ -606,6 +650,10 @@ export const backendApi = {
 
   requestDocuments(id: string) {
     return apiRequest<BackendDocumentVersion[]>(`/requests/${id}/documents`)
+  },
+
+  getDocumentBlob(requestId: string, documentId: string) {
+    return apiBlobRequest(`/requests/${requestId}/documents/${documentId}/content`)
   },
 
   registerDocumentView(id: string) {

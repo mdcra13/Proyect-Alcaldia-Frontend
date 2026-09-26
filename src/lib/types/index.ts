@@ -20,7 +20,7 @@ export interface User {
   role: UserRole
   roleId?: string
   rawRoleName?: string
-  departamentoId?: string
+  departamentoId?: string | null
   departamento?: Departamento
   status: UserStatus
   avatar?: string | null
@@ -55,6 +55,7 @@ export interface HistorialEntry {
 
 export interface DocumentoVersion {
   id: string
+  solicitudId?: string
   nombre: string
   tipo: string
   tamano: number
