@@ -108,14 +108,16 @@ function BackendBootstrap() {
   const fetchUsers = useAuthStore(state => state.fetchUsers)
   const fetchDepartamentos = useDepartamentosStore(state => state.fetchDepartamentos)
   const fetchSolicitudes = useSolicitudesStore(state => state.fetchSolicitudes)
+  const fetchCategories = useSolicitudesStore(state => state.fetchCategories)
 
   useEffect(() => {
     if (!isAuthenticated) return
 
     void fetchDepartamentos().catch(() => undefined)
+    void fetchCategories().catch(() => undefined)
     void fetchSolicitudes()
     if (role === 'it') void fetchUsers().catch(() => undefined)
-  }, [fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
+  }, [fetchCategories, fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
 
   return null
 }

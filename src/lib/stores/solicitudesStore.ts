@@ -8,6 +8,7 @@ import {
   mapBackendHistory,
   mapBackendDocuments,
   DocumentUploadError,
+  type BackendCategory,
 } from '@/lib/api/backend'
 import type {
   Solicitud,
@@ -94,7 +95,8 @@ export function ordenarPorFechaLimite(solicitudes: Solicitud[]): Solicitud[] {
 
 interface NewSolicitudData {
   titulo: string
-  categoria: SolicitudCategoria
+  categoria: SolicitudCategoria | string
+  categoriaId?: string
   departamentoId?: string
   fechaSolicitud?: string
   fechaLimite: string
@@ -181,24 +183,46 @@ interface SolicitudesState {
   registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
+  categories: BackendCategory[]
+  fetchCategories: () => Promise<BackendCategory[]>
   CATEGORIES: CategoriesMap
 }
 
 const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
   solicitudes: [],
+  categories: [],
+
+  fetchCategories: async () => {
+    try {
+      const categories = await backendApi.categories()
+      const active = categories.filter(c => c.isActive !== false && c.is_active !== false)
+      set({ categories: active })
+      return active
+    } catch {
+      return get().categories
+    }
+  },
 
   fetchSolicitudes: async () => {
     try {
-      const [backendDepartments, backendRequests] = await Promise.all([
+      const [backendDepartments, backendRequests, backendCategories] = await Promise.all([
         backendApi.departments(),
         backendApi.requests(),
+        backendApi.categories().catch(() => [] as BackendCategory[]),
       ])
       const departments = backendDepartments.map(mapBackendDepartment)
       const solicitudes = backendRequests.map(request =>
         mapBackendRequest(request, departments)
       )
 
-      set({ solicitudes })
+      if (backendCategories.length > 0) {
+        set({
+          solicitudes,
+          categories: backendCategories.filter(c => c.isActive !== false && c.is_active !== false),
+        })
+      } else {
+        set({ solicitudes })
+      }
     } catch {
       set({ solicitudes: [] })
     }
@@ -387,6 +411,7 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
       solicitante: solicitud.solicitante,
       identificacion: solicitud.identificacion,
       categoria: solicitud.categoria,
+      categoriaId: solicitud.categoriaId,
       departamentoId: solicitud.departamentoId,
       prioridad: solicitud.prioridad,
       fechaSolicitud: solicitud.fechaSolicitud,

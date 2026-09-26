@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent, type DragEvent } from 'react'
+import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { 
@@ -44,8 +44,20 @@ export default function SubirDocumento() {
   const user                = useAuthStore(state => state.user)
   const addSolicitud        = useSolicitudesStore(state => state.addSolicitud)
   const retryUploadDocument = useSolicitudesStore(state => state.retryUploadDocument)
+  const categories          = useSolicitudesStore(state => state.categories)
+  const fetchCategories     = useSolicitudesStore(state => state.fetchCategories)
   const addNotification     = useNotificationStore(state => state.addNotification)
   const departamentos       = useDepartamentosStore(state => state.departamentos)
+  const fetchDepartamentos  = useDepartamentosStore(state => state.fetchDepartamentos)
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      void fetchCategories().catch(() => undefined)
+    }
+    if (departamentos.length === 0) {
+      void fetchDepartamentos().catch(() => undefined)
+    }
+  }, [categories.length, departamentos.length, fetchCategories, fetchDepartamentos])
 
   const today = getTodayPanama()
 
@@ -53,6 +65,7 @@ export default function SubirDocumento() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
     reset,
   } = useForm<SolicitudFormData>({
@@ -155,6 +168,7 @@ export default function SubirDocumento() {
       const solicitud = await addSolicitud({
         titulo:         data.titulo,
         categoria:      data.categoria as SolicitudCategoria,
+        categoriaId:    data.categoria,
         departamentoId: data.departamentoId || undefined,
         fechaSolicitud: data.fechaSolicitud,
         fechaLimite:    data.fechaLimite || '',
@@ -282,13 +296,29 @@ export default function SubirDocumento() {
               <select
                 id="categoria"
                 {...register('categoria', { required: 'La categoría es requerida' })}
+                onChange={e => {
+                  const selectedId = e.target.value
+                  setValue('categoria', selectedId, { shouldValidate: true })
+                  const matchingCat = categories.find(c => c.id === selectedId)
+                  if (matchingCat?.departmentId) {
+                    setValue('departamentoId', matchingCat.departmentId, { shouldValidate: true })
+                  }
+                }}
                 className="form-input custom-select"
               >
                 <option value="">Seleccione una categoría</option>
-                {(Object.entries(CATEGORIES) as [SolicitudCategoria, typeof CATEGORIES[SolicitudCategoria]][]).map(
-                  ([key, value]) => (
-                    <option key={key} value={key}>{value.label}</option>
-                  ),
+                {categories.length > 0 ? (
+                  categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))
+                ) : (
+                  (Object.entries(CATEGORIES) as [SolicitudCategoria, typeof CATEGORIES[SolicitudCategoria]][]).map(
+                    ([key, value]) => (
+                      <option key={key} value={key}>{value.label}</option>
+                    ),
+                  )
                 )}
               </select>
               {errors.categoria && (
@@ -307,7 +337,7 @@ export default function SubirDocumento() {
                 className="form-input custom-select"
               >
                 <option value="">Seleccione un departamento</option>
-                {departamentos.filter(dep => dep.activo).map(dep => (
+                {departamentos.filter(dep => dep.activo !== false).map(dep => (
                   <option key={dep.id} value={dep.id}>{dep.nombre}</option>
                 ))}
               </select>

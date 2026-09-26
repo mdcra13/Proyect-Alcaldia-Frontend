@@ -28,7 +28,7 @@ export interface User {
 }
 
 // Solicitud types
-export type SolicitudCategoria = 'salud' | 'educacion' | 'familiar' | 'comunidad'
+export type SolicitudCategoria = 'salud' | 'educacion' | 'familiar' | 'comunidad' | (string & {})
 
 export type SolicitudEstado =
   | 'received'
@@ -173,7 +173,8 @@ export interface UserFormData {
 
 export interface SolicitudFormData {
   titulo: string
-  categoria: SolicitudCategoria | ''
+  categoria: string
+  categoriaId?: string
   departamentoId?: string
   fechaSolicitud: string
   fechaLimite: string

@@ -140,4 +140,110 @@ describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
       expect(screen.getByText(/Código de seguimiento: RAD-2026-999/i)).toBeInTheDocument()
     })
   })
+
+  it('loads real backend categories, auto-selects department, and completes full registration and upload', async () => {
+    const realCategories = [
+      { id: 'cat-ciud-1', name: 'Solicitudes ciudadanas', departmentId: 'dep-gob-1', isActive: true },
+      { id: 'cat-imp-2', name: 'Pago de impuestos', departmentId: 'dep-hac-2', isActive: true },
+    ]
+    const realDepartments = [
+      { id: 'dep-gob-1', nombre: 'Gobernación y Participación', activo: true },
+      { id: 'dep-hac-2', nombre: 'Hacienda y Finanzas', activo: true },
+    ]
+
+    useSolicitudesStore.setState({
+      categories: realCategories,
+      solicitudes: [],
+    })
+    useDepartamentosStore.setState({
+      departamentos: realDepartments,
+    })
+
+    const mockAddSolicitud = vi.fn().mockResolvedValue({
+      id: 'req-real-100',
+      radicado: 'RAD-2026-100',
+      titulo: 'Exoneración de impuesto predial',
+      descripcion: 'Solicito revisión de impuesto',
+      solicitante: 'Ana Martínez',
+      identificacion: '87654321',
+      categoria: 'cat-imp-2',
+      departamentoId: 'dep-hac-2',
+      fechaSolicitud: today,
+      fechaLimite: today,
+      estado: 'received',
+      prioridad: 'MEDIUM',
+      subidoPor: 'María García',
+      subidoPorId: 'sec-1',
+      documento: 'memorial.pdf',
+      historial: [],
+      anotaciones: [],
+    } as Solicitud)
+
+    useSolicitudesStore.setState({
+      addSolicitud: mockAddSolicitud,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // Verify categories from backend are rendered as options
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    expect(screen.getByRole('option', { name: 'Solicitudes ciudadanas' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Pago de impuestos' })).toBeInTheDocument()
+
+    // Fill form
+    fireEvent.change(screen.getByLabelText(/identificador/i), {
+      target: { value: 'Exoneración de impuesto predial' },
+    })
+
+    // Select category 'Pago de impuestos' (value: 'cat-imp-2')
+    fireEvent.change(categorySelect, {
+      target: { value: 'cat-imp-2' },
+    })
+
+    // Expect department to be auto-selected to 'dep-hac-2'
+    const departmentSelect = screen.getByLabelText(/departamento/i) as HTMLSelectElement
+    expect(departmentSelect.value).toBe('dep-hac-2')
+
+    fireEvent.change(screen.getByLabelText(/prioridad/i), {
+      target: { value: 'MEDIUM' },
+    })
+    fireEvent.change(screen.getByLabelText(/nombre del solicitante/i), {
+      target: { value: 'Ana Martínez' },
+    })
+    fireEvent.change(screen.getByLabelText(/número de identificación/i), {
+      target: { value: '87654321' },
+    })
+
+    // Attach file
+    const file = new File(['pdf-content'], 'memorial.pdf', { type: 'application/pdf' })
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(fileInput, { target: { files: [file] } })
+
+    // Submit form
+    fireEvent.click(screen.getByRole('button', { name: /registrar solicitud/i }))
+
+    await waitFor(() => {
+      expect(mockAddSolicitud).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titulo: 'Exoneración de impuesto predial',
+          categoria: 'cat-imp-2',
+          categoriaId: 'cat-imp-2',
+          departamentoId: 'dep-hac-2',
+          solicitante: 'Ana Martínez',
+          identificacion: '87654321',
+          documento: file,
+        })
+      )
+    })
+
+    // Success screen
+    await waitFor(() => {
+      expect(screen.getByText(/Solicitud Registrada/i)).toBeInTheDocument()
+      expect(screen.getByText(/Código de seguimiento: RAD-2026-100/i)).toBeInTheDocument()
+    })
+  })
 })

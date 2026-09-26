@@ -205,4 +205,90 @@ describe('QA Findings: backendApi & role mapping', () => {
       backendApi.changeDepartment('req-1', 'dep-invalid', 'Cambio por reasignación')
     ).rejects.toThrowError(/El departamento no está activo/)
   })
+
+  it('createRequest successfully matches real backend category ID and department ID', async () => {
+    const captured: { current: CapturedPayload | null } = { current: null }
+    globalThis.fetch = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/categories')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { id: 'cat-real-uuid', name: 'Permiso de construcción', departmentId: 'dep-obras-uuid', isActive: true },
+            ]),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/departments')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { id: 'dep-obras-uuid', name: 'Obras Públicas', isActive: true },
+            ]),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/requests') && options?.method === 'POST') {
+        captured.current = JSON.parse(String(options.body))
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ id: 'req-created-uuid' }),
+            { status: 201 }
+          )
+        )
+      }
+      if (url.includes('/requests/req-created-uuid')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              id: 'req-created-uuid',
+              subject: 'Permiso para muro perimetral',
+              description: 'Construcción en calle 5',
+              applicantName: 'Pedro Gómez',
+              applicantContact: '456789',
+              categoryName: 'Permiso de construcción',
+              departmentName: 'Obras Públicas',
+              statusName: 'received',
+              priority: 'MEDIUM',
+              trackingCode: 'RAD-2026-OBR',
+              createdAt: '2026-09-26T12:00:00Z',
+              updatedAt: '2026-09-26T12:00:00Z',
+              receivedById: 'sec-1',
+              receivedByName: 'Secretaría General',
+              requestDate: '2026-09-26',
+              deadline: '2026-10-05',
+              documentName: null,
+              documentUrl: null,
+            }),
+            { status: 200 }
+          )
+        )
+      }
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
+    })
+
+    const result = await backendApi.createRequest({
+      titulo: 'Permiso para muro perimetral',
+      descripcion: 'Construcción en calle 5',
+      solicitante: 'Pedro Gómez',
+      identificacion: '456789',
+      categoriaId: 'cat-real-uuid',
+      departamentoId: 'dep-obras-uuid',
+      prioridad: 'MEDIUM',
+      fechaSolicitud: '2026-09-26',
+      fechaLimite: '2026-10-05',
+    })
+
+    expect(captured.current).toEqual(
+      expect.objectContaining({
+        subject: 'Permiso para muro perimetral',
+        categoryId: 'cat-real-uuid',
+        departmentId: 'dep-obras-uuid',
+        applicantName: 'Pedro Gómez',
+      })
+    )
+    expect(result.id).toBe('req-created-uuid')
+    expect(result.trackingCode).toBe('RAD-2026-OBR')
+  })
 })

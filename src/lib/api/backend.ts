@@ -154,11 +154,12 @@ interface BackendUser {
   createdAt: string
 }
 
-interface BackendCategory {
+export interface BackendCategory {
   id: string
   name: string
   description?: string
   isActive?: boolean
+  is_active?: boolean
   departmentId: string
 }
 
@@ -666,7 +667,8 @@ export const backendApi = {
     descripcion: string
     solicitante: string
     identificacion: string
-    categoria: SolicitudCategoria
+    categoria?: string
+    categoriaId?: string
     departamentoId?: string
     prioridad?: SolicitudPrioridad
     fechaSolicitud?: string
@@ -677,9 +679,12 @@ export const backendApi = {
       this.departments(),
     ])
     const category =
+      categories.find(item => item.id === input.categoriaId) ??
+      categories.find(item => item.id === input.categoria) ??
+      categories.find(item => normalize(item.name) === normalize(input.categoria)) ??
       categories.find(item => mapCategory(item.name) === input.categoria)
     if (!category) {
-      throw new ApiError(`No se encontró una categoría válida para "${input.categoria}".`, 400)
+      throw new ApiError(`No se encontró una categoría válida para "${input.categoriaId ?? input.categoria ?? ''}".`, 400)
     }
     const department =
       departments.find(item => item.id === input.departamentoId) ??
