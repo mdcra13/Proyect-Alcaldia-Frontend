@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   ArrowRightLeft,
   ChevronLeft,
@@ -17,6 +17,7 @@ import FechaLimiteBadge from '@/components/shared/FechaLimiteBadge'
 import HistorialTimeline from '@/components/shared/HistorialTimeline'
 import { useSolicitudFilters } from '@/lib/hooks/useSolicitudFilters'
 import { filterSolicitudes, decodeText, normalizeDepartamentoNombre } from '@/lib/utils'
+import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore, { CATEGORIES } from '@/lib/stores/solicitudesStore'
 import { useModalAccessibility } from '@/lib/hooks/useModalAccessibility'
@@ -56,6 +57,8 @@ export default function SeguimientoSolicitudes() {
 
   const solicitudes = useSolicitudesStore(state => state.solicitudes)
   const departamentos = useDepartamentosStore(state => state.departamentos)
+  const user = useAuthStore(state => state.user)
+  const isItAdmin = user?.role === 'it'
 
   const closeHistorial = () => {
     setHistorialSolicitud(null)
@@ -280,15 +283,17 @@ export default function SeguimientoSolicitudes() {
                             <History className="h-4 w-4" />
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => setChangeDeptSolicitud(solicitud)}
-                            className="icon-button hover:bg-secondary"
-                            title="Cambiar departamento"
-                            aria-label={`Cambiar departamento de ${solicitud.radicado}`}
-                          >
-                            <ArrowRightLeft className="h-4 w-4" />
-                          </button>
+                          {!isItAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => setChangeDeptSolicitud(solicitud)}
+                              className="icon-button hover:bg-secondary"
+                              title="Cambiar departamento"
+                              aria-label={`Cambiar departamento de ${solicitud.radicado}`}
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -393,14 +398,16 @@ export default function SeguimientoSolicitudes() {
                       <History className="h-4 w-4" />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setChangeDeptSolicitud(solicitud)}
-                      className="mobile-card-btn border border-border bg-card text-foreground"
-                      aria-label={`Cambiar departamento de ${solicitud.radicado}`}
-                    >
-                      <ArrowRightLeft className="h-4 w-4" />
-                    </button>
+                    {!isItAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setChangeDeptSolicitud(solicitud)}
+                        className="mobile-card-btn border border-border bg-card text-foreground"
+                        aria-label={`Cambiar departamento de ${solicitud.radicado}`}
+                      >
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

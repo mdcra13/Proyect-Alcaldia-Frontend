@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Suspense, lazy, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import useAuthStore from '@/lib/stores/authStore'
 import useDepartamentosStore from '@/lib/stores/departamentosStore'
 import useSolicitudesStore from '@/lib/stores/solicitudesStore'
@@ -59,7 +60,11 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, isCheckingSession } = useAuthStore()
+
+  if (isCheckingSession) {
+    return <PageLoader />
+  }
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/" replace />
@@ -73,7 +78,11 @@ function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
 }
 
 function AuthRedirect() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, isCheckingSession } = useAuthStore()
+
+  if (isCheckingSession) {
+    return <PageLoader />
+  }
 
   if (isAuthenticated && user) {
     switch (user.role) {
@@ -99,24 +108,58 @@ function BackendBootstrap() {
   const fetchUsers = useAuthStore(state => state.fetchUsers)
   const fetchDepartamentos = useDepartamentosStore(state => state.fetchDepartamentos)
   const fetchSolicitudes = useSolicitudesStore(state => state.fetchSolicitudes)
+  const fetchCategories = useSolicitudesStore(state => state.fetchCategories)
 
   useEffect(() => {
     if (!isAuthenticated) return
 
     void fetchDepartamentos().catch(() => undefined)
+    void fetchCategories().catch(() => undefined)
     void fetchSolicitudes()
     if (role === 'it') void fetchUsers().catch(() => undefined)
-  }, [fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
+  }, [fetchCategories, fetchDepartamentos, fetchSolicitudes, fetchUsers, isAuthenticated, role])
 
   return null
 }
 
 export default function App() {
+  const isCheckingSession = useAuthStore(state => state.isCheckingSession)
+  const sessionError = useAuthStore(state => state.sessionError)
+  const initSession = useAuthStore(state => state.initSession)
+
+  useEffect(() => {
+    void initSession()
+  }, [initSession])
+
+  if (sessionError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm max-w-md w-full">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-amber-500" />
+          <h1 className="text-xl font-semibold mb-2">Error de conexión</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            {sessionError}
+          </p>
+          <button
+            type="button"
+            onClick={() => void initSession()}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (isCheckingSession) {
+    return <PageLoader />
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <BrowserRouter>
         <BackendBootstrap />
         <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -170,7 +213,7 @@ export default function App() {
             <Route
               path="/secretaria/seguimiento"
               element={
-                <ProtectedRoute allowedRoles={['secretaria']}>
+                <ProtectedRoute allowedRoles={['secretaria', 'it']}>
                   <SeguimientoSolicitudes />
                 </ProtectedRoute>
               }

@@ -1,0 +1,368 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { BrowserRouter } from 'react-router'
+import SubirDocumento from '@/components/secretaria/SubirDocumento'
+import useAuthStore from '@/lib/stores/authStore'
+import useSolicitudesStore from '@/lib/stores/solicitudesStore'
+import useDepartamentosStore from '@/lib/stores/departamentosStore'
+import { DocumentUploadError } from '@/lib/api/backend'
+import { getTodayPanama } from '@/lib/utils'
+import type { Solicitud } from '@/lib/types'
+
+const secretariaUser = {
+  id: 'sec-1',
+  nombre: 'María',
+  apellido: 'García',
+  username: 'maria.sec@alcaldia.gov.co',
+  role: 'secretaria' as const,
+  avatar: null,
+  status: 'active' as const,
+  createdAt: '2024-02-01',
+}
+
+describe('QA Findings: SubirDocumento - Dates & Upload Failure Retry', () => {
+  const today = getTodayPanama()
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    useAuthStore.setState({
+      user: secretariaUser,
+      isAuthenticated: true,
+      rememberSession: false,
+    })
+    useDepartamentosStore.setState({
+      departamentos: [
+        { id: 'dep-1', nombre: 'Salud', activo: true },
+      ],
+    })
+    useSolicitudesStore.setState({
+      solicitudes: [],
+      categories: [
+        { id: 'salud', name: 'Salud', departmentId: 'dep-1', isActive: true },
+      ],
+    })
+  })
+
+  it('enforces date constraints on fechaSolicitud (max today) and fechaLimite (min today)', () => {
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    const fechaSolicitudInput = screen.getByLabelText(/fecha de la solicitud/i) as HTMLInputElement
+    const fechaLimiteInput = screen.getByLabelText(/fecha límite/i) as HTMLInputElement
+
+    expect(fechaSolicitudInput).toHaveAttribute('max', today)
+    expect(fechaLimiteInput).toHaveAttribute('min', today)
+  })
+
+  it('displays radicado and allows retrying document upload without duplicating request if upload fails', async () => {
+    const mockAddSolicitud = vi.fn().mockRejectedValue(
+      new DocumentUploadError('Network error uploading file', 'req-999', 'RAD-2026-999')
+    )
+    const mockRetryUpload = vi.fn().mockResolvedValue({
+      id: 'req-999',
+      radicado: 'RAD-2026-999',
+      titulo: 'Solicitud médica urgente',
+      descripcion: 'Detalle',
+      solicitante: 'Carlos Pérez',
+      identificacion: '12345678',
+      categoria: 'salud',
+      departamentoId: 'dep-1',
+      fechaSolicitud: today,
+      fechaLimite: today,
+      estado: 'received',
+      prioridad: 'HIGH',
+      subidoPor: 'María García',
+      subidoPorId: 'sec-1',
+      documento: 'test.pdf',
+      motivoRechazo: null,
+      historial: [],
+      anotaciones: [],
+    } as Solicitud)
+
+    useSolicitudesStore.setState({
+      addSolicitud: mockAddSolicitud,
+      retryUploadDocument: mockRetryUpload,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // Fill form
+    fireEvent.change(screen.getByLabelText(/identificador/i), {
+      target: { value: 'Solicitud médica urgente' },
+    })
+    fireEvent.change(screen.getByLabelText(/categoría/i), {
+      target: { value: 'salud' },
+    })
+    fireEvent.change(screen.getByLabelText(/departamento/i), {
+      target: { value: 'dep-1' },
+    })
+    fireEvent.change(screen.getByLabelText(/prioridad/i), {
+      target: { value: 'HIGH' },
+    })
+    fireEvent.change(screen.getByLabelText(/nombre del solicitante/i), {
+      target: { value: 'Carlos Pérez' },
+    })
+
+    // Attach file
+    const file = new File(['dummy content'], 'test.pdf', { type: 'application/pdf' })
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(fileInput, { target: { files: [file] } })
+
+    // Submit form -> first attempt fails on upload
+    fireEvent.click(screen.getByRole('button', { name: /registrar solicitud/i }))
+
+    // Expect radicado to be displayed
+    await waitFor(() => {
+      expect(screen.getAllByText(/RAD-2026-999/).length).toBeGreaterThan(0)
+    })
+    expect(screen.getByText(/Solicitud creada pendiente de adjuntar documento/i)).toBeInTheDocument()
+
+    // Submit button should now say "Reintentar subida de documento"
+    const retryButton = screen.getByRole('button', { name: /reintentar subida de documento/i })
+    expect(retryButton).toBeInTheDocument()
+
+    // Click retry
+    fireEvent.click(retryButton)
+
+    await waitFor(() => {
+      expect(mockRetryUpload).toHaveBeenCalledWith('req-999', file, 'María García')
+    })
+    // addSolicitud was NOT called again (no duplicate request!)
+    expect(mockAddSolicitud).toHaveBeenCalledTimes(1)
+
+    // Success screen should be displayed
+    await waitFor(() => {
+      expect(screen.getByText(/Solicitud Registrada/i)).toBeInTheDocument()
+      expect(screen.getByText(/Código de seguimiento: RAD-2026-999/i)).toBeInTheDocument()
+    })
+  })
+
+  it('loads real backend categories, auto-selects department, and completes full registration and upload', async () => {
+    const realCategories = [
+      { id: 'cat-ciud-1', name: 'Solicitudes ciudadanas', departmentId: 'dep-gob-1', isActive: true },
+      { id: 'cat-imp-2', name: 'Pago de impuestos', departmentId: 'dep-hac-2', isActive: true },
+    ]
+    const realDepartments = [
+      { id: 'dep-gob-1', nombre: 'Gobernación y Participación', activo: true },
+      { id: 'dep-hac-2', nombre: 'Hacienda y Finanzas', activo: true },
+    ]
+
+    useSolicitudesStore.setState({
+      categories: realCategories,
+      solicitudes: [],
+    })
+    useDepartamentosStore.setState({
+      departamentos: realDepartments,
+    })
+
+    const mockAddSolicitud = vi.fn().mockResolvedValue({
+      id: 'req-real-100',
+      radicado: 'RAD-2026-100',
+      titulo: 'Exoneración de impuesto predial',
+      descripcion: 'Solicito revisión de impuesto',
+      solicitante: 'Ana Martínez',
+      identificacion: '87654321',
+      categoria: 'cat-imp-2',
+      departamentoId: 'dep-hac-2',
+      fechaSolicitud: today,
+      fechaLimite: today,
+      estado: 'received',
+      prioridad: 'MEDIUM',
+      subidoPor: 'María García',
+      subidoPorId: 'sec-1',
+      documento: 'memorial.pdf',
+      historial: [],
+      anotaciones: [],
+    } as Solicitud)
+
+    useSolicitudesStore.setState({
+      addSolicitud: mockAddSolicitud,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // Verify categories from backend are rendered as options
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    expect(screen.getByRole('option', { name: 'Solicitudes ciudadanas' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Pago de impuestos' })).toBeInTheDocument()
+
+    // Fill form
+    fireEvent.change(screen.getByLabelText(/identificador/i), {
+      target: { value: 'Exoneración de impuesto predial' },
+    })
+
+    // Select category 'Pago de impuestos' (value: 'cat-imp-2')
+    fireEvent.change(categorySelect, {
+      target: { value: 'cat-imp-2' },
+    })
+
+    // Expect department to be auto-selected to 'dep-hac-2'
+    const departmentSelect = screen.getByLabelText(/departamento/i) as HTMLSelectElement
+    expect(departmentSelect.value).toBe('dep-hac-2')
+
+    fireEvent.change(screen.getByLabelText(/prioridad/i), {
+      target: { value: 'MEDIUM' },
+    })
+    fireEvent.change(screen.getByLabelText(/nombre del solicitante/i), {
+      target: { value: 'Ana Martínez' },
+    })
+    fireEvent.change(screen.getByLabelText(/número de identificación/i), {
+      target: { value: '87654321' },
+    })
+
+    // Attach file
+    const file = new File(['pdf-content'], 'memorial.pdf', { type: 'application/pdf' })
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(fileInput, { target: { files: [file] } })
+
+    // Submit form
+    fireEvent.click(screen.getByRole('button', { name: /registrar solicitud/i }))
+
+    await waitFor(() => {
+      expect(mockAddSolicitud).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titulo: 'Exoneración de impuesto predial',
+          categoria: 'cat-imp-2',
+          categoriaId: 'cat-imp-2',
+          departamentoId: 'dep-hac-2',
+          solicitante: 'Ana Martínez',
+          identificacion: '87654321',
+          documento: file,
+        })
+      )
+    })
+
+    // Success screen
+    await waitFor(() => {
+      expect(screen.getByText(/Solicitud Registrada/i)).toBeInTheDocument()
+      expect(screen.getByText(/Código de seguimiento: RAD-2026-100/i)).toBeInTheDocument()
+    })
+  })
+
+  it('disables category select and submit button without fallback during slow category load, then enables upon resolution', async () => {
+    // Start with empty categories
+    useSolicitudesStore.setState({
+      categories: [],
+      solicitudes: [],
+    })
+
+    type ResolvableCategory = { id: string; name: string; departmentId: string; isActive: boolean }
+    let resolveCategories!: (value: ResolvableCategory[]) => void
+    const categoriesPromise = new Promise<ResolvableCategory[]>(resolve => {
+      resolveCategories = resolve
+    })
+
+    const mockFetchCategories = vi.fn().mockImplementation(() => categoriesPromise)
+    useSolicitudesStore.setState({
+      fetchCategories: mockFetchCategories,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // While loading:
+    // 1. Category select is disabled
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    expect(categorySelect).toBeDisabled()
+
+    // 2. Submit button is disabled
+    const submitBtn = screen.getByRole('button', { name: /registrar solicitud/i })
+    expect(submitBtn).toBeDisabled()
+
+    // 3. NO old fallback categories exist (Salud, Educación, Familiar)
+    expect(screen.queryByRole('option', { name: 'Educación' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Familiar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Comunidad' })).not.toBeInTheDocument()
+
+    // 4. Loading indicator or placeholder is shown
+    expect(screen.getAllByText(/cargando categorías/i).length).toBeGreaterThan(0)
+
+    // Now resolve the promise with real categories
+    const realCategories = [
+      { id: 'cat-salud-real', name: 'Salud Pública', departmentId: 'dep-1', isActive: true },
+      { id: 'cat-obras-real', name: 'Obras Públicas', departmentId: 'dep-1', isActive: true },
+    ]
+    useSolicitudesStore.setState({ categories: realCategories })
+    resolveCategories(realCategories)
+
+    // After resolution:
+    await waitFor(() => {
+      expect(categorySelect).not.toBeDisabled()
+    })
+    expect(submitBtn).not.toBeDisabled()
+    expect(screen.getByRole('option', { name: 'Salud Pública' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Obras Públicas' })).toBeInTheDocument()
+  })
+
+  it('shows error and retry option when category catalog fails, keeps select and submit disabled, and reloads on retry', async () => {
+    useSolicitudesStore.setState({
+      categories: [],
+      solicitudes: [],
+    })
+
+    let fail = true
+    const mockFetchCategories = vi.fn().mockImplementation(async () => {
+      if (fail) {
+        throw new Error('Error 500: Falla en catálogo de categorías')
+      }
+      const loaded = [
+        { id: 'cat-edu-real', name: 'Educación y Cultura', departmentId: 'dep-1', isActive: true },
+      ]
+      useSolicitudesStore.setState({ categories: loaded })
+      return loaded
+    })
+
+    useSolicitudesStore.setState({
+      fetchCategories: mockFetchCategories,
+    })
+
+    render(
+      <BrowserRouter>
+        <SubirDocumento />
+      </BrowserRouter>
+    )
+
+    // Wait for failure error message to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Error 500: Falla en catálogo de categorías/i)).toBeInTheDocument()
+    })
+
+    const categorySelect = screen.getByLabelText(/categoría/i) as HTMLSelectElement
+    const submitBtn = screen.getByRole('button', { name: /registrar solicitud/i })
+
+    // Still disabled and no old fallback categories
+    expect(categorySelect).toBeDisabled()
+    expect(submitBtn).toBeDisabled()
+    expect(screen.queryByRole('option', { name: 'Familiar' })).not.toBeInTheDocument()
+
+    // Retry button is available
+    const retryBtn = screen.getByRole('button', { name: /reintentar/i })
+    expect(retryBtn).toBeInTheDocument()
+
+    // Make next attempt succeed and click retry
+    fail = false
+    fireEvent.click(retryBtn)
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Educación y Cultura' })).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText(/Falla en catálogo/i)).not.toBeInTheDocument()
+    expect(categorySelect).not.toBeDisabled()
+    expect(submitBtn).not.toBeDisabled()
+  })
+})

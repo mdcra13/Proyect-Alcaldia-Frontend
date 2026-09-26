@@ -11,7 +11,7 @@ import {
   Undo2,
   XCircle,
 } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import AppLayout from '@/components/layout/AppLayout'
 import { CambiarEstadoModal } from '@/components/shared/CambiarEstadoModal'
 import DocumentPreviewModal from '@/components/shared/DocumentPreviewModal'
@@ -543,4 +543,3 @@ export default function AlcaldeNotas() {
     </AppLayout>
   )
 }
-

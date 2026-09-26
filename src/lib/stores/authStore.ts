@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { backendApi, clearTokens, mapBackendUser } from '@/lib/api/backend'
+import { backendApi, clearTokens, getAccessToken, mapBackendUser, ApiError } from '@/lib/api/backend'
 import type { User, UserFormData, UserRole } from '@/lib/types'
 
 interface LoginResult {
@@ -13,6 +13,9 @@ interface AuthState {
   isAuthenticated: boolean
   rememberSession: boolean
   users: User[]
+  isCheckingSession: boolean
+  sessionError: string | null
+  initSession: () => Promise<void>
   login: (username: string, password: string, remember: boolean) => Promise<LoginResult>
   logout: () => void
   fetchUsers: () => Promise<void>
@@ -32,6 +35,41 @@ const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       rememberSession: false,
       users: [],
+      isCheckingSession: Boolean(getAccessToken()),
+      sessionError: null,
+
+      initSession: async () => {
+        const token = getAccessToken()
+        if (!token) {
+          set({ isCheckingSession: false, sessionError: null })
+          return
+        }
+
+        set({ isCheckingSession: true, sessionError: null })
+        try {
+          const user = mapBackendUser(await backendApi.me())
+          set({ user, isAuthenticated: true, isCheckingSession: false, sessionError: null })
+
+          if (user.role === 'it') {
+            try {
+              const users = (await backendApi.users()).map(mapBackendUser)
+              set({ users })
+            } catch {
+              set({ users: [user] })
+            }
+          }
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            clearTokens()
+            set({ user: null, isAuthenticated: false, isCheckingSession: false, sessionError: null })
+          } else {
+            set({
+              isCheckingSession: false,
+              sessionError: error instanceof Error ? error.message : 'Error de conexión con el servidor.',
+            })
+          }
+        }
+      },
 
       login: async (username, password, remember) => {
         try {
@@ -61,7 +99,7 @@ const useAuthStore = create<AuthState>()(
 
       logout: () => {
         clearTokens()
-        set({ user: null, isAuthenticated: false, rememberSession: false, users: [] })
+        set({ user: null, isAuthenticated: false, rememberSession: false, users: [], isCheckingSession: false, sessionError: null })
       },
 
       fetchUsers: async () => {
@@ -75,6 +113,7 @@ const useAuthStore = create<AuthState>()(
           apellido: updates.apellido,
           email: updates.username,
           role: updates.role,
+          roleId: updates.roleId,
           departamentoId: updates.departamentoId,
           isActive: updates.status ? updates.status === 'active' : undefined,
         }))
@@ -105,8 +144,12 @@ const useAuthStore = create<AuthState>()(
       },
 
       toggleUserStatus: async userId => {
+        const currentUser = get().user
         const user = get().users.find(item => item.id === userId)
         if (!user) throw new Error('Usuario no encontrado')
+        if (currentUser?.id === userId && user.status === 'active') {
+          throw new Error('Un administrador no puede desactivarse a sí mismo.')
+        }
         return get().updateUser(userId, {
           status: user.status === 'active' ? 'inactive' : 'active',
         })

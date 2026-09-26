@@ -1,3 +1,4 @@
+import useAuthStore from '@/lib/stores/authStore'
 
 import { create } from 'zustand'
 import {
@@ -6,6 +7,8 @@ import {
   mapBackendRequest,
   mapBackendHistory,
   mapBackendDocuments,
+  DocumentUploadError,
+  type BackendCategory,
 } from '@/lib/api/backend'
 import type {
   Solicitud,
@@ -92,7 +95,8 @@ export function ordenarPorFechaLimite(solicitudes: Solicitud[]): Solicitud[] {
 
 interface NewSolicitudData {
   titulo: string
-  categoria: SolicitudCategoria
+  categoria: SolicitudCategoria | string
+  categoriaId?: string
   departamentoId?: string
   fechaSolicitud?: string
   fechaLimite: string
@@ -175,27 +179,57 @@ interface SolicitudesState {
   cambiarEstado: (id: string, nuevoEstado: SolicitudEstado, userId: string, userName: string, observacion?: string) => Promise<void>
   cambiarDepartamento: (id: string, nuevoDepartamentoId: string, userId: string, userName: string, motivo?: string) => Promise<void>
   addSolicitud: (solicitud: NewSolicitudData) => Promise<Solicitud>
+  retryUploadDocument: (requestId: string, file: File, subidoPor?: string) => Promise<Solicitud>
   registrarVista: (id: string, userId: string, userName: string) => Solicitud | undefined
   search: (query: string, filters?: SolicitudFilters, departamentoId?: string) => Solicitud[]
   getSolicitudById: (id: string) => Solicitud | undefined
+  categories: BackendCategory[]
+  isLoadingCategories: boolean
+  categoriesError: string | null
+  fetchCategories: () => Promise<BackendCategory[]>
   CATEGORIES: CategoriesMap
 }
 
 const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
   solicitudes: [],
+  categories: [],
+  isLoadingCategories: false,
+  categoriesError: null,
+
+  fetchCategories: async () => {
+    set({ isLoadingCategories: true, categoriesError: null })
+    try {
+      const categories = await backendApi.categories()
+      const active = categories.filter(c => c.isActive !== false && c.is_active !== false)
+      set({ categories: active, isLoadingCategories: false, categoriesError: null })
+      return active
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al cargar el catálogo de categorías'
+      set({ categories: [], isLoadingCategories: false, categoriesError: message })
+      throw error
+    }
+  },
 
   fetchSolicitudes: async () => {
     try {
-      const [backendDepartments, backendRequests] = await Promise.all([
+      const [backendDepartments, backendRequests, backendCategories] = await Promise.all([
         backendApi.departments(),
         backendApi.requests(),
+        backendApi.categories().catch(() => [] as BackendCategory[]),
       ])
       const departments = backendDepartments.map(mapBackendDepartment)
       const solicitudes = backendRequests.map(request =>
         mapBackendRequest(request, departments)
       )
 
-      set({ solicitudes })
+      if (backendCategories.length > 0) {
+        set({
+          solicitudes,
+          categories: backendCategories.filter(c => c.isActive !== false && c.is_active !== false),
+        })
+      } else {
+        set({ solicitudes })
+      }
     } catch {
       set({ solicitudes: [] })
     }
@@ -384,13 +418,22 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
       solicitante: solicitud.solicitante,
       identificacion: solicitud.identificacion,
       categoria: solicitud.categoria,
+      categoriaId: solicitud.categoriaId,
       departamentoId: solicitud.departamentoId,
       prioridad: solicitud.prioridad,
       fechaSolicitud: solicitud.fechaSolicitud,
       fechaLimite: solicitud.fechaLimite,
     })
 
-    await backendApi.uploadRequestDocument(created.id, solicitud.documento)
+    try {
+      await backendApi.uploadRequestDocument(created.id, solicitud.documento)
+    } catch (uploadError) {
+      throw new DocumentUploadError(
+        uploadError instanceof Error ? uploadError.message : 'Error al subir el documento',
+        created.id,
+        created.trackingCode
+      )
+    }
 
     const [details, departments, history] = await Promise.all([
       backendApi.requestDetails(created.id),
@@ -415,8 +458,42 @@ const useSolicitudesStore = create<SolicitudesState>((set, get) => ({
     set(state => ({ solicitudes: [persisted, ...state.solicitudes] }))
     return persisted
   },
+  retryUploadDocument: async (requestId: string, file: File, subidoPor = 'Usuario'): Promise<Solicitud> => {
+    await backendApi.uploadRequestDocument(requestId, file)
+    const [details, departments, history] = await Promise.all([
+      backendApi.requestDetails(requestId),
+      backendApi.departments(),
+      backendApi.requestHistory(requestId),
+    ])
+    const persisted = mapBackendRequest(
+      details,
+      departments.map(mapBackendDepartment)
+    )
+    persisted.historial = history.length
+      ? history.map(entry => ({
+          id: entry.id,
+          fecha: entry.createdAt,
+          accion: entry.eventType,
+          descripcion: entry.observation || 'Documento adjuntado',
+          usuario: subidoPor,
+          usuarioId: entry.userId,
+        }))
+      : persisted.historial
+
+    set(state => ({
+      solicitudes: [
+        persisted,
+        ...state.solicitudes.filter(item => item.id !== requestId),
+      ],
+    }))
+    return persisted
+  },
 
   registrarVista: (id, userId, userName) => {
+    const currentUser = useAuthStore.getState().user
+    if (currentUser?.role === 'it') {
+      return get().getSolicitudById(id)
+    }
     const solicitud = get().getSolicitudById(id)
     if (!solicitud) return undefined
 

@@ -10,7 +10,7 @@ import {
   Menu,
   User,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import useAuthStore from '@/lib/stores/authStore'
 import useNotificationStore from '@/lib/stores/notificationStore'
 import { decodeText } from '@/lib/utils'

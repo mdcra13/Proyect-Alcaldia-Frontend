@@ -10,13 +10,17 @@ export interface Departamento {
 export type UserRole = 'secretaria' | 'departamento' | 'alcalde' | 'it'
 export type UserStatus = 'active' | 'inactive'
 
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+
 export interface User {
   id: string
   nombre: string
   apellido: string
   username: string
   role: UserRole
-  departamentoId?: string
+  roleId?: string
+  rawRoleName?: string
+  departamentoId?: string | null
   departamento?: Departamento
   status: UserStatus
   avatar?: string | null
@@ -24,7 +28,7 @@ export interface User {
 }
 
 // Solicitud types
-export type SolicitudCategoria = 'salud' | 'educacion' | 'familiar' | 'comunidad'
+export type SolicitudCategoria = 'salud' | 'educacion' | 'familiar' | 'comunidad' | (string & {})
 
 export type SolicitudEstado =
   | 'received'
@@ -51,6 +55,7 @@ export interface HistorialEntry {
 
 export interface DocumentoVersion {
   id: string
+  solicitudId?: string
   nombre: string
   tipo: string
   tamano: number
@@ -168,7 +173,8 @@ export interface UserFormData {
 
 export interface SolicitudFormData {
   titulo: string
-  categoria: SolicitudCategoria | ''
+  categoria: string
+  categoriaId?: string
   departamentoId?: string
   fechaSolicitud: string
   fechaLimite: string
