@@ -145,6 +145,140 @@ describe('QA Findings: DocumentPreviewModal - Versions & IT Role Restriction & P
     expect(downloadLinkV1).toHaveTextContent('Descargar (v1)')
   })
 
+  it('shows loading state and disables download without using protected URL during latency', async () => {
+    let resolveBlob!: (blob: Blob) => void
+    const blobPromise = new Promise<Blob>(resolve => {
+      resolveBlob = resolve
+    })
+    vi.spyOn(backendApi, 'getDocumentBlob').mockReturnValue(blobPromise)
+
+    await act(async () => {
+      render(
+        <DocumentPreviewModal
+          open={true}
+          onClose={() => {}}
+          solicitud={solicitudConVersiones}
+        />
+      )
+    })
+
+    // During latency / loading:
+    // 1. Loading spinner and message are displayed
+    expect(screen.getByText('Cargando documento...')).toBeInTheDocument()
+
+    // 2. Visor does NOT render any embed or img pointing to protected URL
+    expect(screen.queryByLabelText('Vista previa del documento PDF')).not.toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /vista previa/i })).not.toBeInTheDocument()
+
+    // 3. Download control is disabled and not an active link
+    const downloadBtn = screen.getByRole('button', {
+      name: 'Descargar archivo_corregido_v2.pdf',
+    })
+    expect(downloadBtn).toBeDisabled()
+    expect(downloadBtn).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
+
+    // Resolve the blob with latency completed
+    await act(async () => {
+      resolveBlob(new Blob(['mock pdf content'], { type: 'application/pdf' }))
+    })
+
+    // After loading completes:
+    await waitFor(() => {
+      expect(screen.queryByText('Cargando documento...')).not.toBeInTheDocument()
+    })
+
+    // Download is now an active link with the Blob URL
+    const downloadLink = screen.getByRole('link', {
+      name: 'Descargar archivo_corregido_v2.pdf',
+    })
+    expect(downloadLink).toBeInTheDocument()
+    expect(downloadLink).toHaveAttribute('href', expect.stringContaining('blob:'))
+    expect(downloadLink).not.toHaveAttribute('href', expect.stringContaining('/uploads/'))
+
+    // Visor renders embed with the Blob URL
+    const embed = screen.getByLabelText('Vista previa del documento PDF')
+    expect(embed).toBeInTheDocument()
+    expect(embed).toHaveAttribute('src', expect.stringContaining('blob:'))
+    expect(embed).not.toHaveAttribute('src', expect.stringContaining('/uploads/'))
+  })
+
+  it('displays error notice and keeps download disabled when blob retrieval fails', async () => {
+    vi.spyOn(backendApi, 'getDocumentBlob').mockRejectedValue(
+      new Error('No se pudo conectar con el servidor de documentos'),
+    )
+
+    await act(async () => {
+      render(
+        <DocumentPreviewModal
+          open={true}
+          onClose={() => {}}
+          solicitud={solicitudConVersiones}
+        />
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('No se pudo cargar el documento')).toBeInTheDocument()
+      expect(
+        screen.getByText('No se pudo conectar con el servidor de documentos'),
+      ).toBeInTheDocument()
+    })
+
+    // Visor does NOT fallback to the protected URL
+    expect(screen.queryByLabelText('Vista previa del documento PDF')).not.toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /vista previa/i })).not.toBeInTheDocument()
+
+    // Download control remains disabled
+    const downloadBtn = screen.getByRole('button', {
+      name: 'Descargar archivo_corregido_v2.pdf',
+    })
+    expect(downloadBtn).toBeDisabled()
+    expect(downloadBtn).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
+  })
+
+  it('revokes previous blob and re-enters loading state when switching document versions', async () => {
+    const revokeSpy = vi.spyOn(window.URL, 'revokeObjectURL')
+
+    await act(async () => {
+      render(
+        <DocumentPreviewModal
+          open={true}
+          onClose={() => {}}
+          solicitud={solicitudConVersiones}
+        />
+      )
+    })
+
+    // Initial load: version 2
+    await waitFor(() => {
+      expect(screen.getByRole('link', {
+        name: 'Descargar archivo_corregido_v2.pdf',
+      })).toHaveAttribute('href', expect.stringContaining('blob:'))
+    })
+
+    // Switch to version 1
+    const version1Button = screen.getByRole('button', {
+      name: /versión 1: archivo_inicial_v1\.pdf/i,
+    })
+
+    await act(async () => {
+      fireEvent.click(version1Button)
+    })
+
+    // Verify version 1 is loaded and previous blob revoked
+    await waitFor(() => {
+      expect(screen.getByText('archivo_inicial_v1.pdf')).toBeInTheDocument()
+      expect(screen.getByText('Versión 1')).toBeInTheDocument()
+      expect(screen.getByRole('link', {
+        name: 'Descargar archivo_inicial_v1.pdf',
+      })).toHaveAttribute('href', expect.stringContaining('blob:'))
+    })
+
+    expect(revokeSpy).toHaveBeenCalled()
+  })
+
   it('restricts IT admin from viewing or downloading documents and does NOT call registrarVista', async () => {
     useAuthStore.setState({
       user: itUser,
@@ -173,6 +307,7 @@ describe('QA Findings: DocumentPreviewModal - Versions & IT Role Restriction & P
 
     // Download link should NOT be rendered for IT admin
     expect(screen.queryByRole('link', { name: /descargar/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /descargar/i })).not.toBeInTheDocument()
 
     // Restriction notice should be rendered
     expect(

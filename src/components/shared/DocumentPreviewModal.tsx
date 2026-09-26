@@ -67,9 +67,9 @@ export default function DocumentPreviewModal({
   const category  = CATEGORIES[solicitud.categoria]
   const status    = ESTADO_CONFIG[solicitud.estado]
   const displayedDocumentName = selectedDocument?.nombre ?? solicitud.documento
-  const displayedDocumentUrl = selectedDocument?.url ?? solicitud.documentoUrl
-  const isImageDocument = /\.(?:jpe?g|png|webp)(?:$|\?)/i.test(
-    displayedDocumentUrl ?? displayedDocumentName ?? '',
+  const isImageDocument = Boolean(
+    selectedDocument?.tipo?.startsWith('image/') ||
+    /\.(?:jpe?g|png|webp)(?:$|\?)/i.test(displayedDocumentName ?? '')
   )
   const titleId       = `document-preview-title-${solicitud.id}`
   const descriptionId = `document-preview-description-${solicitud.id}`
@@ -116,7 +116,7 @@ export default function DocumentPreviewModal({
     open && user?.role !== 'it' && solicitud.id && selectedDocument?.id
   )
   const blobLoading = Boolean(
-    shouldFetchBlob && blobState.docId !== selectedDocument?.id && !blobState.error
+    shouldFetchBlob && blobState.docId !== selectedDocument?.id
   )
   const blobUrl = blobState.docId === selectedDocument?.id ? blobState.url : null
   const blobError = blobState.docId === selectedDocument?.id ? blobState.error : null
@@ -298,16 +298,29 @@ export default function DocumentPreviewModal({
                     )}
                   </div>
                   {displayedDocumentName && user?.role !== 'it' && (
-                    <a  
-                      href={blobUrl || (displayedDocumentUrl ?? '#')}
-                      download={displayedDocumentName}
-                      onClick={e => { if (!blobUrl && !displayedDocumentUrl) e.preventDefault() }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
-                      aria-label={`Descargar ${displayedDocumentName}`}
-                    >
-                      <Download className="h-4 w-4" aria-hidden="true" />
-                      Descargar {selectedDocument ? `(v${selectedDocument.version})` : ''}
-                    </a>
+                    blobUrl ? (
+                      <a  
+                        href={blobUrl}
+                        download={displayedDocumentName}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
+                        aria-label={`Descargar ${displayedDocumentName}`}
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                        Descargar {selectedDocument ? `(v${selectedDocument.version})` : ''}
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed"
+                        aria-label={`Descargar ${displayedDocumentName}`}
+                        title={blobLoading ? 'Cargando documento...' : (blobError ?? 'Documento no disponible')}
+                      >
+                        <Download className="h-4 w-4" aria-hidden="true" />
+                        Descargar {selectedDocument ? `(v${selectedDocument.version})` : ''}
+                      </button>
+                    )
                   )}
                 </div>
                 <div className="flex min-h-80 items-center justify-center bg-secondary/40 p-2">
@@ -330,15 +343,15 @@ export default function DocumentPreviewModal({
                       <p className="font-medium text-destructive">No se pudo cargar el documento</p>
                       <p className="text-sm text-muted-foreground">{blobError}</p>
                     </div>
-                  ) : (blobUrl || displayedDocumentUrl) && isImageDocument ? (
+                  ) : blobUrl && isImageDocument ? (
                     <img
-                      src={blobUrl || displayedDocumentUrl}
+                      src={blobUrl}
                       alt={`Vista previa de ${displayedDocumentName ?? 'la imagen adjunta'}`}
                       className="max-h-[65vh] w-full rounded-md object-contain"
                     />
-                  ) : (blobUrl || displayedDocumentUrl) ? (
+                  ) : blobUrl ? (
                     <embed
-                      src={blobUrl || displayedDocumentUrl}
+                      src={blobUrl}
                       type={selectedDocument?.tipo || 'application/pdf'}
                       className="h-full w-full min-h-[300px] rounded-md"
                       aria-label="Vista previa del documento PDF"
