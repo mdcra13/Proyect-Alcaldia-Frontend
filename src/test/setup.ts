@@ -1,0 +1,53 @@
+import '@testing-library/jest-dom/vitest'
+import { expect, vi } from 'vitest'
+import { toHaveNoViolations } from 'vitest-axe/matchers'
+
+expect.extend({ toHaveNoViolations })
+
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = String(value)
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
+  }
+})()
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
+
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  writable: true,
+  value: vi.fn(),
+})
+
+if (typeof window.URL.createObjectURL !== 'function') {
+  window.URL.createObjectURL = vi.fn((blob: Blob) => `blob:mock-url-${blob.size || 1}`)
+}
+if (typeof window.URL.revokeObjectURL !== 'function') {
+  window.URL.revokeObjectURL = vi.fn()
+}
